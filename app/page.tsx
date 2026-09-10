@@ -34,7 +34,57 @@ function Logo() {
   return <div className="flex items-center gap-2.5" aria-label="Gcverify home"><div className="grid size-9 place-items-center rounded-xl bg-lime-300 text-[15px] font-black tracking-[-0.08em] text-[#0a1514] shadow-[0_0_28px_rgba(190,242,100,.18)]">GC</div><span className="text-lg font-bold tracking-[-0.04em] text-white">Gcverify</span></div>;
 }
 
+function Landing({ onEnter }: { onEnter: () => void }) {
+  return (
+    <main className="landing-shell min-h-screen overflow-hidden bg-[#07100f] text-white">
+      <div className="landing-glow" aria-hidden="true" />
+      <nav className="landing-nav" aria-label="Public navigation">
+        <Logo />
+        <div className="hidden items-center gap-8 text-sm text-white/55 md:flex">
+          <a href="#services">Services</a><a href="#how-it-works">How it works</a><a href="#why-us">Why Gcverify</a>
+        </div>
+        <div className="flex items-center gap-2"><Button variant="ghost" onClick={onEnter} className="hidden h-10 px-4 text-white hover:bg-white/[.06] sm:inline-flex">Sign in</Button><Button onClick={onEnter} className="h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#07100f] hover:bg-lime-200">Create account <ArrowUpRight /></Button></div>
+      </nav>
+
+      <section className="landing-hero">
+        <div className="hero-copy">
+          <div className="hero-pill"><span />Trusted by 2,400+ creators and agencies</div>
+          <h1>Social growth.<br /><em>Verified.</em></h1>
+          <p>Launch reliable social media campaigns from one simple panel. Clear pricing, fast delivery, and real support whenever you need it.</p>
+          <div className="mt-8 flex flex-wrap gap-3"><Button onClick={onEnter} className="h-12 rounded-xl bg-lime-300 px-6 text-base font-bold text-[#07100f] hover:bg-lime-200">Start growing <ArrowUpRight /></Button><a href="#services" className="inline-flex h-12 items-center rounded-xl border border-white/10 bg-white/[.035] px-6 text-sm font-semibold text-white/75 transition hover:bg-white/[.07]">Explore services</a></div>
+          <div className="hero-proof"><div><strong>99.2%</strong><span>successful delivery</span></div><div><strong>10 min</strong><span>average support reply</span></div><div><strong>24/7</strong><span>order processing</span></div></div>
+        </div>
+
+        <div className="hero-visual" aria-label="Preview of the Gcverify order panel">
+          <div className="preview-dots"><span /><span /><span /></div>
+          <div className="preview-head"><div><p>New campaign</p><span>Set it up in seconds</span></div><span className="live-badge"><i />Live</span></div>
+          <div className="preview-label">Service</div><div className="preview-field"><span className="platform-bubble">IG</span><div><strong>Instagram Followers</strong><small>High quality • 0–1 hour</small></div><ChevronRight /></div>
+          <div className="grid grid-cols-2 gap-3"><div><div className="preview-label">Quantity</div><div className="preview-field compact">5,000</div></div><div><div className="preview-label">Charge</div><div className="preview-field compact text-lime-300">$16.00</div></div></div>
+          <div className="preview-button"><Zap />Place order <ArrowUpRight /></div>
+          <div className="floating-chip chip-one"><Check /><span><b>Order completed</b><small>2,500 followers delivered</small></span></div>
+          <div className="floating-chip chip-two"><Sparkles /><span><b>Quality checked</b><small>Stable, gradual delivery</small></span></div>
+        </div>
+      </section>
+
+      <div className="platform-strip"><span>INSTAGRAM</span><i /> <span>TIKTOK</span><i /> <span>YOUTUBE</span><i /> <span>FACEBOOK</span><i /> <span>TELEGRAM</span><i /> <span>X / TWITTER</span></div>
+
+      <section id="services" className="landing-section">
+        <div className="section-heading"><div><p className="eyebrow text-lime-300">What you can grow</p><h2>One panel. Every platform.</h2></div><p>Choose from carefully selected services with clear rates, realistic timing, and order tracking from start to finish.</p></div>
+        <div className="landing-cards">
+          {[{n:'01',title:'Audience growth',copy:'Build your follower base with stable delivery designed for long-term profiles.',accent:'lime'}, {n:'02',title:'Reach & views',copy:'Put your posts and videos in front of more people across every major platform.',accent:'cyan'}, {n:'03',title:'Engagement',copy:'Support your content with likes, shares, saves, comments, and reactions.',accent:'orange'}].map((card) => <article key={card.n} className={`landing-card ${card.accent}`}><span className="card-number">{card.n}</span><div className="card-icon"><ArrowUpRight /></div><h3>{card.title}</h3><p>{card.copy}</p><button onClick={onEnter}>View services <ChevronRight /></button></article>)}
+        </div>
+      </section>
+
+      <section id="how-it-works" className="steps-section"><div><p className="eyebrow text-lime-300">Simple by design</p><h2>From link to launch<br />in three steps.</h2><Button onClick={onEnter} variant="outline" className="mt-7 h-11 rounded-xl border-white/10 bg-white/[.035] px-5 text-white hover:bg-white/[.07]">Open the panel</Button></div><ol><li><span>1</span><div><strong>Pick a service</strong><p>Choose your platform and the growth service that fits your goal.</p></div></li><li><span>2</span><div><strong>Add your link</strong><p>Paste your public profile or post link and enter the quantity.</p></div></li><li><span>3</span><div><strong>Track delivery</strong><p>Follow every order from processing through completion.</p></div></li></ol></section>
+
+      <section id="why-us" className="closing-cta"><div><p className="eyebrow text-[#07100f]/55">Ready when you are</p><h2>Turn attention into momentum.</h2><p>Create your Gcverify account and place your first order in minutes.</p></div><Button onClick={onEnter} className="h-12 rounded-xl bg-[#07100f] px-6 text-base font-bold text-white hover:bg-[#12211e]">Get started <ArrowUpRight /></Button></section>
+      <footer className="landing-footer"><Logo /><p>© 2026 Gcverify. Built for steady growth.</p><div><button type="button">Terms</button><button type="button">Privacy</button><button type="button">Support</button></div></footer>
+    </main>
+  );
+}
+
 export default function Home() {
+  const [view, setView] = useState<'landing' | 'dashboard'>('landing');
   const [serviceId, setServiceId] = useState(services[0].id);
   const [quantity, setQuantity] = useState('1000');
   const [link, setLink] = useState('');
@@ -74,6 +124,8 @@ export default function Home() {
     return () => lifecycle.abort();
   }, []);
 
+  if (view === 'landing') return <Landing onEnter={() => setView('dashboard')} />;
+
   return (
     <main className="min-h-screen bg-[#07100f] text-white">
       <div className="ambient" aria-hidden="true" />
@@ -86,7 +138,7 @@ export default function Home() {
           <div className="space-y-1"><button className="nav-item"><WalletCards /><span>Add funds</span></button><button className="nav-item"><TicketCheck /><span>Tickets</span></button><button className="nav-item"><CircleHelp /><span>API & support</span></button></div>
           <div className="mt-auto rounded-2xl border border-lime-300/15 bg-lime-300/[.06] p-4"><div className="mb-3 flex size-9 items-center justify-center rounded-xl bg-lime-300 text-[#0a1514]"><Headphones className="size-4" /></div><p className="text-sm font-semibold">Need a hand?</p><p className="mt-1 text-xs leading-5 text-white/45">Our team replies in under 10 minutes.</p><button className="mt-3 text-xs font-semibold text-lime-300">Open support →</button></div>
         </nav>
-        <div className="m-3 mt-4 flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.035] p-3"><div className="grid size-9 place-items-center rounded-full bg-cyan-300 text-xs font-bold text-[#0a1514]">OA</div><div className="min-w-0"><p className="truncate text-sm font-semibold">Ola Adebayo</p><p className="text-xs text-white/40">Standard plan</p></div><ChevronRight className="ml-auto size-4 text-white/35" /></div>
+        <div className="m-3 mt-4 flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.035] p-3"><div className="grid size-9 place-items-center rounded-full bg-cyan-300 text-xs font-bold text-[#0a1514]">OA</div><div className="min-w-0"><p className="truncate text-sm font-semibold">Ola Adebayo</p><p className="text-xs text-white/40">Standard plan</p></div><button onClick={() => setView('landing')} className="ml-auto rounded-lg px-2 py-1 text-xs font-semibold text-white/45 transition hover:bg-white/[.06] hover:text-white">Log out</button></div>
       </aside>
       {mobileOpen && <button className="fixed inset-0 z-30 bg-black/70 md:hidden" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
 
