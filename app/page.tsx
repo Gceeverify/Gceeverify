@@ -3,15 +3,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownToLine, ArrowUpRight, Bell, Check, ChevronRight, CircleHelp,
-  Camera, Clock3, Flame, Headphones, LayoutDashboard, ListChecks, Menu,
+  Camera, Clock3, Flame, Globe2, Headphones, LayoutDashboard, ListChecks, Menu,
   MessageCircleMore, PackageSearch, Plus, Search, ShoppingBag, Sparkles,
-  TicketCheck, Video, WalletCards, X, Zap,
+  RefreshCw, Server, Smartphone, TicketCheck, Video, WalletCards, X, Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type Service = { id: string; name: string; platform: string; rate: number; min: number; max: number; speed: string };
+type ProviderStatus = {
+  id: 'smsbower' | 'jap' | 'bulkacc';
+  name: string;
+  capability: string;
+  connected: boolean;
+  balance: number | null;
+  currency: string;
+  detail: string;
+};
 const services: Service[] = [
   { id: 'ig-followers', name: 'Instagram Followers • High Quality', platform: 'Instagram', rate: 3.2, min: 100, max: 100000, speed: '0–1 hour' },
   { id: 'ig-likes', name: 'Instagram Likes • Instant', platform: 'Instagram', rate: 1.15, min: 50, max: 50000, speed: 'Instant' },
@@ -27,8 +36,10 @@ const recentOrders = [
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, active: true },
   { label: 'New order', icon: ShoppingBag }, { label: 'Orders', icon: ListChecks, count: '3' },
-  { label: 'Services', icon: PackageSearch },
+  { label: 'Services', icon: PackageSearch }, { label: 'Providers', icon: Server },
 ];
+
+const providerIcons = { smsbower: Smartphone, jap: Zap, bulkacc: Globe2 };
 
 function Logo() {
   return <div className="flex items-center gap-2.5" aria-label="Gcverify home"><div className="grid size-9 place-items-center rounded-xl bg-lime-300 text-[15px] font-black tracking-[-0.08em] text-[#0a1514] shadow-[0_0_28px_rgba(190,242,100,.18)]">GC</div><span className="text-lg font-bold tracking-[-0.04em] text-white">Gcverify</span></div>;
@@ -38,46 +49,47 @@ function Landing({ onEnter }: { onEnter: () => void }) {
   return (
     <main className="landing-shell min-h-screen overflow-hidden bg-[#07100f] text-white">
       <div className="landing-glow" aria-hidden="true" />
+      <div className="landing-orbit" aria-hidden="true" />
       <nav className="landing-nav" aria-label="Public navigation">
         <Logo />
         <div className="hidden items-center gap-8 text-sm text-white/55 md:flex">
-          <a href="#services">Services</a><a href="#how-it-works">How it works</a><a href="#why-us">Why Gcverify</a>
+          <a href="#why-us">Why us</a><a href="#services">Services</a><a href="#how-it-works">Our process</a><a href="#pricing">Pricing</a><a href="#faq">FAQs</a>
         </div>
-        <div className="flex items-center gap-2"><Button variant="ghost" onClick={onEnter} className="hidden h-10 px-4 text-white hover:bg-white/[.06] sm:inline-flex">Sign in</Button><Button onClick={onEnter} className="h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#07100f] hover:bg-lime-200">Create account <ArrowUpRight /></Button></div>
+        <Button onClick={onEnter} variant="outline" className="h-10 rounded-full border-lime-400/45 bg-transparent px-5 text-lime-300 hover:bg-lime-300 hover:text-[#07100f]">Sign in</Button>
       </nav>
 
       <section className="landing-hero">
         <div className="hero-copy">
-          <div className="hero-pill"><span />Trusted by 2,400+ creators and agencies</div>
-          <h1>Social growth.<br /><em>Verified.</em></h1>
-          <p>Launch reliable social media campaigns from one simple panel. Clear pricing, fast delivery, and real support whenever you need it.</p>
-          <div className="mt-8 flex flex-wrap gap-3"><Button onClick={onEnter} className="h-12 rounded-xl bg-lime-300 px-6 text-base font-bold text-[#07100f] hover:bg-lime-200">Start growing <ArrowUpRight /></Button><a href="#services" className="inline-flex h-12 items-center rounded-xl border border-white/10 bg-white/[.035] px-6 text-sm font-semibold text-white/75 transition hover:bg-white/[.07]">Explore services</a></div>
-          <div className="hero-proof"><div><strong>99.2%</strong><span>successful delivery</span></div><div><strong>10 min</strong><span>average support reply</span></div><div><strong>24/7</strong><span>order processing</span></div></div>
+          <h1>Discover the perfect<br /><em>social boost</em> for you</h1>
+          <p>Discover secure and reliable social media services. Grow your audience, increase engagement, and manage every campaign from one simple panel.</p>
+          <Button onClick={onEnter} className="mt-8 h-12 rounded-full bg-lime-400 px-6 text-base font-bold text-[#07100f] hover:bg-lime-300">Get started <ArrowUpRight /></Button>
+          <div className="client-proof"><div className="avatar-stack"><span>OA</span><span>JM</span><span>AK</span></div><div><strong>10.2k+</strong><small>creators growing with us</small></div></div>
         </div>
 
-        <div className="hero-visual" aria-label="Preview of the Gcverify order panel">
-          <div className="preview-dots"><span /><span /><span /></div>
-          <div className="preview-head"><div><p>New campaign</p><span>Set it up in seconds</span></div><span className="live-badge"><i />Live</span></div>
-          <div className="preview-label">Service</div><div className="preview-field"><span className="platform-bubble">IG</span><div><strong>Instagram Followers</strong><small>High quality • 0–1 hour</small></div><ChevronRight /></div>
-          <div className="grid grid-cols-2 gap-3"><div><div className="preview-label">Quantity</div><div className="preview-field compact">5,000</div></div><div><div className="preview-label">Charge</div><div className="preview-field compact text-lime-300">$16.00</div></div></div>
-          <div className="preview-button"><Zap />Place order <ArrowUpRight /></div>
-          <div className="floating-chip chip-one"><Check /><span><b>Order completed</b><small>2,500 followers delivered</small></span></div>
-          <div className="floating-chip chip-two"><Sparkles /><span><b>Quality checked</b><small>Stable, gradual delivery</small></span></div>
+        <div className="hero-art" aria-label="Gcverify campaign card preview">
+          <div className="lime-disc" aria-hidden="true" />
+          <div className="growth-card">
+            <div className="growth-card-top"><div className="gc-mark">GC</div><Zap /></div>
+            <p>Campaign access</p><h3>2,500 &nbsp; 98.4% &nbsp; 24/7</h3>
+            <div className="growth-card-bottom"><div><span>CREATOR</span><strong>OLA ADEBAYO</strong></div><div><span>STATUS</span><strong>VERIFIED</strong></div><div className="pixel-mark"><i /><i /><i /><i /><i /><i /></div></div>
+          </div>
+          <span className="spark spark-a">✦</span><span className="spark spark-b">✦</span><span className="spark spark-c">✦</span>
         </div>
       </section>
 
-      <div className="platform-strip"><span>INSTAGRAM</span><i /> <span>TIKTOK</span><i /> <span>YOUTUBE</span><i /> <span>FACEBOOK</span><i /> <span>TELEGRAM</span><i /> <span>X / TWITTER</span></div>
+      <section className="metric-band"><div><strong>5m+</strong><span>Orders delivered</span></div><div><strong>250+</strong><span>Active services</span></div><div><strong>99.2%</strong><span>Success rate</span></div><div><strong>10.2k+</strong><span>Worldwide clients</span></div></section>
+      <div className="platform-strip"><span>INSTAGRAM</span><span>TIKTOK</span><span>YOUTUBE</span><span>FACEBOOK</span><span>TELEGRAM</span><span>X / TWITTER</span></div>
 
       <section id="services" className="landing-section">
-        <div className="section-heading"><div><p className="eyebrow text-lime-300">What you can grow</p><h2>One panel. Every platform.</h2></div><p>Choose from carefully selected services with clear rates, realistic timing, and order tracking from start to finish.</p></div>
-        <div className="landing-cards">
-          {[{n:'01',title:'Audience growth',copy:'Build your follower base with stable delivery designed for long-term profiles.',accent:'lime'}, {n:'02',title:'Reach & views',copy:'Put your posts and videos in front of more people across every major platform.',accent:'cyan'}, {n:'03',title:'Engagement',copy:'Support your content with likes, shares, saves, comments, and reactions.',accent:'orange'}].map((card) => <article key={card.n} className={`landing-card ${card.accent}`}><span className="card-number">{card.n}</span><div className="card-icon"><ArrowUpRight /></div><h3>{card.title}</h3><p>{card.copy}</p><button onClick={onEnter}>View services <ChevronRight /></button></article>)}
-        </div>
+        <h2 className="offer-title">What do we offer?</h2>
+        <div className="offer-grid">{[
+          { icon: Check, title: 'Secure delivery', copy: 'Your account details are never required and every order is safely processed.' },
+          { icon: Clock3, title: 'Fast processing', copy: 'Campaigns start quickly with live status updates from order to completion.' },
+          { icon: WalletCards, title: 'Multiple services', copy: 'Followers, views, likes, shares, and more across every major platform.' },
+        ].map(({ icon: Icon, title, copy }) => <article key={title}><div className="offer-icon"><Icon /></div><div><h3>{title}</h3><p>{copy}</p></div></article>)}</div>
       </section>
 
-      <section id="how-it-works" className="steps-section"><div><p className="eyebrow text-lime-300">Simple by design</p><h2>From link to launch<br />in three steps.</h2><Button onClick={onEnter} variant="outline" className="mt-7 h-11 rounded-xl border-white/10 bg-white/[.035] px-5 text-white hover:bg-white/[.07]">Open the panel</Button></div><ol><li><span>1</span><div><strong>Pick a service</strong><p>Choose your platform and the growth service that fits your goal.</p></div></li><li><span>2</span><div><strong>Add your link</strong><p>Paste your public profile or post link and enter the quantity.</p></div></li><li><span>3</span><div><strong>Track delivery</strong><p>Follow every order from processing through completion.</p></div></li></ol></section>
-
-      <section id="why-us" className="closing-cta"><div><p className="eyebrow text-[#07100f]/55">Ready when you are</p><h2>Turn attention into momentum.</h2><p>Create your Gcverify account and place your first order in minutes.</p></div><Button onClick={onEnter} className="h-12 rounded-xl bg-[#07100f] px-6 text-base font-bold text-white hover:bg-[#12211e]">Get started <ArrowUpRight /></Button></section>
+      <section id="how-it-works" className="personalized-section"><div className="personalized-copy"><h2>Design your personalized<br />growth campaign.</h2><p>You have the freedom to combine services around your goal, creating a campaign that feels natural and works on your schedule.</p><Button onClick={onEnter} className="mt-7 h-12 rounded-full bg-lime-400 px-6 font-bold text-[#07100f] hover:bg-lime-300">Create campaign <ArrowUpRight /></Button></div><div className="card-stack" aria-label="Three Gcverify campaign options"><div className="mini-growth-card card-back"><span>STARTER</span><strong>1,000</strong><small>Profile reach</small></div><div className="mini-growth-card card-mid"><span>CREATOR</span><strong>5,000</strong><small>Audience growth</small></div><div className="mini-growth-card card-front"><span>AGENCY</span><strong>25,000</strong><small>Multi-platform reach</small><div className="pixel-mark"><i /><i /><i /><i /><i /><i /></div></div></div></section>
       <footer className="landing-footer"><Logo /><p>© 2026 Gcverify. Built for steady growth.</p><div><button type="button">Terms</button><button type="button">Privacy</button><button type="button">Support</button></div></footer>
     </main>
   );
@@ -90,9 +102,24 @@ export default function Home() {
   const [link, setLink] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [ordered, setOrdered] = useState(false);
+  const [providers, setProviders] = useState<ProviderStatus[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(false);
   const service = services.find((item) => item.id === serviceId) ?? services[0];
   const amount = Number(quantity) || 0;
   const charge = useMemo(() => ((amount / 1000) * service.rate).toFixed(2), [amount, service]);
+
+  const refreshProviders = async () => {
+    setProvidersLoading(true);
+    try {
+      const response = await fetch('/api/providers', { cache: 'no-store' });
+      const data = (await response.json()) as { providers?: ProviderStatus[] };
+      setProviders(data.providers ?? []);
+    } catch {
+      setProviders([]);
+    } finally {
+      setProvidersLoading(false);
+    }
+  };
 
   useEffect(() => {
     const modelContext = (document as Document & { modelContext?: { registerTool: (tool: unknown, options?: { signal?: AbortSignal }) => void | Promise<void> } }).modelContext;
@@ -124,6 +151,10 @@ export default function Home() {
     return () => lifecycle.abort();
   }, []);
 
+  useEffect(() => {
+    if (view === 'dashboard' && providers.length === 0) void refreshProviders();
+  }, [view]);
+
   if (view === 'landing') return <Landing onEnter={() => setView('dashboard')} />;
 
   return (
@@ -133,7 +164,7 @@ export default function Home() {
         <div className="flex items-center justify-between px-5 pb-7 pt-6"><Logo /><button className="icon-button md:hidden" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X /></button></div>
         <nav aria-label="Primary navigation" className="flex flex-1 flex-col px-3">
           <p className="nav-eyebrow">Workspace</p>
-          <div className="space-y-1">{navItems.map(({ label, icon: Icon, active, count }) => <button key={label} className={`nav-item ${active ? 'nav-item-active' : ''}`} onClick={() => setMobileOpen(false)}><Icon /><span>{label}</span>{count && <span className="ml-auto rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/70">{count}</span>}</button>)}</div>
+          <div className="space-y-1">{navItems.map(({ label, icon: Icon, active, count }) => <button key={label} className={`nav-item ${active ? 'nav-item-active' : ''}`} onClick={() => { setMobileOpen(false); if (label === 'Providers') document.getElementById('providers')?.scrollIntoView({ behavior: 'smooth' }); }}><Icon /><span>{label}</span>{count && <span className="ml-auto rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/70">{count}</span>}</button>)}</div>
           <p className="nav-eyebrow mt-7">Billing & support</p>
           <div className="space-y-1"><button className="nav-item"><WalletCards /><span>Add funds</span></button><button className="nav-item"><TicketCheck /><span>Tickets</span></button><button className="nav-item"><CircleHelp /><span>API & support</span></button></div>
           <div className="mt-auto rounded-2xl border border-lime-300/15 bg-lime-300/[.06] p-4"><div className="mb-3 flex size-9 items-center justify-center rounded-xl bg-lime-300 text-[#0a1514]"><Headphones className="size-4" /></div><p className="text-sm font-semibold">Need a hand?</p><p className="mt-1 text-xs leading-5 text-white/45">Our team replies in under 10 minutes.</p><button className="mt-3 text-xs font-semibold text-lime-300">Open support →</button></div>
@@ -156,6 +187,25 @@ export default function Home() {
             <article className="stat-card"><div className="flex items-center justify-between"><span className="stat-label">In progress</span><Clock3 className="size-5 text-orange-300" /></div><p className="mt-6 text-3xl font-bold tracking-[-0.04em]">08</p><p className="mt-1 text-xs text-white/35">3 nearing completion</p></article>
             <article className="stat-card"><div className="flex items-center justify-between"><span className="stat-label">Completed</span><Check className="size-5 text-lime-300" /></div><p className="mt-6 text-3xl font-bold tracking-[-0.04em]">1,241</p><p className="mt-1 text-xs text-white/35">96.7% success rate</p></article>
           </div>
+
+          <section id="providers" className="panel provider-panel mt-6 p-5 sm:p-7">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div><p className="eyebrow">Live integrations</p><h2 className="mt-1 text-xl font-semibold tracking-tight">Service providers</h2><p className="mt-2 text-sm text-white/40">Foreign numbers, boosting, and account inventory in one place.</p></div>
+              <Button onClick={() => void refreshProviders()} disabled={providersLoading} variant="outline" className="h-10 rounded-xl border-white/10 bg-white/[.035] text-white hover:bg-white/[.07]"><RefreshCw className={providersLoading ? 'animate-spin' : ''} />{providersLoading ? 'Checking' : 'Refresh status'}</Button>
+            </div>
+            <div className="provider-grid mt-6">
+              {(providers.length ? providers : [
+                { id: 'smsbower', name: 'SMSBower', capability: 'Foreign numbers' },
+                { id: 'jap', name: 'Just Another Panel', capability: 'Social boosting' },
+                { id: 'bulkacc', name: 'BulkAcc', capability: 'Account logs' },
+              ]).map((provider) => {
+                const Icon = providerIcons[provider.id as keyof typeof providerIcons];
+                const connected = 'connected' in provider ? provider.connected : false;
+                const balance = 'balance' in provider ? provider.balance : null;
+                return <article key={provider.id} className="provider-card"><div className="flex items-start justify-between gap-4"><span className="provider-icon"><Icon /></span><span className={`provider-state ${connected ? 'provider-state-live' : ''}`}><i />{providersLoading ? 'Checking' : connected ? 'Connected' : providers.length ? 'Needs attention' : 'Waiting'}</span></div><p className="mt-5 text-sm font-semibold">{provider.name}</p><p className="mt-1 text-xs text-white/38">{provider.capability}</p><div className="mt-5 flex items-end justify-between border-t border-white/[.06] pt-4"><div><span className="block text-xs text-white/30">Provider balance</span><strong className="mt-1 block text-lg text-white">{balance === null ? '—' : `${provider.currency} ${balance.toFixed(2)}`}</strong></div><span className="text-right text-xs text-white/35">{'detail' in provider ? provider.detail : 'Secure server check'}</span></div></article>;
+              })}
+            </div>
+          </section>
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(330px,.65fr)]">
             <section className="panel p-5 sm:p-7">
