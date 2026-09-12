@@ -1,26 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowDownToLine, ArrowUpRight, Bell, Check, ChevronRight, CircleHelp,
-  Camera, Clock3, Flame, Globe2, Headphones, LayoutDashboard, ListChecks, Menu,
+  Camera, Clock3, Flame, Headphones, LayoutDashboard, ListChecks, Menu,
   MessageCircleMore, PackageSearch, Plus, Search, ShoppingBag, Sparkles,
-  RefreshCw, Server, Smartphone, TicketCheck, Video, WalletCards, X, Zap,
+  Server, Smartphone, TicketCheck, Video, WalletCards, X, Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type Service = { id: string; name: string; platform: string; rate: number; min: number; max: number; speed: string };
-type ProviderStatus = {
-  id: 'smsbower' | 'jap' | 'bulkacc';
-  name: string;
-  capability: string;
-  connected: boolean;
-  balance: number | null;
-  currency: string;
-  detail: string;
-};
 const services: Service[] = [
   { id: 'ig-followers', name: 'Instagram Followers • High Quality', platform: 'Instagram', rate: 3.2, min: 100, max: 100000, speed: '0–1 hour' },
   { id: 'ig-likes', name: 'Instagram Likes • Instant', platform: 'Instagram', rate: 1.15, min: 50, max: 50000, speed: 'Instant' },
@@ -36,10 +28,13 @@ const recentOrders = [
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, active: true },
   { label: 'New order', icon: ShoppingBag }, { label: 'Orders', icon: ListChecks, count: '3' },
-  { label: 'Services', icon: PackageSearch }, { label: 'Providers', icon: Server },
+  { label: 'Services', icon: PackageSearch },
 ];
-
-const providerIcons = { smsbower: Smartphone, jap: Zap, bulkacc: Globe2 };
+const quickActions = [
+  { href: '/boost', label: 'Boost account', description: 'Followers, views, likes and more', icon: Zap, tone: 'lime' },
+  { href: '/numbers', label: 'Foreign numbers', description: 'Temporary numbers for SMS', icon: Smartphone, tone: 'cyan' },
+  { href: '/logs', label: 'Buy logs', description: 'Premium accounts and access', icon: Server, tone: 'orange' },
+];
 
 function Logo() {
   return <div className="flex items-center gap-2.5" aria-label="Gcverify home"><div className="grid size-9 place-items-center rounded-xl bg-lime-300 text-[15px] font-black tracking-[-0.08em] text-[#0a1514] shadow-[0_0_28px_rgba(190,242,100,.18)]">GC</div><span className="text-lg font-bold tracking-[-0.04em] text-white">Gcverify</span></div>;
@@ -102,24 +97,9 @@ export default function Home() {
   const [link, setLink] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [ordered, setOrdered] = useState(false);
-  const [providers, setProviders] = useState<ProviderStatus[]>([]);
-  const [providersLoading, setProvidersLoading] = useState(false);
   const service = services.find((item) => item.id === serviceId) ?? services[0];
   const amount = Number(quantity) || 0;
   const charge = useMemo(() => ((amount / 1000) * service.rate).toFixed(2), [amount, service]);
-
-  const refreshProviders = async () => {
-    setProvidersLoading(true);
-    try {
-      const response = await fetch('/api/providers', { cache: 'no-store' });
-      const data = (await response.json()) as { providers?: ProviderStatus[] };
-      setProviders(data.providers ?? []);
-    } catch {
-      setProviders([]);
-    } finally {
-      setProvidersLoading(false);
-    }
-  };
 
   useEffect(() => {
     const modelContext = (document as Document & { modelContext?: { registerTool: (tool: unknown, options?: { signal?: AbortSignal }) => void | Promise<void> } }).modelContext;
@@ -151,9 +131,7 @@ export default function Home() {
     return () => lifecycle.abort();
   }, []);
 
-  useEffect(() => {
-    if (view === 'dashboard' && providers.length === 0) void refreshProviders();
-  }, [view]);
+  useEffect(() => { const frame = requestAnimationFrame(() => { if (window.location.hash === '#dashboard') setView('dashboard'); }); return () => cancelAnimationFrame(frame); }, []);
 
   if (view === 'landing') return <Landing onEnter={() => setView('dashboard')} />;
 
@@ -164,7 +142,9 @@ export default function Home() {
         <div className="flex items-center justify-between px-5 pb-7 pt-6"><Logo /><button className="icon-button md:hidden" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X /></button></div>
         <nav aria-label="Primary navigation" className="flex flex-1 flex-col px-3">
           <p className="nav-eyebrow">Workspace</p>
-          <div className="space-y-1">{navItems.map(({ label, icon: Icon, active, count }) => <button key={label} className={`nav-item ${active ? 'nav-item-active' : ''}`} onClick={() => { setMobileOpen(false); if (label === 'Providers') document.getElementById('providers')?.scrollIntoView({ behavior: 'smooth' }); }}><Icon /><span>{label}</span>{count && <span className="ml-auto rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/70">{count}</span>}</button>)}</div>
+          <div className="space-y-1">{navItems.map(({ label, icon: Icon, active, count }) => <button key={label} className={`nav-item ${active ? 'nav-item-active' : ''}`} onClick={() => setMobileOpen(false)}><Icon /><span>{label}</span>{count && <span className="ml-auto rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/70">{count}</span>}</button>)}</div>
+          <p className="nav-eyebrow mt-7">Marketplace</p>
+          <div className="space-y-1"><Link href="/boost" className="nav-item"><Zap /><span>Boost account</span></Link><Link href="/numbers" className="nav-item"><Smartphone /><span>Foreign numbers</span></Link><Link href="/logs" className="nav-item"><Server /><span>Buy logs</span></Link></div>
           <p className="nav-eyebrow mt-7">Billing & support</p>
           <div className="space-y-1"><button className="nav-item"><WalletCards /><span>Add funds</span></button><button className="nav-item"><TicketCheck /><span>Tickets</span></button><button className="nav-item"><CircleHelp /><span>API & support</span></button></div>
           <div className="mt-auto rounded-2xl border border-lime-300/15 bg-lime-300/[.06] p-4"><div className="mb-3 flex size-9 items-center justify-center rounded-xl bg-lime-300 text-[#0a1514]"><Headphones className="size-4" /></div><p className="text-sm font-semibold">Need a hand?</p><p className="mt-1 text-xs leading-5 text-white/45">Our team replies in under 10 minutes.</p><button className="mt-3 text-xs font-semibold text-lime-300">Open support →</button></div>
@@ -188,24 +168,7 @@ export default function Home() {
             <article className="stat-card"><div className="flex items-center justify-between"><span className="stat-label">Completed</span><Check className="size-5 text-lime-300" /></div><p className="mt-6 text-3xl font-bold tracking-[-0.04em]">1,241</p><p className="mt-1 text-xs text-white/35">96.7% success rate</p></article>
           </div>
 
-          <section id="providers" className="panel provider-panel mt-6 p-5 sm:p-7">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-              <div><p className="eyebrow">Live integrations</p><h2 className="mt-1 text-xl font-semibold tracking-tight">Service providers</h2><p className="mt-2 text-sm text-white/40">Foreign numbers, boosting, and account inventory in one place.</p></div>
-              <Button onClick={() => void refreshProviders()} disabled={providersLoading} variant="outline" className="h-10 rounded-xl border-white/10 bg-white/[.035] text-white hover:bg-white/[.07]"><RefreshCw className={providersLoading ? 'animate-spin' : ''} />{providersLoading ? 'Checking' : 'Refresh status'}</Button>
-            </div>
-            <div className="provider-grid mt-6">
-              {(providers.length ? providers : [
-                { id: 'smsbower', name: 'SMSBower', capability: 'Foreign numbers' },
-                { id: 'jap', name: 'Just Another Panel', capability: 'Social boosting' },
-                { id: 'bulkacc', name: 'BulkAcc', capability: 'Account logs' },
-              ]).map((provider) => {
-                const Icon = providerIcons[provider.id as keyof typeof providerIcons];
-                const connected = 'connected' in provider ? provider.connected : false;
-                const balance = 'balance' in provider ? provider.balance : null;
-                return <article key={provider.id} className="provider-card"><div className="flex items-start justify-between gap-4"><span className="provider-icon"><Icon /></span><span className={`provider-state ${connected ? 'provider-state-live' : ''}`}><i />{providersLoading ? 'Checking' : connected ? 'Connected' : providers.length ? 'Needs attention' : 'Waiting'}</span></div><p className="mt-5 text-sm font-semibold">{provider.name}</p><p className="mt-1 text-xs text-white/38">{provider.capability}</p><div className="mt-5 flex items-end justify-between border-t border-white/[.06] pt-4"><div><span className="block text-xs text-white/30">Provider balance</span><strong className="mt-1 block text-lg text-white">{balance === null ? '—' : `${provider.currency} ${balance.toFixed(2)}`}</strong></div><span className="text-right text-xs text-white/35">{'detail' in provider ? provider.detail : 'Secure server check'}</span></div></article>;
-              })}
-            </div>
-          </section>
+          <section id="dashboard" className="panel quick-actions-panel mt-6 p-5 sm:p-7"><div><p className="eyebrow">Marketplace</p><h2 className="mt-1 text-xl font-semibold tracking-tight">Quick actions</h2><p className="mt-2 text-sm text-white/40">Choose what you want to order.</p></div><div className="quick-action-grid mt-6">{quickActions.map(({ href, label, description, icon: Icon, tone }) => <Link href={href} key={href} className={`quick-action-card quick-${tone}`}><span className="quick-action-icon"><Icon /></span><span><strong>{label}</strong><small>{description}</small></span><ArrowUpRight /></Link>)}</div></section>
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(330px,.65fr)]">
             <section className="panel p-5 sm:p-7">
