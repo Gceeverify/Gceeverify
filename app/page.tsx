@@ -45,7 +45,6 @@ function Landing({ onEnter }: { onEnter: () => void }) {
   return (
     <main className="landing-shell min-h-screen overflow-hidden bg-[#07100f] text-white">
       <div className="landing-glow" aria-hidden="true" />
-      <div className="landing-orbit" aria-hidden="true" />
       <nav className="landing-nav" aria-label="Public navigation">
         <Logo />
         <div className="hidden items-center gap-8 text-sm text-white/55 md:flex">
@@ -56,21 +55,22 @@ function Landing({ onEnter }: { onEnter: () => void }) {
 
       <section className="landing-hero">
         <div className="hero-copy">
-          <p className="hero-kicker">Digital access, simplified.</p>
-          <h1>Everything digital.<br /><em>One trusted place.</em></h1>
-          <p>Social growth, verification numbers, premium digital accounts, and more - brought together in one fast, reliable dashboard.</p>
-          <Button onClick={onEnter} className="mt-8 h-12 rounded-full bg-lime-400 px-6 text-base font-bold text-[#07100f] hover:bg-lime-300">Explore services <ArrowUpRight /></Button>
-          <div className="client-proof"><div className="avatar-stack"><span>OA</span><span>JM</span><span>AK</span></div><div><strong>10.2k+</strong><small>creators growing with us</small></div></div>
+          <p className="hero-kicker"><span />One account for every digital service</p>
+          <h1>Your digital services, <em>all in one place.</em></h1>
+          <p>Grow your audience, receive verification codes, and access premium digital accounts from one reliable dashboard.</p>
+          <div className="hero-actions"><Button onClick={onEnter} className="hero-primary">Open dashboard <ArrowUpRight /></Button><a href="#services" className="hero-secondary">Browse services <ChevronRight /></a></div>
+          <div className="hero-trust"><span><Check />Clear pricing</span><span><Check />Fast delivery</span><span><Check />24/7 access</span></div>
         </div>
 
-        <div className="hero-art" aria-label="GCVerify service card preview">
-          <div className="lime-disc" aria-hidden="true" />
-          <div className="growth-card">
-            <div className="growth-card-top"><div className="gc-mark">GC</div><Zap /></div>
-            <p>Your digital wallet</p><h3>SMM &nbsp; SMS &nbsp; LOGS</h3>
-            <div className="growth-card-bottom"><div><span>ACCESS</span><strong>ALL SERVICES</strong></div><div><span>STATUS</span><strong>VERIFIED</strong></div><div className="pixel-mark"><i /><i /><i /><i /><i /><i /></div></div>
+        <div className="hero-service-panel" aria-label="GCVerify services preview">
+          <div className="service-panel-head"><div><span className="service-panel-eyebrow">Available balance</span><strong>$128.40</strong></div><span className="live-status"><i />Live</span></div>
+          <div className="service-panel-title"><div><Image src="/favicon.svg" width={48} height={48} alt="" /><div><strong>What do you need today?</strong><span>Choose a service to get started</span></div></div></div>
+          <div className="hero-service-list">
+            <button type="button" onClick={onEnter}><span className="hero-service-icon service-green"><Zap /></span><span><strong>Boost an account</strong><small>Followers, views & engagement</small></span><ArrowUpRight /></button>
+            <Link href="/numbers"><span className="hero-service-icon service-blue"><Smartphone /></span><span><strong>Get a verification number</strong><small>Live numbers for SMS</small></span><ArrowUpRight /></Link>
+            <Link href="/logs"><span className="hero-service-icon service-yellow"><Server /></span><span><strong>Browse premium accounts</strong><small>Fresh digital inventory</small></span><ArrowUpRight /></Link>
           </div>
-          <span className="spark spark-a">✦</span><span className="spark spark-b">✦</span><span className="spark spark-c">✦</span>
+          <div className="service-panel-foot"><span><Check />Secure checkout</span><span>250+ services</span></div>
         </div>
       </section>
 
