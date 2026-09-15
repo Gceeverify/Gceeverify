@@ -18,13 +18,27 @@ export const metadata: Metadata = {
   icons: { icon: '/favicon.svg' },
 };
 
+const themeScript = `
+  try {
+    const saved = localStorage.getItem('gceeverify-theme');
+    const theme = saved === 'light' || saved === 'dark'
+      ? saved
+      : (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  } catch (_) {
+    document.documentElement.dataset.theme = 'dark';
+  }
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
       <body
         className={`${sora.variable} ${geistMono.variable} antialiased`}
       >

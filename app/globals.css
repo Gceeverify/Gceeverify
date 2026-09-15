@@ -277,3 +277,89 @@ table th { padding: 1rem 1.75rem; font-weight: 600; } table td { padding: 1.05re
   .hero-trust { gap: .7rem 1rem; }
   .hero-service-panel { border-radius: 20px; padding: 1rem; }
 }
+
+/* Persistent light and dark appearance */
+.theme-toggle { position: relative; display: grid; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid rgba(255,255,205,.13); border-radius: .75rem; background: rgba(255,255,205,.045); color: #fffff5; transition: border-color .2s ease,background .2s ease,color .2s ease,transform .2s ease; }
+.theme-toggle:hover { border-color: rgba(116,239,91,.42); background: rgba(116,239,91,.09); transform: translateY(-1px); }
+.theme-toggle svg { position: absolute; width: 1rem; height: 1rem; transition: opacity .2s ease,transform .25s ease; }
+.theme-sun { opacity: 0; transform: rotate(-70deg) scale(.6); }
+.theme-moon { opacity: 1; transform: rotate(0) scale(1); }
+
+html[data-theme='light'] {
+  --background: #f3f7ef; --foreground: #142414; --card: #ffffff; --card-foreground: #142414;
+  --popover: #ffffff; --popover-foreground: #142414; --muted: #e7eee1; --muted-foreground: #596956;
+  --border: rgba(22,49,21,.12); --input: rgba(22,49,21,.14);
+}
+html[data-theme='light'] body { background: #f3f7ef; color: #142414; }
+html[data-theme='light'] .theme-toggle { border-color: rgba(22,49,21,.14); background: rgba(255,255,255,.8); color: #173417; box-shadow: 0 6px 18px rgba(23,52,23,.08); }
+html[data-theme='light'] .theme-sun { opacity: 1; transform: rotate(0) scale(1); }
+html[data-theme='light'] .theme-moon { opacity: 0; transform: rotate(70deg) scale(.6); }
+html[data-theme='light'] .landing-shell,
+html[data-theme='light'] .service-marketplace { background: linear-gradient(145deg,#f8fbf4 0%,#edf5e8 52%,#f4f8f0 100%); color: #142414; }
+html[data-theme='light'] .dashboard-shell { background: #f3f7ef !important; color: #142414 !important; }
+html[data-theme='light'] .landing-glow,
+html[data-theme='light'] .market-glow { opacity: .5; }
+html[data-theme='light'] .brand-logo { color: #173417; }
+html[data-theme='light'] .sidebar { border-color: rgba(22,49,21,.1); background: #ffffff; color: #142414; box-shadow: 14px 0 45px rgba(23,52,23,.05); }
+html[data-theme='light'] .dashboard-shell > section > header,
+html[data-theme='light'] .market-topbar { border-color: rgba(22,49,21,.1); background: rgba(248,251,244,.88); }
+html[data-theme='light'] .stat-card,
+html[data-theme='light'] .panel,
+html[data-theme='light'] .market-surface,
+html[data-theme='light'] .catalog-pane,
+html[data-theme='light'] .checkout-pane,
+html[data-theme='light'] .hero-service-panel,
+html[data-theme='light'] .offer-grid article,
+html[data-theme='light'] .quick-action-card,
+html[data-theme='light'] .platform-card,
+html[data-theme='light'] .number-tabs,
+html[data-theme='light'] .number-services button,
+html[data-theme='light'] .quote-stats div,
+html[data-theme='light'] .sms-code { border-color: rgba(22,49,21,.1); background: rgba(255,255,255,.86); box-shadow: 0 18px 50px rgba(23,52,23,.07); }
+html[data-theme='light'] .stat-featured { background: linear-gradient(145deg,rgba(116,239,91,.18),rgba(255,255,255,.94)); }
+html[data-theme='light'] .hero-service-list button,
+html[data-theme='light'] .hero-service-list a,
+html[data-theme='light'] .market-search,
+html[data-theme='light'] .field-control,
+html[data-theme='light'] .market-select,
+html[data-theme='light'] .market-input { border-color: rgba(22,49,21,.12) !important; background: rgba(255,255,255,.9) !important; color: #142414 !important; }
+html[data-theme='light'] [class*='text-white'],
+html[data-theme='light'] .nav-item,
+html[data-theme='light'] .nav-eyebrow,
+html[data-theme='light'] .eyebrow,
+html[data-theme='light'] .field-label,
+html[data-theme='light'] .market-back,
+html[data-theme='light'] .market-heading > span,
+html[data-theme='light'] .surface-heading > span,
+html[data-theme='light'] .service-result strong,
+html[data-theme='light'] table td { color: rgba(20,36,20,.68) !important; }
+html[data-theme='light'] .hero-copy h1,
+html[data-theme='light'] .offer-title,
+html[data-theme='light'] .personalized-copy h2,
+html[data-theme='light'] .market-heading h1,
+html[data-theme='light'] .checkout-empty h3 { color: #142414 !important; }
+html[data-theme='light'] .hero-copy > p:not(.hero-kicker),
+html[data-theme='light'] .hero-trust,
+html[data-theme='light'] .service-panel-eyebrow,
+html[data-theme='light'] .service-panel-title span,
+html[data-theme='light'] .hero-service-list small,
+html[data-theme='light'] .service-panel-foot,
+html[data-theme='light'] .quick-action-card small { color: rgba(20,36,20,.56); }
+html[data-theme='light'] .nav-item:hover { background: rgba(22,49,21,.05); color: #142414; }
+html[data-theme='light'] .nav-item-active { background: rgba(62,184,45,.11); color: #247c1c; }
+html[data-theme='light'] .icon-button,
+html[data-theme='light'] .market-balance { border-color: rgba(22,49,21,.12); background: rgba(255,255,255,.8); color: #284628; }
+html[data-theme='light'] .market-balance strong { color: #142414; }
+html[data-theme='light'] .market-search input { color: #142414 !important; }
+html[data-theme='light'] .drawer-panel { border-color: rgba(22,49,21,.12); background: #f8fbf4; }
+html[data-theme='light'] table td,
+html[data-theme='light'] .service-result,
+html[data-theme='light'] .product-row,
+html[data-theme='light'] .logs-toolbar,
+html[data-theme='light'] .pagination-row { border-color: rgba(22,49,21,.09); }
+html[data-theme='light'] .landing-footer { color: rgba(20,36,20,.48); }
+
+@media (max-width: 520px) {
+  .theme-toggle { width: 2.35rem; height: 2.35rem; }
+  .market-topbar .icon-button[aria-label='Support'] { display: none; }
+}

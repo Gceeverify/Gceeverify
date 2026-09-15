@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 type Service = { id: string; name: string; platform: string; rate: number; min: number; max: number; speed: string };
 const services: Service[] = [
@@ -50,7 +51,7 @@ function Landing({ onEnter }: { onEnter: () => void }) {
         <div className="hidden items-center gap-8 text-sm text-white/55 md:flex">
           <a href="#services">Services</a><a href="#how-it-works">How it works</a><a href="#trust">Why Gceeverify</a>
         </div>
-        <Button onClick={onEnter} variant="outline" className="h-10 rounded-full border-lime-400/45 bg-transparent px-5 text-lime-300 hover:bg-lime-300 hover:text-[#07100f]">Sign in</Button>
+        <div className="flex items-center gap-2"><ThemeToggle /><Button onClick={onEnter} variant="outline" className="h-10 rounded-full border-lime-400/45 bg-transparent px-5 text-lime-300 hover:bg-lime-300 hover:text-[#07100f]">Sign in</Button></div>
       </nav>
 
       <section className="landing-hero">
@@ -138,7 +139,7 @@ export default function Home() {
   if (view === 'landing') return <Landing onEnter={() => setView('dashboard')} />;
 
   return (
-    <main className="min-h-screen bg-[#07100f] text-white">
+    <main className="dashboard-shell min-h-screen bg-[#07100f] text-white">
       <div className="ambient" aria-hidden="true" />
       <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
         <div className="flex items-center justify-between px-5 pb-7 pt-6"><Logo /><button className="icon-button md:hidden" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X /></button></div>
@@ -158,7 +159,7 @@ export default function Home() {
       <section className="md:pl-[250px]">
         <header className="sticky top-0 z-20 flex h-[74px] items-center justify-between border-b border-white/[.07] bg-[#07100f]/80 px-4 backdrop-blur-xl sm:px-7 lg:px-10">
           <div className="flex items-center gap-3"><button className="icon-button md:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu /></button><div className="hidden items-center gap-2 text-sm text-white/35 sm:flex"><LayoutDashboard className="size-4" /><span>/</span><span className="text-white/80">Dashboard</span></div></div>
-          <div className="flex items-center gap-2 sm:gap-3"><div className="hidden items-center gap-2 rounded-xl border border-white/[.07] bg-white/[.035] px-3 py-2 text-xs text-white/45 lg:flex"><Search className="size-4" />Search anything <kbd className="ml-5 rounded bg-white/[.07] px-1.5 py-0.5">⌘ K</kbd></div><button className="icon-button relative" aria-label="Notifications"><Bell /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-lime-300" /></button><Button className="h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200"><Plus />Add funds</Button></div>
+          <div className="flex items-center gap-2 sm:gap-3"><div className="hidden items-center gap-2 rounded-xl border border-white/[.07] bg-white/[.035] px-3 py-2 text-xs text-white/45 lg:flex"><Search className="size-4" />Search anything <kbd className="ml-5 rounded bg-white/[.07] px-1.5 py-0.5">⌘ K</kbd></div><ThemeToggle /><button className="icon-button relative" aria-label="Notifications"><Bell /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-lime-300" /></button><Button className="h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200"><Plus />Add funds</Button></div>
         </header>
 
         <div className="mx-auto max-w-[1420px] px-4 py-7 sm:px-7 lg:px-10 lg:py-9">
