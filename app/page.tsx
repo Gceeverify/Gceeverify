@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowDownToLine, ArrowUpRight, Bell, Check, ChevronRight, CircleHelp,
@@ -37,7 +38,7 @@ const quickActions = [
 ];
 
 function Logo() {
-  return <div className="flex items-center gap-2.5" aria-label="Gcverify home"><div className="grid size-9 place-items-center rounded-xl bg-lime-300 text-[15px] font-black tracking-[-0.08em] text-[#0a1514] shadow-[0_0_28px_rgba(190,242,100,.18)]">GC</div><span className="text-lg font-bold tracking-[-0.04em] text-white">Gcverify</span></div>;
+  return <div className="brand-logo" aria-label="GCVerify home"><Image src="/gcverify-logo-light.png" width={4138} height={928} alt="GCVerify" priority /></div>;
 }
 
 function Landing({ onEnter }: { onEnter: () => void }) {
@@ -48,25 +49,26 @@ function Landing({ onEnter }: { onEnter: () => void }) {
       <nav className="landing-nav" aria-label="Public navigation">
         <Logo />
         <div className="hidden items-center gap-8 text-sm text-white/55 md:flex">
-          <a href="#why-us">Why us</a><a href="#services">Services</a><a href="#how-it-works">Our process</a><a href="#pricing">Pricing</a><a href="#faq">FAQs</a>
+          <a href="#services">Services</a><a href="#how-it-works">How it works</a><a href="#trust">Why GCVerify</a>
         </div>
         <Button onClick={onEnter} variant="outline" className="h-10 rounded-full border-lime-400/45 bg-transparent px-5 text-lime-300 hover:bg-lime-300 hover:text-[#07100f]">Sign in</Button>
       </nav>
 
       <section className="landing-hero">
         <div className="hero-copy">
-          <h1>Discover the perfect<br /><em>social boost</em> for you</h1>
-          <p>Discover secure and reliable social media services. Grow your audience, increase engagement, and manage every campaign from one simple panel.</p>
-          <Button onClick={onEnter} className="mt-8 h-12 rounded-full bg-lime-400 px-6 text-base font-bold text-[#07100f] hover:bg-lime-300">Get started <ArrowUpRight /></Button>
+          <p className="hero-kicker">Digital access, simplified.</p>
+          <h1>Everything digital.<br /><em>One trusted place.</em></h1>
+          <p>Social growth, verification numbers, premium digital accounts, and more - brought together in one fast, reliable dashboard.</p>
+          <Button onClick={onEnter} className="mt-8 h-12 rounded-full bg-lime-400 px-6 text-base font-bold text-[#07100f] hover:bg-lime-300">Explore services <ArrowUpRight /></Button>
           <div className="client-proof"><div className="avatar-stack"><span>OA</span><span>JM</span><span>AK</span></div><div><strong>10.2k+</strong><small>creators growing with us</small></div></div>
         </div>
 
-        <div className="hero-art" aria-label="Gcverify campaign card preview">
+        <div className="hero-art" aria-label="GCVerify service card preview">
           <div className="lime-disc" aria-hidden="true" />
           <div className="growth-card">
             <div className="growth-card-top"><div className="gc-mark">GC</div><Zap /></div>
-            <p>Campaign access</p><h3>2,500 &nbsp; 98.4% &nbsp; 24/7</h3>
-            <div className="growth-card-bottom"><div><span>CREATOR</span><strong>OLA ADEBAYO</strong></div><div><span>STATUS</span><strong>VERIFIED</strong></div><div className="pixel-mark"><i /><i /><i /><i /><i /><i /></div></div>
+            <p>Your digital wallet</p><h3>SMM &nbsp; SMS &nbsp; LOGS</h3>
+            <div className="growth-card-bottom"><div><span>ACCESS</span><strong>ALL SERVICES</strong></div><div><span>STATUS</span><strong>VERIFIED</strong></div><div className="pixel-mark"><i /><i /><i /><i /><i /><i /></div></div>
           </div>
           <span className="spark spark-a">✦</span><span className="spark spark-b">✦</span><span className="spark spark-c">✦</span>
         </div>
@@ -76,16 +78,16 @@ function Landing({ onEnter }: { onEnter: () => void }) {
       <div className="platform-strip"><span>INSTAGRAM</span><span>TIKTOK</span><span>YOUTUBE</span><span>FACEBOOK</span><span>TELEGRAM</span><span>X / TWITTER</span></div>
 
       <section id="services" className="landing-section">
-        <h2 className="offer-title">What do we offer?</h2>
+        <p className="section-kicker">One account. Multiple services.</p><h2 className="offer-title">What can you access?</h2>
         <div className="offer-grid">{[
-          { icon: Check, title: 'Secure delivery', copy: 'Your account details are never required and every order is safely processed.' },
-          { icon: Clock3, title: 'Fast processing', copy: 'Campaigns start quickly with live status updates from order to completion.' },
-          { icon: WalletCards, title: 'Multiple services', copy: 'Followers, views, likes, shares, and more across every major platform.' },
+          { icon: Zap, title: 'Social media growth', copy: 'Followers, views, likes, and engagement services across major platforms.' },
+          { icon: Smartphone, title: 'Verification numbers', copy: 'Temporary foreign and virtual numbers for supported SMS services.' },
+          { icon: Server, title: 'Digital accounts & logs', copy: 'Browse premium digital inventory with clear pricing and live availability.' },
         ].map(({ icon: Icon, title, copy }) => <article key={title}><div className="offer-icon"><Icon /></div><div><h3>{title}</h3><p>{copy}</p></div></article>)}</div>
       </section>
 
-      <section id="how-it-works" className="personalized-section"><div className="personalized-copy"><h2>Design your personalized<br />growth campaign.</h2><p>You have the freedom to combine services around your goal, creating a campaign that feels natural and works on your schedule.</p><Button onClick={onEnter} className="mt-7 h-12 rounded-full bg-lime-400 px-6 font-bold text-[#07100f] hover:bg-lime-300">Create campaign <ArrowUpRight /></Button></div><div className="card-stack" aria-label="Three Gcverify campaign options"><div className="mini-growth-card card-back"><span>STARTER</span><strong>1,000</strong><small>Profile reach</small></div><div className="mini-growth-card card-mid"><span>CREATOR</span><strong>5,000</strong><small>Audience growth</small></div><div className="mini-growth-card card-front"><span>AGENCY</span><strong>25,000</strong><small>Multi-platform reach</small><div className="pixel-mark"><i /><i /><i /><i /><i /><i /></div></div></div></section>
-      <footer className="landing-footer"><Logo /><p>© 2026 Gcverify. Built for steady growth.</p><div><button type="button">Terms</button><button type="button">Privacy</button><button type="button">Support</button></div></footer>
+      <section id="how-it-works" className="personalized-section"><div className="personalized-copy"><p className="section-kicker">Simple by design</p><h2>Find it. Fund it.<br />Get it done.</h2><p>Choose a service, see the price upfront, and track every order from a single dashboard built for speed and clarity.</p><Button onClick={onEnter} className="mt-7 h-12 rounded-full bg-lime-400 px-6 font-bold text-[#07100f] hover:bg-lime-300">Open dashboard <ArrowUpRight /></Button></div><div id="trust" className="card-stack" aria-label="GCVerify platform values"><div className="mini-growth-card card-back"><span>FAST</span><strong>24/7</strong><small>Always-on access</small></div><div className="mini-growth-card card-mid"><span>RELIABLE</span><strong>LIVE</strong><small>Clear order status</small></div><div className="mini-growth-card card-front"><span>TRUSTED</span><strong>ONE</strong><small>Connected dashboard</small><div className="pixel-mark"><i /><i /><i /><i /><i /><i /></div></div></div></section>
+      <footer className="landing-footer"><Logo /><p>© 2026 GCVerify. Digital access, simplified.</p><div><button type="button">Terms</button><button type="button">Privacy</button><button type="button">Support</button></div></footer>
     </main>
   );
 }
@@ -108,7 +110,7 @@ export default function Home() {
     void Promise.resolve(modelContext.registerTool({
       name: 'configure_social_order',
       title: 'Configure social order',
-      description: 'Prepare a Gcverify social growth order in the visible order form without submitting it.',
+      description: 'Prepare a GCVerify social growth order in the visible order form without submitting it.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -188,7 +190,7 @@ export default function Home() {
               { icon: Video, title: 'YouTube Views', sub: 'from $4.80 / 1K', color: 'bg-red-400/10 text-red-300' },
               { icon: MessageCircleMore, title: 'TikTok Views', sub: 'from $0.55 / 1K', color: 'bg-cyan-400/10 text-cyan-300' },
             ].map(({ icon: Icon, title, sub, color }) => <button key={title} className="service-row"><span className={`grid size-10 place-items-center rounded-xl ${color}`}><Icon className="size-4" /></span><span className="text-left"><span className="block text-sm font-medium">{title}</span><span className="text-xs text-white/35">{sub}</span></span><ChevronRight className="ml-auto size-4 text-white/25" /></button>)}</div></section>
-              <section className="announcement"><div className="relative z-10"><p className="eyebrow text-lime-300">Gcverify boost</p><h2 className="mt-2 max-w-[230px] text-xl font-semibold leading-snug">More reach, less guesswork.</h2><p className="mt-2 max-w-[270px] text-sm leading-6 text-white/45">Use curated bundles for steadier, more natural delivery.</p><button className="mt-5 flex items-center gap-2 text-sm font-semibold text-lime-300">Explore bundles <ArrowUpRight className="size-4" /></button></div><div className="orbit" aria-hidden="true"><span /><span /><span /></div></section>
+              <section className="announcement"><div className="relative z-10"><p className="eyebrow text-lime-300">GCVerify boost</p><h2 className="mt-2 max-w-[230px] text-xl font-semibold leading-snug">More reach, less guesswork.</h2><p className="mt-2 max-w-[270px] text-sm leading-6 text-white/45">Use curated bundles for steadier, more natural delivery.</p><button className="mt-5 flex items-center gap-2 text-sm font-semibold text-lime-300">Explore bundles <ArrowUpRight className="size-4" /></button></div><div className="orbit" aria-hidden="true"><span /><span /><span /></div></section>
             </aside>
           </div>
 

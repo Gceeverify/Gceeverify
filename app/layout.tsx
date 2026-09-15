@@ -1,10 +1,16 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Boldonse, Geist_Mono, Sora } from 'next/font/google';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const sora = Sora({
+  variable: '--font-sora',
   subsets: ['latin'],
+});
+
+const boldonse = Boldonse({
+  variable: '--font-boldonse',
+  subsets: ['latin'],
+  weight: '400',
 });
 
 const geistMono = Geist_Mono({
@@ -13,8 +19,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Gcverify — Social Growth Panel',
-  description: 'Order and manage social media growth services from one fast, reliable dashboard.',
+  title: 'GCVerify - Digital services, one trusted dashboard',
+  description: 'Access social growth, verification numbers, digital accounts, and more from one fast, reliable dashboard.',
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({
@@ -25,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${sora.variable} ${boldonse.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>
