@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'GCVerify - Digital services, one trusted dashboard',
+  title: 'Gceeverify - Digital services, one trusted dashboard',
   description: 'Access social growth, verification numbers, digital accounts, and more from one fast, reliable dashboard.',
   icons: { icon: '/favicon.svg' },
 };

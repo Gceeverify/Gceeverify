@@ -38,7 +38,7 @@ const quickActions = [
 ];
 
 function Logo() {
-  return <div className="brand-logo" aria-label="GCVerify home"><Image src="/gcverify-logo-light.png" width={4138} height={928} alt="GCVerify" priority /></div>;
+  return <div className="brand-logo" aria-label="Gceeverify home"><Image src="/favicon.svg" width={36} height={36} alt="" priority /><span>Gceeverify</span></div>;
 }
 
 function Landing({ onEnter }: { onEnter: () => void }) {
@@ -48,7 +48,7 @@ function Landing({ onEnter }: { onEnter: () => void }) {
       <nav className="landing-nav" aria-label="Public navigation">
         <Logo />
         <div className="hidden items-center gap-8 text-sm text-white/55 md:flex">
-          <a href="#services">Services</a><a href="#how-it-works">How it works</a><a href="#trust">Why GCVerify</a>
+          <a href="#services">Services</a><a href="#how-it-works">How it works</a><a href="#trust">Why Gceeverify</a>
         </div>
         <Button onClick={onEnter} variant="outline" className="h-10 rounded-full border-lime-400/45 bg-transparent px-5 text-lime-300 hover:bg-lime-300 hover:text-[#07100f]">Sign in</Button>
       </nav>
@@ -62,7 +62,7 @@ function Landing({ onEnter }: { onEnter: () => void }) {
           <div className="hero-trust"><span><Check />Clear pricing</span><span><Check />Fast delivery</span><span><Check />24/7 access</span></div>
         </div>
 
-        <div className="hero-service-panel" aria-label="GCVerify services preview">
+        <div className="hero-service-panel" aria-label="Gceeverify services preview">
           <div className="service-panel-head"><div><span className="service-panel-eyebrow">Available balance</span><strong>$128.40</strong></div><span className="live-status"><i />Live</span></div>
           <div className="service-panel-title"><div><Image src="/favicon.svg" width={48} height={48} alt="" /><div><strong>What do you need today?</strong><span>Choose a service to get started</span></div></div></div>
           <div className="hero-service-list">
@@ -86,8 +86,8 @@ function Landing({ onEnter }: { onEnter: () => void }) {
         ].map(({ icon: Icon, title, copy }) => <article key={title}><div className="offer-icon"><Icon /></div><div><h3>{title}</h3><p>{copy}</p></div></article>)}</div>
       </section>
 
-      <section id="how-it-works" className="personalized-section"><div className="personalized-copy"><p className="section-kicker">Simple by design</p><h2>Find it. Fund it.<br />Get it done.</h2><p>Choose a service, see the price upfront, and track every order from a single dashboard built for speed and clarity.</p><Button onClick={onEnter} className="mt-7 h-12 rounded-full bg-lime-400 px-6 font-bold text-[#07100f] hover:bg-lime-300">Open dashboard <ArrowUpRight /></Button></div><div id="trust" className="card-stack" aria-label="GCVerify platform values"><div className="mini-growth-card card-back"><span>FAST</span><strong>24/7</strong><small>Always-on access</small></div><div className="mini-growth-card card-mid"><span>RELIABLE</span><strong>LIVE</strong><small>Clear order status</small></div><div className="mini-growth-card card-front"><span>TRUSTED</span><strong>ONE</strong><small>Connected dashboard</small><div className="pixel-mark"><i /><i /><i /><i /><i /><i /></div></div></div></section>
-      <footer className="landing-footer"><Logo /><p>© 2026 GCVerify. Digital access, simplified.</p><div><button type="button">Terms</button><button type="button">Privacy</button><button type="button">Support</button></div></footer>
+      <section id="how-it-works" className="personalized-section"><div className="personalized-copy"><p className="section-kicker">Simple by design</p><h2>Find it. Fund it.<br />Get it done.</h2><p>Choose a service, see the price upfront, and track every order from a single dashboard built for speed and clarity.</p><Button onClick={onEnter} className="mt-7 h-12 rounded-full bg-lime-400 px-6 font-bold text-[#07100f] hover:bg-lime-300">Open dashboard <ArrowUpRight /></Button></div><div id="trust" className="card-stack" aria-label="Gceeverify platform values"><div className="mini-growth-card card-back"><span>FAST</span><strong>24/7</strong><small>Always-on access</small></div><div className="mini-growth-card card-mid"><span>RELIABLE</span><strong>LIVE</strong><small>Clear order status</small></div><div className="mini-growth-card card-front"><span>TRUSTED</span><strong>ONE</strong><small>Connected dashboard</small><div className="pixel-mark"><i /><i /><i /><i /><i /><i /></div></div></div></section>
+      <footer className="landing-footer"><Logo /><p>© 2026 Gceeverify. Digital access, simplified.</p><div><button type="button">Terms</button><button type="button">Privacy</button><button type="button">Support</button></div></footer>
     </main>
   );
 }
@@ -110,7 +110,7 @@ export default function Home() {
     void Promise.resolve(modelContext.registerTool({
       name: 'configure_social_order',
       title: 'Configure social order',
-      description: 'Prepare a GCVerify social growth order in the visible order form without submitting it.',
+      description: 'Prepare a Gceeverify social growth order in the visible order form without submitting it.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -190,7 +190,7 @@ export default function Home() {
               { icon: Video, title: 'YouTube Views', sub: 'from $4.80 / 1K', color: 'bg-red-400/10 text-red-300' },
               { icon: MessageCircleMore, title: 'TikTok Views', sub: 'from $0.55 / 1K', color: 'bg-cyan-400/10 text-cyan-300' },
             ].map(({ icon: Icon, title, sub, color }) => <button key={title} className="service-row"><span className={`grid size-10 place-items-center rounded-xl ${color}`}><Icon className="size-4" /></span><span className="text-left"><span className="block text-sm font-medium">{title}</span><span className="text-xs text-white/35">{sub}</span></span><ChevronRight className="ml-auto size-4 text-white/25" /></button>)}</div></section>
-              <section className="announcement"><div className="relative z-10"><p className="eyebrow text-lime-300">GCVerify boost</p><h2 className="mt-2 max-w-[230px] text-xl font-semibold leading-snug">More reach, less guesswork.</h2><p className="mt-2 max-w-[270px] text-sm leading-6 text-white/45">Use curated bundles for steadier, more natural delivery.</p><button className="mt-5 flex items-center gap-2 text-sm font-semibold text-lime-300">Explore bundles <ArrowUpRight className="size-4" /></button></div><div className="orbit" aria-hidden="true"><span /><span /><span /></div></section>
+              <section className="announcement"><div className="relative z-10"><p className="eyebrow text-lime-300">Gceeverify boost</p><h2 className="mt-2 max-w-[230px] text-xl font-semibold leading-snug">More reach, less guesswork.</h2><p className="mt-2 max-w-[270px] text-sm leading-6 text-white/45">Use curated bundles for steadier, more natural delivery.</p><button className="mt-5 flex items-center gap-2 text-sm font-semibold text-lime-300">Explore bundles <ArrowUpRight className="size-4" /></button></div><div className="orbit" aria-hidden="true"><span /><span /><span /></div></section>
             </aside>
           </div>
 
