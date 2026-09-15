@@ -414,3 +414,52 @@ html[data-theme='light'] .landing-footer { color: rgba(20,36,20,.48); }
   .theme-toggle { width: 2.35rem; height: 2.35rem; }
   .market-topbar .icon-button[aria-label='Support'] { display: none; }
 }
+
+/* Mobile dashboard and navigation */
+.mobile-dashboard-brand { min-width: 0; align-items: center; gap: .5rem; color: #fff; }
+.mobile-dashboard-brand img { width: 28px; height: 28px; flex: 0 0 auto; }
+.mobile-dashboard-brand span { overflow: hidden; font-size: .9rem; font-weight: 750; letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-account { flex: 0 0 auto; }
+
+@media (max-width: 767px) {
+  .sidebar { width: min(86vw,320px); height: 100dvh; max-height: 100dvh; transform: translateX(calc(-100% - 18px)); border-right-color: rgba(255,255,255,.1); box-shadow: 24px 0 70px rgba(0,0,0,.38); }
+  .sidebar-open { transform: translateX(0); }
+  .sidebar-head { flex: 0 0 auto; padding: 1rem 1rem 1.15rem; }
+  .sidebar-head .brand-logo img { width: 31px; height: 31px; }
+  .sidebar-nav { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 .65rem .75rem; scrollbar-width: thin; }
+  .sidebar-nav .nav-item { min-height: 46px; padding: .72rem .8rem; font-size: .9rem; }
+  .sidebar-nav .nav-eyebrow { margin-top: 1.15rem; }
+  .sidebar-nav .nav-eyebrow:first-child { margin-top: 0; }
+  .sidebar-account { margin: .5rem .75rem max(.75rem,env(safe-area-inset-bottom)); }
+  .sidebar-backdrop { background: rgba(3,10,8,.68); backdrop-filter: blur(3px); }
+  .dashboard-topbar { height: 64px; padding: 0 .85rem; }
+  .mobile-dashboard-brand { display: flex; }
+  .dashboard-topbar-actions { gap: .45rem; }
+  .dashboard-topbar .icon-button,
+  .dashboard-topbar .theme-toggle { width: 2.35rem; height: 2.35rem; border-radius: .7rem; }
+  .dashboard-content { padding: 1.35rem 1rem 3rem; }
+  .dashboard-content > div:first-child { margin-bottom: 1.25rem; gap: .75rem; }
+  .dashboard-content > div:first-child h1 { font-size: 1.75rem; line-height: 1.15; }
+  .dashboard-content > div:first-child > p { font-size: .82rem; line-height: 1.5; }
+  .stat-card { min-height: 132px; padding: 1rem; }
+  .panel { border-radius: 1rem; }
+  .announcement { min-height: 200px; }
+  table th,table td { padding-right: 1rem; padding-left: 1rem; }
+}
+
+@media (max-width: 520px) {
+  .mobile-dashboard-brand span { display: none; }
+  .header-add-funds { width: 2.35rem; height: 2.35rem !important; padding: 0 !important; border-radius: .7rem !important; }
+  .header-add-funds span { display: none; }
+  .header-add-funds svg { margin: 0; }
+  .dashboard-content { padding-right: .75rem; padding-left: .75rem; }
+  .stats-grid { grid-template-columns: 1fr; gap: .75rem; }
+  .quick-actions-panel { margin-top: .75rem; }
+  .quick-action-grid { grid-template-columns: 1fr; gap: .65rem; }
+  .quick-action-card { min-height: 82px; flex-direction: row; justify-content: flex-start; gap: .85rem; padding: .85rem; text-align: left; }
+  .quick-action-card small { display: block; }
+  .quick-action-card > svg { display: block; }
+}
+
+html[data-theme='light'] .mobile-dashboard-brand { color: #173417; }
+html[data-theme='light'] .sidebar-account { border-color: rgba(22,49,21,.1); background: #f3f7ef; }

@@ -136,14 +136,26 @@ export default function Home() {
 
   useEffect(() => { const frame = requestAnimationFrame(() => { if (window.location.hash === '#dashboard') setView('dashboard'); }); return () => cancelAnimationFrame(frame); }, []);
 
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setMobileOpen(false); };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [mobileOpen]);
+
   if (view === 'landing') return <Landing onEnter={() => setView('dashboard')} />;
 
   return (
     <main className="dashboard-shell min-h-screen bg-[#07100f] text-white">
       <div className="ambient" aria-hidden="true" />
-      <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
-        <div className="flex items-center justify-between px-5 pb-7 pt-6"><Logo /><button className="icon-button md:hidden" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X /></button></div>
-        <nav aria-label="Primary navigation" className="flex flex-1 flex-col px-3">
+      <aside id="dashboard-sidebar" className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`} aria-label="Dashboard navigation">
+        <div className="sidebar-head flex items-center justify-between px-5 pb-7 pt-6"><Logo /><button className="icon-button md:hidden" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X /></button></div>
+        <nav aria-label="Primary navigation" className="sidebar-nav flex flex-1 flex-col px-3">
           <p className="nav-eyebrow">Workspace</p>
           <div className="space-y-1">{navItems.map(({ label, icon: Icon, active, count }) => <button key={label} className={`nav-item ${active ? 'nav-item-active' : ''}`} onClick={() => setMobileOpen(false)}><Icon /><span>{label}</span>{count && <span className="ml-auto rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/70">{count}</span>}</button>)}</div>
           <p className="nav-eyebrow mt-7">Marketplace</p>
@@ -152,17 +164,17 @@ export default function Home() {
           <div className="space-y-1"><button className="nav-item"><WalletCards /><span>Add funds</span></button><button className="nav-item"><TicketCheck /><span>Tickets</span></button><button className="nav-item"><CircleHelp /><span>API & support</span></button></div>
           <div className="mt-auto rounded-2xl border border-lime-300/15 bg-lime-300/[.06] p-4"><div className="mb-3 flex size-9 items-center justify-center rounded-xl bg-lime-300 text-[#0a1514]"><Headphones className="size-4" /></div><p className="text-sm font-semibold">Need a hand?</p><p className="mt-1 text-xs leading-5 text-white/45">Our team replies in under 10 minutes.</p><button className="mt-3 text-xs font-semibold text-lime-300">Open support →</button></div>
         </nav>
-        <div className="m-3 mt-4 flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.035] p-3"><div className="grid size-9 place-items-center rounded-full bg-cyan-300 text-xs font-bold text-[#0a1514]">OA</div><div className="min-w-0"><p className="truncate text-sm font-semibold">Ola Adebayo</p><p className="text-xs text-white/40">Standard plan</p></div><button onClick={() => setView('landing')} className="ml-auto rounded-lg px-2 py-1 text-xs font-semibold text-white/45 transition hover:bg-white/[.06] hover:text-white">Log out</button></div>
+        <div className="sidebar-account m-3 mt-4 flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.035] p-3"><div className="grid size-9 place-items-center rounded-full bg-cyan-300 text-xs font-bold text-[#0a1514]">OA</div><div className="min-w-0"><p className="truncate text-sm font-semibold">Ola Adebayo</p><p className="text-xs text-white/40">Standard plan</p></div><button onClick={() => setView('landing')} className="ml-auto rounded-lg px-2 py-1 text-xs font-semibold text-white/45 transition hover:bg-white/[.06] hover:text-white">Log out</button></div>
       </aside>
-      {mobileOpen && <button className="fixed inset-0 z-30 bg-black/70 md:hidden" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
+      {mobileOpen && <button className="sidebar-backdrop fixed inset-0 z-30 bg-black/70 md:hidden" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
 
       <section className="md:pl-[250px]">
-        <header className="sticky top-0 z-20 flex h-[74px] items-center justify-between border-b border-white/[.07] bg-[#07100f]/80 px-4 backdrop-blur-xl sm:px-7 lg:px-10">
-          <div className="flex items-center gap-3"><button className="icon-button md:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu /></button><div className="hidden items-center gap-2 text-sm text-white/35 sm:flex"><LayoutDashboard className="size-4" /><span>/</span><span className="text-white/80">Dashboard</span></div></div>
-          <div className="flex items-center gap-2 sm:gap-3"><div className="hidden items-center gap-2 rounded-xl border border-white/[.07] bg-white/[.035] px-3 py-2 text-xs text-white/45 lg:flex"><Search className="size-4" />Search anything <kbd className="ml-5 rounded bg-white/[.07] px-1.5 py-0.5">⌘ K</kbd></div><ThemeToggle /><button className="icon-button relative" aria-label="Notifications"><Bell /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-lime-300" /></button><Button className="h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200"><Plus />Add funds</Button></div>
+        <header className="dashboard-topbar sticky top-0 z-20 flex h-[74px] items-center justify-between border-b border-white/[.07] bg-[#07100f]/80 px-4 backdrop-blur-xl sm:px-7 lg:px-10">
+          <div className="flex min-w-0 items-center gap-3"><button className="icon-button md:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation" aria-expanded={mobileOpen} aria-controls="dashboard-sidebar"><Menu /></button><div className="mobile-dashboard-brand md:hidden"><Image src="/favicon.svg" width={28} height={28} alt="" /><span>Gceeverify</span></div><div className="hidden items-center gap-2 text-sm text-white/35 sm:flex"><LayoutDashboard className="size-4" /><span>/</span><span className="text-white/80">Dashboard</span></div></div>
+          <div className="dashboard-topbar-actions flex items-center gap-2 sm:gap-3"><div className="hidden items-center gap-2 rounded-xl border border-white/[.07] bg-white/[.035] px-3 py-2 text-xs text-white/45 lg:flex"><Search className="size-4" />Search anything <kbd className="ml-5 rounded bg-white/[.07] px-1.5 py-0.5">⌘ K</kbd></div><ThemeToggle /><button className="icon-button relative" aria-label="Notifications"><Bell /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-lime-300" /></button><Button aria-label="Add funds" className="header-add-funds h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200"><Plus /><span>Add funds</span></Button></div>
         </header>
 
-        <div className="mx-auto max-w-[1420px] px-4 py-7 sm:px-7 lg:px-10 lg:py-9">
+        <div className="dashboard-content mx-auto max-w-[1420px] px-4 py-7 sm:px-7 lg:px-10 lg:py-9">
           <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="mb-2 flex items-center gap-2 text-sm text-white/40"><span className="size-2 rounded-full bg-lime-300 shadow-[0_0_10px_#bef264]" />All systems operational</p><h1 className="text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Good morning, Ola.</h1></div><p className="max-w-sm text-sm leading-6 text-white/45">Everything you need to launch, track, and manage your social growth.</p></div>
           <div className="stats-grid">
             <article className="stat-card stat-featured"><div className="flex items-center justify-between"><span className="stat-label">Available balance</span><WalletCards className="size-5 text-lime-300" /></div><div className="mt-6 flex items-end justify-between"><div><p className="text-3xl font-bold tracking-[-0.04em]">$128.40</p><p className="mt-1 text-xs text-white/35">Ready to spend</p></div><button className="round-action" aria-label="Add money"><ArrowUpRight /></button></div></article>
