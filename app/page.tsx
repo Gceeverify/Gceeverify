@@ -65,7 +65,7 @@ const navItems = [
 const quickActions = [
   { href: '/boost', label: 'Boost', icon: Zap, tone: 'lime' },
   { href: '/numbers', label: 'Numbers', icon: Smartphone, tone: 'cyan' },
-  { href: '/logs', label: 'Accounts', icon: Server, tone: 'orange' },
+  { href: '/logs', label: 'Logs', icon: Server, tone: 'orange' },
   { href: '/vtu', label: 'VTU', icon: RadioTower, tone: 'violet' },
 ];
 const vtuServices = [
