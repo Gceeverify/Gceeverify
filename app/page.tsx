@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowUpRight,
-  Bell,
   Check,
   ChevronDown,
   ChevronRight,
@@ -32,6 +31,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationMenu } from '@/components/notification-menu';
 
 const recentOrders = [
   {
@@ -557,10 +557,7 @@ export default function Home() {
               </kbd>
             </div>
             <ThemeToggle />
-            <button className="icon-button relative" aria-label="Notifications">
-              <Bell />
-              <span className="absolute right-2 top-2 size-1.5 rounded-full bg-lime-300" />
-            </button>
+            <NotificationMenu />
             <Button
               aria-label="Add funds"
               className="header-add-funds h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200"
