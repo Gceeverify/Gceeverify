@@ -22,8 +22,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { action?: 'purchase' | 'complete' | 'cancel'; service?: string; country?: string; maxPrice?: number; id?: string };
-    if (body.action === 'purchase' && body.service && body.country && Number.isFinite(body.maxPrice)) return Response.json(await purchaseNumber(body.service, body.country, body.maxPrice!), { status: 201 });
+    const body = (await request.json()) as { action?: 'purchase' | 'complete' | 'cancel'; service?: string; country?: string; maxPrice?: number; providerId?: string; id?: string };
+    if (body.action === 'purchase' && body.service && body.country && body.providerId && Number.isFinite(body.maxPrice)) return Response.json(await purchaseNumber(body.service, body.country, body.maxPrice!, body.providerId), { status: 201 });
     if ((body.action === 'complete' || body.action === 'cancel') && body.id) return Response.json(await setNumberStatus(body.id, body.action === 'complete' ? '6' : '8'));
     return Response.json({ error: 'Complete the number request.' }, { status: 400 });
   } catch (error) {

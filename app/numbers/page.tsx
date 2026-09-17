@@ -23,7 +23,13 @@ type Catalog = {
   countries: Array<{ id: string; name: string }>;
   error?: string;
 };
-type QuoteOption = { price: number; count: number };
+type QuoteOption = {
+  providerId: string;
+  price: number;
+  count: number;
+  tier: 'gold' | 'silver' | 'bronze';
+  reliability: string;
+};
 type Quote = {
   lowestPrice: number;
   totalAvailable: number;
@@ -38,9 +44,9 @@ type Activation = {
 };
 
 const serverDetails = [
-  { label: 'Server 1', badge: 'Recommended' },
-  { label: 'Server 2', badge: 'Alternative' },
-  { label: 'Server 3', badge: 'Premium' },
+  { label: 'Server 1', badge: 'Gold', note: 'Fastest & most confirmed' },
+  { label: 'Server 2', badge: 'Silver', note: 'Reliable fallback route' },
+  { label: 'Server 3', badge: 'Bronze', note: 'Budget delivery route' },
 ];
 
 const popularServiceCodes = ['wa', 'tg', 'fb', 'ig'];
@@ -150,6 +156,7 @@ export default function NumbersPage() {
           service,
           country,
           maxPrice: selectedOption.price,
+          providerId: selectedOption.providerId,
         }),
       });
       const result = (await response.json()) as Activation & { error?: string };
@@ -238,7 +245,7 @@ export default function NumbersPage() {
                   value={index}
                   disabled={Boolean(quote) && !serverOptions[index]}
                 >
-                  {server.label} ({server.badge})
+                  {server.label} — {server.badge}
                 </option>
               ))}
             </select>
@@ -333,10 +340,10 @@ export default function NumbersPage() {
                   <Signal />
                 </span>
                 <span>
-                  <strong>Live SMS Provider</strong>
+                  <strong>{serverDetails[selectedServer].badge} SMS Provider</strong>
                   <small>
                     <Check />
-                    Connected to {serverDetails[selectedServer].label}
+                    {selectedOption.reliability}
                   </small>
                 </span>
                 <span>
@@ -403,7 +410,10 @@ export default function NumbersPage() {
                   </span>
                   <strong>
                     {serverDetails[selectedServer].label}
-                    <small>{serverDetails[selectedServer].badge}</small>
+                    <small>
+                      {serverDetails[selectedServer].badge} ·{' '}
+                      {serverDetails[selectedServer].note}
+                    </small>
                   </strong>
                 </div>
                 <div>

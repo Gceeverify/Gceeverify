@@ -116,19 +116,104 @@ export async function getNumberCatalog() {
 }
 
 export async function getNumberQuote(service: string, country: string) {
-  const text = await smsRequest({ action: 'getPricesV2', service, country });
-  const result = JSON.parse(text) as Record<string, Record<string, Record<string, number>>>;
-  const priceMap = result[country]?.[service] ?? {};
-  const options = Object.entries(priceMap)
-    .map(([price, count]) => ({ price: Number(price), count: Number(count) }))
-    .filter((option) => Number.isFinite(option.price) && option.count > 0)
-    .sort((a, b) => a.price - b.price);
+  const [pricesText, topText, countriesText] = await Promise.all([
+    smsRequest({ action: 'getPricesV3', service, country }),
+    smsRequest({ action: 'getTopCountriesByService', service }),
+    smsRequest({ action: 'getCountries' }),
+  ]);
+  const prices = JSON.parse(pricesText) as Record<
+    string,
+    Record<string, Record<string, { count: number; price: number; provider_id: number }>>
+  >;
+  const countries = JSON.parse(countriesText) as Record<string, { id: string; eng: string }>;
+  const countryName = countries[country]?.eng ?? '';
+  const countrySlug = countryName
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[()]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const providerMap = prices[country]?.[service] ?? {};
+  const available = Object.values(providerMap)
+    .map((provider) => ({
+      providerId: String(provider.provider_id),
+      price: Number(provider.price),
+      count: Number(provider.count),
+    }))
+    .filter((provider) => Number.isFinite(provider.price) && provider.count > 0);
+  const countryMarker = `"${countrySlug}":{`;
+  const countryStart = topText.indexOf(countryMarker);
+  let countryBlock = '';
+  if (countryStart >= 0) {
+    const objectStart = countryStart + countryMarker.length - 1;
+    let depth = 0;
+    for (let index = objectStart; index < topText.length; index += 1) {
+      if (topText[index] === '{') depth += 1;
+      if (topText[index] === '}') depth -= 1;
+      if (depth === 0) {
+        countryBlock = topText.slice(objectStart, index + 1);
+        break;
+      }
+    }
+  }
+  const goldProviderIds = Array.from(countryBlock.matchAll(/"(\d+)":\{/g), (match) => match[1]);
+  const gold = goldProviderIds
+    .map((providerId) => available.find((provider) => provider.providerId === providerId))
+    .filter((provider): provider is (typeof available)[number] => Boolean(provider));
+  const selectedIds = new Set<string>();
+  const options: Array<{
+    providerId: string;
+    price: number;
+    count: number;
+    tier: 'gold' | 'silver' | 'bronze';
+    reliability: string;
+  }> = [];
+  const addOption = (
+    provider: (typeof available)[number] | undefined,
+    tier: 'gold' | 'silver' | 'bronze',
+    reliability: string,
+  ) => {
+    if (!provider || selectedIds.has(provider.providerId)) return;
+    selectedIds.add(provider.providerId);
+    options.push({ ...provider, tier, reliability });
+  };
+
+  addOption(gold[0], 'gold', 'Highest-ranked Gold supplier');
+  addOption(gold[1], 'silver', 'Proven high-delivery fallback');
+
+  const remainingByStock = available
+    .filter((provider) => !selectedIds.has(provider.providerId))
+    .sort((a, b) => b.count - a.count || a.price - b.price);
+  if (options.length < 1) addOption(remainingByStock.shift(), 'gold', 'Best available high-stock supplier');
+  if (options.length < 2) addOption(remainingByStock.shift(), 'silver', 'Reliable high-stock fallback');
+
+  const economy = available
+    .filter((provider) => !selectedIds.has(provider.providerId))
+    .sort((a, b) => a.price - b.price || b.count - a.count)[0];
+  addOption(economy, 'bronze', 'Lowest-cost available supplier');
+
   if (!options.length) throw new Error('No numbers are currently available for this selection.');
-  return { lowestPrice: options[0].price, totalAvailable: options.reduce((sum, item) => sum + item.count, 0), options: options.slice(0, 8) };
+  return {
+    lowestPrice: Math.min(...options.map((option) => option.price)),
+    totalAvailable: options.reduce((sum, item) => sum + item.count, 0),
+    options,
+  };
 }
 
-export async function purchaseNumber(service: string, country: string, maxPrice: number) {
-  const text = await smsRequest({ action: 'getNumberV2', service, country, maxPrice: String(maxPrice) });
+export async function purchaseNumber(
+  service: string,
+  country: string,
+  maxPrice: number,
+  providerId: string,
+) {
+  const text = await smsRequest({
+    action: 'getNumberV2',
+    service,
+    country,
+    maxPrice: String(maxPrice),
+    providerIds: providerId,
+  });
   if (text.startsWith('{')) return JSON.parse(text) as { activationId: string; phoneNumber: string; activationCost: number; countryCode: string };
   const match = text.match(/^ACCESS_NUMBER:([^:]+):(.+)$/);
   if (!match) throw new Error(text.replaceAll('_', ' ').toLowerCase());
