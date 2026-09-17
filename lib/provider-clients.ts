@@ -89,6 +89,7 @@ export async function placeLogOrder(productCode: string, quantity: number) {
 }
 
 const smsBase = 'https://smsbower.page/stubs/handler_api.php';
+const mailBase = 'https://smsbower.page/api/mail';
 
 async function smsRequest(params: Record<string, string>) {
   const url = new URL(smsBase);
@@ -145,4 +146,95 @@ export async function getNumberStatus(id: string) {
 export async function setNumberStatus(id: string, status: '6' | '8') {
   const text = await smsRequest({ action: 'setStatus', id, status });
   return { status: text.toLowerCase().replaceAll('_', ' ') };
+}
+
+type MailApiResponse<T> = {
+  status: number;
+  error?: string;
+} & T;
+
+async function mailRequest<T>(path: string, params: Record<string, string>) {
+  const url = new URL(`${mailBase}/${path}`);
+  url.searchParams.set('api_key', requiredKey('SMSBOWER_API_KEY'));
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+  const response = await timedFetch(url.toString());
+  const result = (await response.json()) as MailApiResponse<T>;
+  if (!response.ok || result.status !== 1) {
+    throw new Error(result.error || 'Virtual email service could not be reached.');
+  }
+  return result;
+}
+
+export type VirtualEmailOffer = {
+  domain: string;
+  price: number;
+  count: number;
+};
+
+export async function getVirtualEmailCatalog() {
+  const [servicesText, pricing] = await Promise.all([
+    smsRequest({ action: 'getMailServicesList' }),
+    mailRequest<{ data: Record<string, Record<string, { price: number | null; count: number }>> }>(
+      'getPriceRests',
+      {},
+    ),
+  ]);
+  const servicesResult = JSON.parse(servicesText) as {
+    services: Array<{ code: string; name: string }>;
+  };
+  const availableServices = servicesResult.services.filter((service) => {
+    const offers = pricing.data[service.code];
+    return offers && Object.values(offers).some((offer) => offer.count > 0 && Number.isFinite(offer.price));
+  });
+  const domains = Array.from(
+    new Set(
+      Object.values(pricing.data).flatMap((offers) =>
+        Object.entries(offers)
+          .filter(([, offer]) => offer.count > 0 && Number.isFinite(offer.price))
+          .map(([domain]) => domain),
+      ),
+    ),
+  ).sort((a, b) => {
+    const order = ['gmail.com', 'icloud.com', 'others'];
+    return (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b));
+  });
+  return { services: availableServices, domains };
+}
+
+export async function getVirtualEmailQuote(service: string, domain: string) {
+  const result = await mailRequest<{
+    data: Record<string, Record<string, { price: number | null; count: number }>>;
+  }>('getPriceRests', { service, domain });
+  const offer = result.data[service]?.[domain];
+  if (!offer || !Number.isFinite(offer.price) || offer.count < 1) {
+    throw new Error('No virtual emails are currently available for this selection.');
+  }
+  return { domain, price: Number(offer.price), count: offer.count };
+}
+
+export async function purchaseVirtualEmail(service: string, domain: string, maxPrice: number) {
+  const result = await mailRequest<{ mail: string; mailId: number | string }>('getActivation', {
+    service,
+    domain,
+    maxPrice: String(maxPrice),
+  });
+  return { email: result.mail, activationId: String(result.mailId), price: maxPrice, domain };
+}
+
+export async function getVirtualEmailCode(id: string) {
+  try {
+    const result = await mailRequest<{ code: string }>('getCode', { mailId: id });
+    return { status: 'received', code: result.code };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Email status could not be checked.';
+    if (message.toLowerCase().includes('not been received yet')) {
+      return { status: 'waiting', code: null };
+    }
+    throw error;
+  }
+}
+
+export async function setVirtualEmailStatus(id: string, status: '2' | '3') {
+  const result = await mailRequest<{ message?: string }>('setStatus', { id, status });
+  return { status: result.message || 'Success' };
 }

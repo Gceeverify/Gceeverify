@@ -9,11 +9,13 @@ export function ServicePageShell({
   eyebrow,
   title,
   description,
+  action,
   children,
 }: {
   eyebrow: string;
   title: string;
   description: string;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -45,10 +47,13 @@ export function ServicePageShell({
         <Link href="/#dashboard" className="market-back">
           <ArrowLeft /> Back to dashboard
         </Link>
-        <div className="market-heading">
-          <p>{eyebrow}</p>
-          <h1>{title}</h1>
-          <span>{description}</span>
+        <div className="market-heading-row">
+          <div className="market-heading">
+            <p>{eyebrow}</p>
+            <h1>{title}</h1>
+            <span>{description}</span>
+          </div>
+          {action}
         </div>
         {children}
       </div>

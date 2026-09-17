@@ -9,11 +9,13 @@ import {
   ChevronDown,
   ChevronRight,
   CircleHelp,
+  Flag,
   GraduationCap,
   Headphones,
   LayoutDashboard,
   Lightbulb,
   ListChecks,
+  Mail,
   Menu,
   PackageSearch,
   Plus,
@@ -65,6 +67,7 @@ const navItems = [
 const quickActions = [
   { href: '/boost', label: 'Boost', icon: Zap, tone: 'lime' },
   { href: '/numbers', label: 'Numbers', icon: Smartphone, tone: 'cyan' },
+  { href: '/emails', label: 'Virtual Email', icon: Mail, tone: 'violet' },
   { href: '/logs', label: 'Logs', icon: Server, tone: 'orange' },
   { href: '/vtu', label: 'VTU', icon: RadioTower, tone: 'violet' },
 ];
@@ -366,6 +369,7 @@ function Landing({ onEnter }: { onEnter: () => void }) {
 export default function Home() {
   const [view, setView] = useState<'landing' | 'dashboard'>('landing');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [numbersOpen, setNumbersOpen] = useState(true);
   const [vtuOpen, setVtuOpen] = useState(true);
 
   useEffect(() => {
@@ -438,10 +442,40 @@ export default function Home() {
               <Zap />
               <span>Boost account</span>
             </Link>
-            <Link href="/numbers" className="nav-item">
-              <Smartphone />
-              <span>Foreign numbers</span>
-            </Link>
+            <div className="vtu-nav-group numbers-nav-group">
+              <button
+                className={`nav-item nav-vtu-trigger ${numbersOpen ? 'nav-vtu-open' : ''}`}
+                onClick={() => setNumbersOpen((open) => !open)}
+                aria-expanded={numbersOpen}
+                aria-controls="numbers-navigation"
+              >
+                <Smartphone />
+                <span>Buy Numbers</span>
+                <ChevronDown className="nav-vtu-chevron" />
+              </button>
+              {numbersOpen ? (
+                <div
+                  id="numbers-navigation"
+                  className="vtu-subnav numbers-subnav"
+                >
+                  <Link href="/numbers" onClick={() => setMobileOpen(false)}>
+                    <Server />
+                    <span>Buy Number</span>
+                  </Link>
+                  <Link
+                    href="/numbers?country=187"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Flag />
+                    <span>Buy USA Number</span>
+                  </Link>
+                  <Link href="/emails" onClick={() => setMobileOpen(false)}>
+                    <Mail />
+                    <span>Virtual Email</span>
+                  </Link>
+                </div>
+              ) : null}
+            </div>
             <Link href="/logs" className="nav-item">
               <Server />
               <span>Buy logs</span>
