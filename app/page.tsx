@@ -67,7 +67,7 @@ const navItems = [
 const quickActions = [
   { href: '/boost', label: 'Boost', icon: Zap, tone: 'lime' },
   { href: '/numbers', label: 'Numbers', icon: Smartphone, tone: 'cyan' },
-  { href: '/emails', label: 'Virtual Email', icon: Mail, tone: 'violet' },
+  { href: '/emails', label: 'Virtual Email', icon: Mail, tone: 'lime' },
   { href: '/logs', label: 'Logs', icon: Server, tone: 'orange' },
   { href: '/vtu', label: 'VTU', icon: RadioTower, tone: 'violet' },
 ];

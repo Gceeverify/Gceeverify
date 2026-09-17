@@ -192,7 +192,7 @@ button {
 
 /* Virtual email workspace */
 .virtual-email-layout {
-  --email-accent: #a78bfa;
+  --email-accent: #74ef5b;
 }
 .email-intro-card {
   display: grid;
@@ -200,9 +200,9 @@ button {
   align-items: center;
   gap: 0.85rem;
   margin-bottom: 1.45rem;
-  border: 1px solid rgba(167, 139, 250, 0.2);
+  border: 1px solid rgba(116, 239, 91, 0.2);
   border-radius: 0.95rem;
-  background: linear-gradient(120deg, rgba(167, 139, 250, 0.1), rgba(76, 201, 240, 0.035));
+  background: linear-gradient(120deg, rgba(116, 239, 91, 0.1), rgba(76, 201, 240, 0.035));
   padding: 0.95rem;
 }
 .email-intro-card > span {
@@ -211,8 +211,8 @@ button {
   height: 42px;
   place-items: center;
   border-radius: 0.75rem;
-  background: rgba(167, 139, 250, 0.14);
-  color: #c4b5fd;
+  background: rgba(116, 239, 91, 0.14);
+  color: #74ef5b;
 }
 .email-intro-card svg {
   width: 1.05rem;
@@ -234,7 +234,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: #c4b5fd;
+  color: #74ef5b;
   font-size: 0.65rem;
   font-weight: 700;
 }
@@ -242,8 +242,8 @@ button {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #a78bfa;
-  box-shadow: 0 0 10px #a78bfa;
+  background: #74ef5b;
+  box-shadow: 0 0 10px #74ef5b;
 }
 .email-domain-grid {
   display: grid;
@@ -266,8 +266,8 @@ button {
 }
 .email-domain-grid button:hover,
 .email-domain-grid button.active {
-  border-color: rgba(167, 139, 250, 0.55);
-  background: rgba(167, 139, 250, 0.08);
+  border-color: rgba(116, 239, 91, 0.55);
+  background: rgba(116, 239, 91, 0.08);
   color: #fff;
 }
 .email-domain-grid button > span {
@@ -277,8 +277,8 @@ button {
   margin-bottom: 0.65rem;
   place-items: center;
   border-radius: 0.55rem;
-  background: rgba(167, 139, 250, 0.12);
-  color: #c4b5fd;
+  background: rgba(116, 239, 91, 0.12);
+  color: #74ef5b;
 }
 .email-domain-grid svg {
   width: 0.9rem;
@@ -300,7 +300,7 @@ button {
   height: 20px;
   place-items: center;
   border-radius: 50%;
-  background: #a78bfa;
+  background: #74ef5b;
   color: #07100f;
 }
 .email-domain-grid button > i:empty {
@@ -315,7 +315,7 @@ button {
   gap: 0.65rem;
   margin-top: 1rem;
   border-radius: 0.8rem;
-  background: rgba(167, 139, 250, 0.07);
+  background: rgba(116, 239, 91, 0.07);
   padding: 0.8rem;
   color: rgba(255, 255, 255, 0.42);
   font-size: 0.68rem;
@@ -324,7 +324,7 @@ button {
 .email-info-note > svg {
   width: 0.95rem;
   flex: 0 0 auto;
-  color: #c4b5fd;
+  color: #74ef5b;
 }
 .email-info-note strong {
   display: block;
@@ -340,7 +340,7 @@ button {
   align-items: center;
   gap: 0.4rem;
   margin: 0.65rem 0;
-  color: #c4b5fd;
+  color: #74ef5b;
   font-size: 0.7rem;
   font-weight: 700;
 }
@@ -348,8 +348,8 @@ button {
   width: 0.8rem;
 }
 html[data-theme='light'] .email-intro-card {
-  border-color: rgba(109, 76, 190, 0.18);
-  background: linear-gradient(120deg, rgba(167, 139, 250, 0.13), rgba(255, 255, 255, 0.8));
+  border-color: rgba(36, 124, 28, 0.18);
+  background: linear-gradient(120deg, rgba(116, 239, 91, 0.13), rgba(255, 255, 255, 0.8));
 }
 html[data-theme='light'] .email-intro-card p,
 html[data-theme='light'] .email-domain-grid small,
@@ -362,11 +362,11 @@ html[data-theme='light'] .email-domain-grid button {
   color: #142414;
 }
 html[data-theme='light'] .email-domain-grid button.active {
-  border-color: rgba(109, 76, 190, 0.35);
-  background: rgba(167, 139, 250, 0.1);
+  border-color: rgba(36, 124, 28, 0.35);
+  background: rgba(116, 239, 91, 0.1);
 }
 html[data-theme='light'] .email-info-note {
-  background: rgba(167, 139, 250, 0.1);
+  background: rgba(116, 239, 91, 0.1);
 }
 html[data-theme='light'] .email-info-note strong {
   color: #142414;
@@ -5034,7 +5034,7 @@ html[data-theme='light'] .vtu-coming-soon strong {
 }
 .email-history-button svg {
   width: 1.1rem;
-  color: #a78bfa;
+  color: #74ef5b;
 }
 .email-market-controls {
   display: grid;
@@ -5056,8 +5056,8 @@ html[data-theme='light'] .vtu-coming-soon strong {
   padding: 0 1rem;
 }
 .email-market-search:focus-within {
-  border-color: rgba(99, 102, 241, 0.72);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+  border-color: rgba(116, 239, 91, 0.65);
+  box-shadow: 0 0 0 3px rgba(116, 239, 91, 0.08);
 }
 .email-market-search svg {
   width: 1.2rem;
@@ -5097,9 +5097,9 @@ html[data-theme='light'] .vtu-coming-soon strong {
 }
 .email-domain-filters button:hover,
 .email-domain-filters button.active {
-  border-color: #5b52ea;
-  background: #5145e5;
-  color: #fff;
+  border-color: #74ef5b;
+  background: #74ef5b;
+  color: #07100f;
 }
 .email-coupon-row {
   display: flex;
@@ -5122,7 +5122,7 @@ html[data-theme='light'] .vtu-coming-soon strong {
 }
 .email-coupon-row > span svg {
   width: 1rem;
-  color: #a78bfa;
+  color: #74ef5b;
 }
 .email-coupon-row > div {
   display: flex;
@@ -5141,14 +5141,14 @@ html[data-theme='light'] .vtu-coming-soon strong {
   font-weight: 700;
 }
 .email-coupon-row input:focus {
-  border-color: rgba(99, 102, 241, 0.7);
+  border-color: rgba(116, 239, 91, 0.65);
 }
 .email-coupon-row button {
   height: 52px;
   border-radius: 0.85rem;
-  background: #f8fafc;
+  background: #74ef5b;
   padding: 0 1.2rem;
-  color: #0b1020;
+  color: #07100f;
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -5172,7 +5172,7 @@ html[data-theme='light'] .vtu-coming-soon strong {
 }
 .email-service-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.35);
+  border-color: rgba(116, 239, 91, 0.3);
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
 }
 .email-card-topline {
@@ -5187,8 +5187,8 @@ html[data-theme='light'] .vtu-coming-soon strong {
   height: 46px;
   place-items: center;
   border-radius: 0.85rem;
-  background: rgba(79, 70, 229, 0.17);
-  color: #818cf8;
+  background: rgba(116, 239, 91, 0.11);
+  color: #74ef5b;
 }
 .email-service-icon svg {
   width: 1.25rem;
@@ -5264,15 +5264,15 @@ html[data-theme='light'] .vtu-coming-soon strong {
   justify-content: center;
   gap: 0.45rem;
   border-radius: 0.75rem;
-  background: #5145e5;
+  background: #74ef5b;
   padding: 0 0.95rem;
-  color: #fff;
+  color: #07100f;
   font-size: 0.78rem;
   font-weight: 800;
   transition: 0.18s ease;
 }
 .email-card-footer > button:hover {
-  background: #635bff;
+  background: #bef264;
 }
 .email-card-footer > button.confirming {
   background: #10b981;
@@ -5300,7 +5300,7 @@ html[data-theme='light'] .vtu-coming-soon strong {
 .email-market-loading svg,
 .email-market-empty > svg {
   width: 1.5rem;
-  color: #818cf8;
+  color: #74ef5b;
 }
 .email-market-empty h2 {
   color: #fff;
@@ -5324,7 +5324,7 @@ html[data-theme='light'] .vtu-coming-soon strong {
 }
 .email-market-footnote svg {
   width: 0.82rem;
-  color: #818cf8;
+  color: #74ef5b;
 }
 .active-email-panel {
   position: relative;
@@ -5382,7 +5382,7 @@ html[data-theme='light'] .vtu-coming-soon strong {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  color: #a5b4fc;
+  color: #74ef5b;
   font-size: 0.7rem;
   font-weight: 750;
 }
@@ -5397,9 +5397,9 @@ html[data-theme='light'] .vtu-coming-soon strong {
 .email-check-button {
   height: 42px !important;
   border-radius: 0.7rem !important;
-  background: #5145e5 !important;
+  background: #74ef5b !important;
   padding: 0 0.9rem !important;
-  color: #fff !important;
+  color: #07100f !important;
   font-size: 0.72rem !important;
 }
 .active-email-close {
@@ -5434,7 +5434,7 @@ html[data-theme='light'] .email-domain-filters button {
   color: rgba(20, 36, 20, 0.65);
 }
 html[data-theme='light'] .email-domain-filters button.active {
-  color: #fff;
+  color: #142414;
 }
 html[data-theme='light'] .email-service-card h2,
 html[data-theme='light'] .email-market-empty h2,
