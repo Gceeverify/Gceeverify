@@ -2,28 +2,20 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowRight,
-  AtSign,
-  Check,
-  Clock3,
-  Copy,
-  Grid2X2,
-  Inbox,
-  LoaderCircle,
-  Mail,
-  RefreshCw,
-  ShieldCheck,
-  Sparkles,
+  AtSign, CheckCircle2, Clock3, Copy, History, Inbox, LoaderCircle,
+  Mail, RefreshCw, Search, ShieldCheck, Sparkles, Ticket, X, Zap,
 } from 'lucide-react';
 import { Notice, ServicePageShell } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
 
+type DomainOffer = { domain: string; price: number; count: number };
+type ServiceOffer = { code: string; name: string; domains: DomainOffer[] };
 type Catalog = {
   services: Array<{ code: string; name: string }>;
   domains: string[];
+  offers: ServiceOffer[];
   error?: string;
 };
-type Quote = { domain: string; price: number; count: number; error?: string };
 type Activation = {
   email: string;
   activationId: string;
@@ -31,24 +23,22 @@ type Activation = {
   domain: string;
 };
 
-const popularServiceCodes = ['ig', 'tg', 'fb', 'tw', 'dr'];
-
 function domainLabel(domain: string) {
-  if (domain === 'gmail.com') return 'Gmail';
-  if (domain === 'icloud.com') return 'iCloud Mail';
+  if (domain === 'gmail.com') return '@gmail.com';
+  if (domain === 'icloud.com') return '@icloud.com';
   if (domain === 'others') return 'Other domains';
-  return domain;
+  return `@${domain}`;
 }
 
 export default function VirtualEmailPage() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [domain, setDomain] = useState('');
-  const [service, setService] = useState('');
-  const [quote, setQuote] = useState<Quote | null>(null);
+  const [search, setSearch] = useState('');
+  const [domain, setDomain] = useState('all');
+  const [coupon, setCoupon] = useState('');
+  const [pendingKey, setPendingKey] = useState('');
   const [activation, setActivation] = useState<Activation | null>(null);
   const [emailCode, setEmailCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -58,7 +48,6 @@ export default function VirtualEmailPage() {
         const result = (await response.json()) as Catalog;
         if (!response.ok) throw new Error(result.error);
         setCatalog(result);
-        setDomain(result.domains[0] || 'gmail.com');
       } catch (error) {
         setMessage(error instanceof Error ? error.message : 'Virtual emails could not be loaded.');
       } finally {
@@ -67,48 +56,28 @@ export default function VirtualEmailPage() {
     })();
   }, []);
 
-  const selectedServiceName = catalog?.services.find((item) => item.code === service)?.name;
-  const popularServices = useMemo(
-    () =>
-      popularServiceCodes
-        .map((code) => catalog?.services.find((item) => item.code === code))
-        .filter((item): item is { code: string; name: string } => Boolean(item)),
-    [catalog],
-  );
+  const visibleOffers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return (catalog?.offers ?? [])
+      .map((service) => {
+        const matchingDomains = service.domains.filter(
+          (offer) => domain === 'all' || offer.domain === domain,
+        );
+        const bestOffer = matchingDomains.sort((a, b) => a.price - b.price)[0];
+        return bestOffer ? { ...service, offer: bestOffer } : null;
+      })
+      .filter(
+        (service): service is ServiceOffer & { offer: DomainOffer } =>
+          Boolean(service) && (!query || service.name.toLowerCase().includes(query)),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [catalog, domain, search]);
 
-  const resetOffer = (nextDomain: string) => {
-    setDomain(nextDomain);
-    setQuote(null);
-    setConfirming(false);
-    setMessage('');
-    if (service) void loadQuote(service, nextDomain);
-  };
-
-  const loadQuote = async (serviceCode: string, selectedDomain = domain) => {
-    if (!serviceCode || !selectedDomain) return;
-    setService(serviceCode);
-    setQuote(null);
-    setConfirming(false);
-    setMessage('');
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `/api/emails?action=quote&service=${encodeURIComponent(serviceCode)}&domain=${encodeURIComponent(selectedDomain)}`,
-      );
-      const result = (await response.json()) as Quote;
-      if (!response.ok) throw new Error(result.error);
-      setQuote(result);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No virtual emails are available.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const purchase = async () => {
-    if (!quote || !service) return;
-    if (!confirming) {
-      setConfirming(true);
+  const purchase = async (service: ServiceOffer, offer: DomainOffer) => {
+    const key = `${service.code}:${offer.domain}`;
+    if (pendingKey !== key) {
+      setPendingKey(key);
+      setMessage('Click Confirm to reserve this virtual email.');
       return;
     }
     setLoading(true);
@@ -118,17 +87,16 @@ export default function VirtualEmailPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'purchase',
-          service,
-          domain,
-          maxPrice: quote.price,
+          action: 'purchase', service: service.code, domain: offer.domain, maxPrice: offer.price,
         }),
       });
       const result = (await response.json()) as Activation & { error?: string };
       if (!response.ok) throw new Error(result.error);
       setActivation(result);
-      setConfirming(false);
+      setEmailCode(null);
+      setPendingKey('');
       setMessage('Virtual email reserved. Use it now to receive your verification code.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'The virtual email could not be reserved.');
     } finally {
@@ -147,11 +115,7 @@ export default function VirtualEmailPage() {
       const result = (await response.json()) as { code: string | null; error?: string };
       if (!response.ok) throw new Error(result.error);
       setEmailCode(result.code);
-      setMessage(
-        result.code
-          ? 'Your email verification code has arrived.'
-          : 'Still waiting for the email. Try again shortly.',
-      );
+      setMessage(result.code ? 'Your email verification code has arrived.' : 'Still waiting for the email. Try again shortly.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Email status could not be checked.');
     } finally {
@@ -168,173 +132,119 @@ export default function VirtualEmailPage() {
   return (
     <ServicePageShell
       eyebrow="Email verification"
-      title="Virtual Email"
-      description="Get a temporary inbox and receive verification codes privately."
+      title="Buy Virtual Email"
+      description="Select an online platform to get an instant email address for verification."
+      action={
+        <button
+          type="button"
+          className="email-history-button"
+          onClick={() => activation ? window.scrollTo({ top: 0, behavior: 'smooth' }) : setMessage('You do not have an active virtual email yet.')}
+        >
+          <History /> My Virtual Emails
+        </button>
+      }
     >
-      <section className="number-checkout-layout virtual-email-layout">
-        <div className="market-surface number-builder">
-          <div className="email-intro-card">
-            <span><Mail /></span>
+      {activation && (
+        <section className="market-surface active-email-panel" aria-label="Active virtual email">
+          <div className="active-email-main">
+            <span className="active-email-icon"><Inbox /></span>
             <div>
-              <strong>Private inbox, ready in seconds</strong>
-              <p>Your address stays private and remains available for the verification window.</p>
-            </div>
-            <small><i /> Live inventory</small>
-          </div>
-
-          <div className="number-step">
-            <div className="number-step-heading">
-              <span className="number-step-index">1</span>
-              <div>
-                <h2>Choose Email Type</h2>
-                <p>Select the domain accepted by your service</p>
-              </div>
-              <AtSign />
-            </div>
-            <div className="email-domain-grid">
-              {catalog?.domains.map((item) => (
-                <button
-                  type="button"
-                  key={item}
-                  className={domain === item ? 'active' : ''}
-                  onClick={() => resetOffer(item)}
-                >
-                  <span><Mail /></span>
-                  <strong>{domainLabel(item)}</strong>
-                  <small>{item === 'others' ? 'Disposable inbox' : `@${item}`}</small>
-                  <i>{domain === item ? <Check /> : null}</i>
-                </button>
-              ))}
+              <small>Active virtual email</small>
+              <strong>{activation.email}</strong>
+              <span>{domainLabel(activation.domain)} · Expires in about 25 minutes</span>
             </div>
           </div>
+          <button type="button" className="active-email-copy" onClick={() => void copyEmail()}><Copy /> Copy</button>
+          <div className="active-email-code"><small>Verification code</small><strong>{emailCode || 'Waiting…'}</strong></div>
+          <Button className="email-check-button" onClick={() => void checkCode()} disabled={loading}>
+            <RefreshCw className={loading ? 'animate-spin' : ''} /> Check inbox
+          </Button>
+          <button
+            type="button"
+            className="active-email-close"
+            aria-label="Close active email panel"
+            onClick={() => { setActivation(null); setEmailCode(null); }}
+          ><X /></button>
+        </section>
+      )}
 
-          <div className="number-step">
-            <div className="number-step-heading">
-              <span className="number-step-index">2</span>
-              <div>
-                <h2>Select Service</h2>
-                <p>Where will you use this email?</p>
-              </div>
-              <Grid2X2 />
-            </div>
-            {popularServices.length > 0 && (
-              <div className="popular-number-services">
-                <span><Sparkles /> Popular:</span>
-                {popularServices.map((item) => (
+      <section className="email-market-controls" aria-label="Virtual email filters">
+        <label className="email-market-search">
+          <Search />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search service (e.g. Telegram, OpenAI, Discord...)"
+          />
+        </label>
+        <div className="email-domain-filters" aria-label="Filter by email domain">
+          <button className={domain === 'all' ? 'active' : ''} onClick={() => setDomain('all')}>All Domains</button>
+          {catalog?.domains.map((item) => (
+            <button key={item} className={domain === item ? 'active' : ''} onClick={() => setDomain(item)}>
+              {domainLabel(item)}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="email-coupon-row">
+        <span><Ticket /> Coupon Code</span>
+        <div>
+          <input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder="ENTER CODE" />
+          <button type="button" disabled={!coupon.trim()} onClick={() => setMessage('This coupon code is not available.')}>Apply</button>
+        </div>
+      </section>
+
+      {message && (
+        <Notice
+          message={message}
+          tone={message.includes('reserved') || message.includes('arrived') || message.includes('copied') ? 'success' : 'error'}
+        />
+      )}
+
+      {loading && !catalog ? (
+        <div className="email-market-loading"><LoaderCircle className="animate-spin" /> Loading live email inventory…</div>
+      ) : visibleOffers.length ? (
+        <section className="email-service-grid" aria-label="Available virtual email services">
+          {visibleOffers.map((service) => {
+            const key = `${service.code}:${service.offer.domain}`;
+            const confirming = pendingKey === key;
+            return (
+              <article className="email-service-card" key={key}>
+                <div className="email-card-topline">
+                  <span className="email-service-icon">{service.code === 'ot' ? <AtSign /> : <Mail />}</span>
+                  <span className="email-stock"><CheckCircle2 /> In Stock</span>
+                </div>
+                <h2>{service.name}</h2>
+                <span className="email-domain-tag">{domainLabel(service.offer.domain)}</span>
+                <div className="email-card-footer">
+                  <div>
+                    <small>PRICE</small>
+                    <strong>${service.offer.price.toFixed(4)}</strong>
+                    <span>{service.offer.count.toLocaleString()} available</span>
+                  </div>
                   <button
                     type="button"
-                    key={item.code}
-                    className={service === item.code ? 'active' : ''}
-                    onClick={() => void loadQuote(item.code)}
+                    className={confirming ? 'confirming' : ''}
+                    onClick={() => void purchase(service, service.offer)}
+                    disabled={loading}
                   >
-                    {item.name}
+                    {loading && confirming ? <LoaderCircle className="animate-spin" /> : confirming ? <ShieldCheck /> : <Zap />}
+                    {confirming ? 'Confirm' : 'Get Email'}
                   </button>
-                ))}
-              </div>
-            )}
-            <select
-              className="number-checkout-select"
-              aria-label="Select service"
-              value={service}
-              disabled={!catalog || loading}
-              onChange={(event) => void loadQuote(event.target.value)}
-            >
-              <option value="">{loading && !catalog ? 'Loading services...' : 'Select a service'}</option>
-              {catalog?.services.map((item) => (
-                <option value={item.code} key={item.code}>{item.name}</option>
-              ))}
-            </select>
-          </div>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      ) : (
+        <div className="email-market-empty"><Search /><h2>No matching services</h2><p>Try another search or choose a different email domain.</p></div>
+      )}
 
-          <div className="number-step provider-step">
-            <div className="number-step-heading">
-              <span className="number-step-index">3</span>
-              <div>
-                <h2>Live Availability</h2>
-                <p>Current inventory for your selection</p>
-              </div>
-              <Inbox />
-            </div>
-            {loading && service ? (
-              <div className="provider-loading"><LoaderCircle className="animate-spin" /> Checking inboxes...</div>
-            ) : quote ? (
-              <div className="number-provider-card active">
-                <span className="provider-signal"><Inbox /></span>
-                <span>
-                  <strong>{domainLabel(quote.domain)} inbox</strong>
-                  <small><Check /> Private verification inbox</small>
-                </span>
-                <span>
-                  <small>{quote.count.toLocaleString()} available</small>
-                  <b>${quote.price.toFixed(4)}</b>
-                </span>
-              </div>
-            ) : (
-              <div className="provider-empty"><Inbox /> Select a service to check availability</div>
-            )}
-          </div>
-        </div>
-
-        <aside className="market-surface number-summary-card email-summary-card">
-          {activation ? (
-            <div className="number-activation email-activation">
-              <span className="activation-icon"><Mail /></span>
-              <p className="checkout-eyebrow">Active virtual email</p>
-              <h2>{activation.email}</h2>
-              <button type="button" className="copy-email-button" onClick={() => void copyEmail()}>
-                <Copy /> Copy address
-              </button>
-              <span className="activation-id">Activation #{activation.activationId}</span>
-              <div className="sms-code">
-                <span>Email code</span>
-                <strong>{emailCode || 'Waiting...'}</strong>
-              </div>
-              <Button onClick={() => void checkCode()} disabled={loading} className="market-primary">
-                <RefreshCw className={loading ? 'animate-spin' : ''} /> Check inbox
-              </Button>
-              <button
-                type="button"
-                className="text-button"
-                onClick={() => {
-                  setActivation(null);
-                  setEmailCode(null);
-                  setMessage('');
-                }}
-              >
-                Get another email
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="number-summary-title"><ShieldCheck /><h2>Order Summary</h2></div>
-              <div className="number-order-summary checkout-summary-rows">
-                <div><span><AtSign /> Email type</span><strong>{domain ? domainLabel(domain) : '—'}</strong></div>
-                <div><span><Grid2X2 /> Service</span><strong>{selectedServiceName || '—'}</strong></div>
-                <div><span><Inbox /> Availability</span><strong className={quote ? 'summary-positive' : ''}>{quote ? `${quote.count.toLocaleString()} inboxes` : 'Select service'}</strong></div>
-                <div><span><Sparkles /> Price</span><strong className="summary-price">{quote ? `$${quote.price.toFixed(4)}` : '—'}</strong></div>
-                <div><span><Clock3 /> Active window</span><strong className="summary-positive">25 minutes</strong></div>
-                <div><span><ShieldCheck /> Privacy</span><strong>Private inbox</strong></div>
-              </div>
-              <div className="email-info-note"><Clock3 /><span><strong>Use it right away</strong>Your inbox is temporary and intended for a single verification.</span></div>
-              <Button
-                onClick={() => void purchase()}
-                disabled={loading || !quote}
-                className={`market-primary number-buy-button ${confirming ? 'market-confirm' : ''}`}
-              >
-                {loading ? <LoaderCircle className="animate-spin" /> : confirming ? 'Confirm purchase' : 'Buy Virtual Email'}
-                <ArrowRight />
-              </Button>
-              <div className="secure-checkout"><ShieldCheck /> Secure checkout</div>
-            </>
-          )}
-          {message && (
-            <Notice
-              message={message}
-              tone={message.includes('arrived') || message.includes('reserved') || message.includes('copied') ? 'success' : 'error'}
-            />
-          )}
-        </aside>
-      </section>
+      <div className="email-market-footnote">
+        <span><Clock3 /> Temporary inboxes are intended for one-time verification codes.</span>
+        <span><Sparkles /> Live SMSBower inventory</span>
+      </div>
     </ServicePageShell>
   );
 }

@@ -469,13 +469,17 @@ export default function Home() {
                     <Flag />
                     <span>Buy USA Number</span>
                   </Link>
-                  <Link href="/emails" onClick={() => setMobileOpen(false)}>
-                    <Mail />
-                    <span>Virtual Email</span>
-                  </Link>
                 </div>
               ) : null}
             </div>
+            <Link
+              href="/emails"
+              className="nav-item"
+              onClick={() => setMobileOpen(false)}
+            >
+              <Mail />
+              <span>Virtual Email</span>
+            </Link>
             <Link href="/logs" className="nav-item">
               <Server />
               <span>Buy logs</span>

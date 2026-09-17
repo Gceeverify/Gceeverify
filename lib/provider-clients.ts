@@ -198,7 +198,18 @@ export async function getVirtualEmailCatalog() {
     const order = ['gmail.com', 'icloud.com', 'others'];
     return (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b));
   });
-  return { services: availableServices, domains };
+  const offers = availableServices.map((service) => ({
+    code: service.code,
+    name: service.name,
+    domains: Object.entries(pricing.data[service.code] ?? {})
+      .filter(([, offer]) => offer.count > 0 && Number.isFinite(offer.price))
+      .map(([domain, offer]) => ({
+        domain,
+        price: Number(offer.price),
+        count: offer.count,
+      })),
+  }));
+  return { services: availableServices, domains, offers };
 }
 
 export async function getVirtualEmailQuote(service: string, domain: string) {
