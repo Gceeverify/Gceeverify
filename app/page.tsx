@@ -34,6 +34,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationMenu } from '@/components/notification-menu';
+import { ReferenceLanding } from '@/components/reference-landing';
 
 const recentOrders = [
   {
@@ -118,7 +119,7 @@ function Logo() {
   );
 }
 
-function Landing({ onEnter }: { onEnter: () => void }) {
+export function LegacyLanding({ onEnter }: { onEnter: () => void }) {
   return (
     <main className="landing-shell min-h-screen overflow-hidden bg-[#07100f] text-white">
       <div className="landing-glow" aria-hidden="true" />
@@ -394,7 +395,7 @@ export default function Home() {
   }, [mobileOpen]);
 
   if (view === 'landing')
-    return <Landing onEnter={() => setView('dashboard')} />;
+    return <ReferenceLanding onEnter={() => setView('dashboard')} />;
 
   return (
     <main className="dashboard-shell min-h-screen bg-[#07100f] text-white">

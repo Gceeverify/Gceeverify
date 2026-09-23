@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Headphones, WalletCards } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationMenu } from '@/components/notification-menu';
 
@@ -21,26 +22,32 @@ export function ServicePageShell({
   return (
     <main className="service-marketplace min-h-screen text-white">
       <div className="market-glow" aria-hidden="true" />
-      <header className="market-topbar">
-        <Link
-          href="/#dashboard"
-          className="brand-logo"
-          aria-label="Gceeverify dashboard"
-        >
-          <Image src="/favicon.svg" width={36} height={36} alt="" priority />
-          <span>Gceeverify</span>
-        </Link>
-        <div className="flex items-center gap-2">
+      <header className="market-topbar dashboard-topbar">
+        <div className="service-header-identity">
+          <Link
+            href="/#dashboard"
+            className="brand-logo"
+            aria-label="Gceeverify dashboard"
+          >
+            <Image src="/favicon.svg" width={36} height={36} alt="" priority />
+            <span>Gceeverify</span>
+          </Link>
+          <div className="service-header-breadcrumb">
+            <LayoutDashboard />
+            <span>/</span>
+            <span>{title}</span>
+          </div>
+        </div>
+        <div className="dashboard-topbar-actions flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
-          <button className="icon-button" aria-label="Support">
-            <Headphones />
-          </button>
           <NotificationMenu />
-          <button className="market-balance">
-            <WalletCards />
-            <span>Wallet</span>
-            <strong>$128.40</strong>
-          </button>
+          <Button
+            aria-label="Add funds"
+            className="header-add-funds h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200"
+          >
+            <Plus />
+            <span>Add funds</span>
+          </Button>
         </div>
       </header>
       <div className="market-wrap">
