@@ -4520,6 +4520,9 @@ html[data-theme='light'] .landing-footer {
   .header-add-funds {
     display: none !important;
   }
+  .dashboard-topbar .dashboard-logout-button {
+    display: none;
+  }
   .dashboard-topbar .icon-button,
   .dashboard-topbar .theme-toggle {
     width: 2.35rem;
@@ -4561,10 +4564,6 @@ html[data-theme='light'] .landing-footer {
 @media (max-width: 520px) {
   .mobile-dashboard-brand span {
     display: none;
-  }
-  .dashboard-logout-button {
-    height: 2.35rem;
-    padding: 0 0.65rem;
   }
   .dashboard-content {
     padding-right: 0.75rem;
