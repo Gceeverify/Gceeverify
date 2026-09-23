@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   ListChecks,
+  LogOut,
   Mail,
   Menu,
   PackageSearch,
@@ -618,6 +619,17 @@ export function GceeverifyHome({
             </div>
             <ThemeToggle />
             <NotificationMenu />
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="dashboard-logout-button"
+                aria-label="Log out of Gceeverify"
+                title="Log out"
+              >
+                <LogOut />
+                <span>Log out</span>
+              </button>
+            </form>
             <Button
               aria-label="Add funds"
               className="header-add-funds h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200"

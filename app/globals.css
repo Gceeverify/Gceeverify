@@ -4390,6 +4390,30 @@ html[data-theme='light'] .landing-footer {
 .sidebar-account {
   flex: 0 0 auto;
 }
+.dashboard-logout-button {
+  display: inline-flex;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(255, 125, 125, 0.2);
+  border-radius: 0.75rem;
+  padding: 0 0.8rem;
+  color: #ffb4b4;
+  font-size: 0.72rem;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+.dashboard-logout-button:hover {
+  border-color: rgba(255, 125, 125, 0.42);
+  background: rgba(255, 90, 90, 0.1);
+  color: #ffe1e1;
+}
+.dashboard-logout-button svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
 
 @media (max-width: 767px) {
   .sidebar {
@@ -4499,6 +4523,14 @@ html[data-theme='light'] .landing-footer {
   }
   .header-add-funds svg {
     margin: 0;
+  }
+  .dashboard-logout-button {
+    width: 2.35rem;
+    height: 2.35rem;
+    padding: 0;
+  }
+  .dashboard-logout-button span {
+    display: none;
   }
   .dashboard-content {
     padding-right: 0.75rem;
