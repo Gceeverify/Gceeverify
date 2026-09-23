@@ -12,6 +12,7 @@ import {
   verifyBigisubCable,
   verifyBigisubElectricity,
 } from '@/lib/provider-clients';
+import { getCurrentUser } from '@/lib/auth';
 
 const phonePattern = /^0[789]\d{9}$/;
 const pinPattern = /^\d{4}$/;
@@ -82,6 +83,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!(await getCurrentUser())) {
+      return Response.json({ error: 'Sign in to continue.' }, { status: 401 });
+    }
     const body = (await request.json()) as Record<string, unknown>;
     const action = text(body.action);
     const service = text(body.service);

@@ -35,6 +35,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationMenu } from '@/components/notification-menu';
 import { ReferenceLanding } from '@/components/reference-landing';
+import { signOut } from '@/app/auth/actions';
 
 const recentOrders = [
   {
@@ -367,18 +368,29 @@ export function LegacyLanding({ onEnter }: { onEnter: () => void }) {
   );
 }
 
-export default function Home() {
-  const [view, setView] = useState<'landing' | 'dashboard'>('landing');
+export function GceeverifyHome({
+  initialView = 'landing',
+  userName = 'Ola',
+  balance = 0,
+}: {
+  initialView?: 'landing' | 'dashboard';
+  userName?: string;
+  balance?: number;
+}) {
+  const view = initialView;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [numbersOpen, setNumbersOpen] = useState(true);
   const [vtuOpen, setVtuOpen] = useState(true);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      if (window.location.hash === '#dashboard') setView('dashboard');
-    });
-    return () => cancelAnimationFrame(frame);
-  }, []);
+  const displayName = userName.trim() || 'User';
+  const initials = displayName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+  const balanceLabel = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+  }).format(balance);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -395,7 +407,7 @@ export default function Home() {
   }, [mobileOpen]);
 
   if (view === 'landing')
-    return <ReferenceLanding onEnter={() => setView('dashboard')} />;
+    return <ReferenceLanding />;
 
   return (
     <main className="dashboard-shell min-h-screen bg-[#07100f] text-white">
@@ -543,18 +555,19 @@ export default function Home() {
         </nav>
         <div className="sidebar-account m-3 mt-4 flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.035] p-3">
           <div className="grid size-9 place-items-center rounded-full bg-cyan-300 text-xs font-bold text-[#0a1514]">
-            OA
+            {initials}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">Ola Adebayo</p>
+            <p className="truncate text-sm font-semibold">{displayName}</p>
             <p className="text-xs text-white/40">Standard plan</p>
           </div>
-          <button
-            onClick={() => setView('landing')}
-            className="ml-auto rounded-lg px-2 py-1 text-xs font-semibold text-white/45 transition hover:bg-white/[.06] hover:text-white"
-          >
-            Log out
-          </button>
+          <form action={signOut} className="ml-auto">
+            <button
+              className="rounded-lg px-2 py-1 text-xs font-semibold text-white/45 transition hover:bg-white/[.06] hover:text-white"
+            >
+              Log out
+            </button>
+          </form>
         </div>
       </aside>
       {mobileOpen && (
@@ -614,7 +627,7 @@ export default function Home() {
                 <span className="size-2 rounded-full bg-lime-300 shadow-[0_0_10px_#bef264]" />
                 All systems operational
               </p>
-              <h1>Good morning, Ola.</h1>
+              <h1>Good morning, {displayName.split(' ')[0]}.</h1>
             </div>
             <p>Manage your digital services from one place.</p>
           </div>
@@ -622,7 +635,7 @@ export default function Home() {
           <section className="dashboard-balance" aria-label="Wallet balance">
             <div>
               <span>Available balance</span>
-              <strong>$128.40</strong>
+              <strong>{balanceLabel}</strong>
             </div>
             <Button className="dashboard-balance-button">
               <Plus /> Add funds
@@ -711,4 +724,8 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+export default function Home() {
+  return <GceeverifyHome />;
 }

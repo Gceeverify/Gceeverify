@@ -1,4 +1,5 @@
 import { getBoostServices, placeBoostOrder } from '@/lib/provider-clients';
+import { getCurrentUser } from '@/lib/auth';
 
 const platforms = ['instagram', 'tiktok', 'youtube', 'facebook', 'telegram', 'twitter', 'linkedin', 'snapchat', 'pinterest'];
 
@@ -34,6 +35,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!(await getCurrentUser())) {
+      return Response.json({ error: 'Sign in to place an order.' }, { status: 401 });
+    }
     const body = (await request.json()) as { service?: number; link?: string; quantity?: number };
     if (!Number.isInteger(body.service) || !body.link || !Number.isInteger(body.quantity) || body.quantity! <= 0) {
       return Response.json({ error: 'Complete all order details.' }, { status: 400 });

@@ -1,4 +1,5 @@
 import { getLogProducts, placeLogOrder } from '@/lib/provider-clients';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -19,6 +20,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!(await getCurrentUser())) {
+      return Response.json({ error: 'Sign in to continue.' }, { status: 401 });
+    }
     const body = (await request.json()) as { productCode?: string; quantity?: number };
     if (!body.productCode || !Number.isInteger(body.quantity) || body.quantity! <= 0) return Response.json({ error: 'Choose a product and quantity.' }, { status: 400 });
     return Response.json(await placeLogOrder(body.productCode, body.quantity!), { status: 201 });

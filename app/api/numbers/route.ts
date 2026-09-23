@@ -1,4 +1,5 @@
 import { getNumberCatalog, getNumberQuote, getNumberStatus, purchaseNumber, setNumberStatus } from '@/lib/provider-clients';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -22,6 +23,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!(await getCurrentUser())) {
+      return Response.json({ error: 'Sign in to continue.' }, { status: 401 });
+    }
     const body = (await request.json()) as { action?: 'purchase' | 'complete' | 'cancel'; service?: string; country?: string; maxPrice?: number; providerId?: string; id?: string };
     if (body.action === 'purchase' && body.service && body.country && body.providerId && Number.isFinite(body.maxPrice)) return Response.json(await purchaseNumber(body.service, body.country, body.maxPrice!, body.providerId), { status: 201 });
     if ((body.action === 'complete' || body.action === 'cancel') && body.id) return Response.json(await setNumberStatus(body.id, body.action === 'complete' ? '6' : '8'));

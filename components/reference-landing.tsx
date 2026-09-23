@@ -131,7 +131,7 @@ function Brand({ inverse = false }: { inverse?: boolean }) {
   );
 }
 
-export function ReferenceLanding({ onEnter }: { onEnter: () => void }) {
+export function ReferenceLanding() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
@@ -148,8 +148,8 @@ export function ReferenceLanding({ onEnter }: { onEnter: () => void }) {
         </nav>
         <div className="ref-header-actions">
           <ThemeToggle />
-          <button className="ref-signup" onClick={onEnter}>Sign up</button>
-          <button className="ref-login" onClick={onEnter}>Log in</button>
+          <Link className="ref-signup" href="/signup">Sign up</Link>
+          <Link className="ref-login" href="/login">Log in</Link>
         </div>
         <button
           className="ref-menu"
@@ -165,7 +165,7 @@ export function ReferenceLanding({ onEnter }: { onEnter: () => void }) {
             <a href="#services" onClick={() => setMobileNavOpen(false)}>Services</a>
             <a href="#how-it-works" onClick={() => setMobileNavOpen(false)}>How it works</a>
             <a href="#faq" onClick={() => setMobileNavOpen(false)}>FAQ</a>
-            <button onClick={onEnter}>Log in <ArrowRight /></button>
+            <Link className="ref-mobile-login" href="/login">Log in <ArrowRight /></Link>
           </nav>
         ) : null}
       </header>
@@ -179,8 +179,8 @@ export function ReferenceLanding({ onEnter }: { onEnter: () => void }) {
             <h1>Verify. Boost.<br />Access. <em>All in<br />one Place.</em></h1>
             <p>Get social media services, virtual numbers and digital accounts instantly from a simple, secure platform.</p>
             <div className="ref-hero-cta">
-              <button onClick={onEnter}>Get started <ArrowRight /></button>
-              <a href="#services">Explore services</a>
+              <Link className="ref-primary-cta" href="/signup">Get started <ArrowRight /></Link>
+              <a className="ref-secondary-cta" href="#services">Explore services</a>
             </div>
           </div>
           <div className="ref-hero-visual" aria-label="A happy Gceeverify customer using the platform">
@@ -246,7 +246,7 @@ export function ReferenceLanding({ onEnter }: { onEnter: () => void }) {
                 <strong className="ref-step-number">{step.number}</strong>
                 <h3>{step.title}</h3>
                 <p>{step.copy}</p>
-                <button onClick={onEnter}>{step.action} <ArrowRight /></button>
+                <Link className="ref-step-link" href={step.number === '01' ? '/signup' : '/login'}>{step.action} <ArrowRight /></Link>
               </article>
             ))}
           </div>
@@ -258,7 +258,7 @@ export function ReferenceLanding({ onEnter }: { onEnter: () => void }) {
           <span className="ref-eyebrow"><i /> Everything in view</span>
           <h2>An easy-to-use dashboard</h2>
           <p>Manage your orders, track transactions and access every service from one clean, focused workspace.</p>
-          <button onClick={onEnter}>See dashboard <ArrowRight /></button>
+          <Link className="ref-dashboard-link" href="/login">See dashboard <ArrowRight /></Link>
         </div>
         <div className="ref-laptop" aria-label="Gceeverify dashboard preview">
           <div className="ref-laptop-screen">
@@ -327,7 +327,7 @@ export function ReferenceLanding({ onEnter }: { onEnter: () => void }) {
         <div className="ref-container ref-footer-grid">
           <div className="ref-footer-brand"><Brand inverse /><p>Fast, reliable and seamless digital services.</p><div><button type="button" aria-label="Instagram"><Camera /></button><button type="button" aria-label="YouTube"><Play /></button></div></div>
           <div><h3>Services</h3><Link href="/boost">Social boost</Link><Link href="/numbers">Virtual numbers</Link><Link href="/logs">Digital accounts</Link></div>
-          <div><h3>Company</h3><a href="#how-it-works">About</a><a href="#faq">Support</a><button onClick={onEnter}>Dashboard</button></div>
+          <div><h3>Company</h3><a href="#how-it-works">About</a><a href="#faq">Support</a><Link href="/login">Dashboard</Link></div>
           <div><h3>Why us</h3><span><ShieldCheck /> Secure</span><span><Clock3 /> Always on</span><span><Gauge /> Fast delivery</span></div>
         </div>
         <div className="ref-footer-bottom ref-container"><span>© 2026 Gceeverify</span><span>Digital access, simplified.</span></div>
