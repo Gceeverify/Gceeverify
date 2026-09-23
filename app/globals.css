@@ -5785,11 +5785,18 @@ html[data-theme='light'] .active-email-code small {
 }
 .ref-signup,
 .ref-login {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
   min-width: 104px;
   height: 42px;
+  padding-inline: 1.25rem;
   border-radius: 999px;
   font-size: 0.76rem;
   font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
   transition: transform 180ms ease, background 180ms ease;
 }
 .ref-signup { background: var(--ref-green); color: #102015; }
