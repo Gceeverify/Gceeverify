@@ -393,6 +393,14 @@ export function GceeverifyHome({
   }).format(balance);
 
   useEffect(() => {
+    if (initialView !== 'landing') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error_code') === 'otp_expired') {
+      window.location.replace('/login?error=expired');
+    }
+  }, [initialView]);
+
+  useEffect(() => {
     if (!mobileOpen) return;
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {

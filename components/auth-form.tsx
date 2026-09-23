@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useActionState } from 'react';
 import { ArrowRight, CheckCircle2, LockKeyhole, Mail, UserRound } from 'lucide-react';
-import { signIn, signUp, type AuthState } from '@/app/auth/actions';
+import { resendConfirmation, signIn, signUp, type AuthState } from '@/app/auth/actions';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 const initialState: AuthState = {};
@@ -12,14 +12,18 @@ const initialState: AuthState = {};
 export function AuthForm({
   mode,
   next = '/dashboard',
-  confirmationError = false,
+  confirmationError,
 }: {
   mode: 'login' | 'signup';
   next?: string;
-  confirmationError?: boolean;
+  confirmationError?: string;
 }) {
   const action = mode === 'login' ? signIn : signUp;
   const [state, formAction, pending] = useActionState(action, initialState);
+  const [resendState, resendAction, resendPending] = useActionState(
+    resendConfirmation,
+    initialState,
+  );
   const isLogin = mode === 'login';
 
   return (
@@ -64,7 +68,7 @@ export function AuthForm({
 
           {(state.error || confirmationError) && (
             <p className="auth-notice auth-error" role="alert">
-              {state.error ?? 'That confirmation link is invalid or has expired.'}
+              {state.error ?? confirmationError}
             </p>
           )}
           {state.success && (
@@ -76,6 +80,26 @@ export function AuthForm({
             {!pending && <ArrowRight />}
           </button>
         </form>
+
+        {isLogin && state.showResend && state.email && (
+          <form action={resendAction} className="auth-resend">
+            <input type="hidden" name="email" value={state.email} />
+            {resendState.error && (
+              <p className="auth-notice auth-error" role="alert">{resendState.error}</p>
+            )}
+            {resendState.success && (
+              <output className="auth-notice auth-success">
+                <CheckCircle2 />{resendState.success}
+              </output>
+            )}
+            {!resendState.success && (
+              <button type="submit" disabled={resendPending} className="auth-resend-button">
+                <Mail />
+                {resendPending ? 'Sending…' : 'Resend confirmation email'}
+              </button>
+            )}
+          </form>
+        )}
 
         <p className="auth-switch">
           {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
