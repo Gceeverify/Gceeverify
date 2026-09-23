@@ -568,11 +568,11 @@ export function GceeverifyHome({
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{displayName}</p>
-            <p className="text-xs text-white/40">Standard plan</p>
           </div>
           <form action={signOut} className="ml-auto">
             <button
-              className="rounded-lg px-2 py-1 text-xs font-semibold text-white/45 transition hover:bg-white/[.06] hover:text-white"
+              type="submit"
+              className="sidebar-account-logout"
             >
               Log out
             </button>

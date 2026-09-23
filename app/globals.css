@@ -4136,6 +4136,18 @@ html[data-theme='light'] .sidebar {
   color: #142414;
   box-shadow: 14px 0 45px rgba(23, 52, 23, 0.05);
 }
+html[data-theme='light'] .dashboard-logout-button,
+html[data-theme='light'] .sidebar-account-logout {
+  border-color: rgba(190, 45, 45, 0.3);
+  background: rgba(220, 55, 55, 0.08);
+  color: #a32323;
+}
+html[data-theme='light'] .dashboard-logout-button:hover,
+html[data-theme='light'] .sidebar-account-logout:hover {
+  border-color: rgba(190, 45, 45, 0.48);
+  background: rgba(220, 55, 55, 0.14);
+  color: #771919;
+}
 html[data-theme='light'] .dashboard-shell > section > header,
 html[data-theme='light'] .market-topbar {
   border-color: rgba(22, 49, 21, 0.1);
@@ -4409,16 +4421,32 @@ html[data-theme='light'] .landing-footer {
 .sidebar-account {
   flex: 0 0 auto;
 }
+.sidebar-account-logout {
+  border: 1px solid rgba(255, 125, 125, 0.26);
+  border-radius: 0.6rem;
+  background: rgba(255, 90, 90, 0.08);
+  padding: 0.42rem 0.62rem;
+  color: #ffc1c1;
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.sidebar-account-logout:hover {
+  border-color: rgba(255, 125, 125, 0.5);
+  background: rgba(255, 90, 90, 0.15);
+  color: #fff;
+}
 .dashboard-logout-button {
   display: inline-flex;
   height: 2.5rem;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  border: 1px solid rgba(255, 125, 125, 0.2);
+  border: 1px solid rgba(255, 125, 125, 0.38);
   border-radius: 0.75rem;
   padding: 0 0.8rem;
-  color: #ffb4b4;
+  background: rgba(255, 90, 90, 0.1);
+  color: #ffd0d0;
   font-size: 0.72rem;
   font-weight: 750;
   white-space: nowrap;
@@ -4489,6 +4517,9 @@ html[data-theme='light'] .landing-footer {
   .dashboard-topbar-actions {
     gap: 0.45rem;
   }
+  .header-add-funds {
+    display: none !important;
+  }
   .dashboard-topbar .icon-button,
   .dashboard-topbar .theme-toggle {
     width: 2.35rem;
@@ -4531,25 +4562,9 @@ html[data-theme='light'] .landing-footer {
   .mobile-dashboard-brand span {
     display: none;
   }
-  .header-add-funds {
-    width: 2.35rem;
-    height: 2.35rem !important;
-    padding: 0 !important;
-    border-radius: 0.7rem !important;
-  }
-  .header-add-funds span {
-    display: none;
-  }
-  .header-add-funds svg {
-    margin: 0;
-  }
   .dashboard-logout-button {
-    width: 2.35rem;
     height: 2.35rem;
-    padding: 0;
-  }
-  .dashboard-logout-button span {
-    display: none;
+    padding: 0 0.65rem;
   }
   .dashboard-content {
     padding-right: 0.75rem;
@@ -6147,20 +6162,33 @@ html[data-theme='light'] .active-email-code small {
     font-weight: 700;
   }
   .ref-mobile-nav a:hover { background: #effdef; }
+  .ref-mobile-auth {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+  }
+  .ref-mobile-signup,
   .ref-mobile-login {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.55rem;
-    margin-top: 0.25rem;
     border-radius: 11px;
-    background: var(--ref-green);
     padding: 0.8rem;
-    color: #15331a;
     font-size: 0.8rem;
     font-weight: 850;
   }
-  .ref-mobile-login svg { width: 15px; }
+  .ref-mobile-signup {
+    background: var(--ref-green);
+    color: #15331a;
+  }
+  .ref-mobile-login {
+    border: 1px solid rgba(21,52,29,.2);
+    background: transparent;
+    color: #15331a;
+  }
+  .ref-mobile-signup svg { width: 15px; }
   .ref-hero { min-height: 970px; }
   .ref-hero-inner { grid-template-columns: 1fr; min-height: 970px; padding-top: 105px; }
   .ref-hero-copy { max-width: 680px; padding-bottom: 1rem; }
@@ -6260,6 +6288,14 @@ html[data-theme='dark'] .ref-mobile-nav {
 }
 html[data-theme='dark'] .ref-mobile-nav a { color: #d7e7d7; }
 html[data-theme='dark'] .ref-mobile-nav a:hover { background: rgba(116,239,91,.08); }
+html[data-theme='dark'] .ref-mobile-nav .ref-mobile-signup {
+  background: var(--ref-green);
+  color: #102015;
+}
+html[data-theme='dark'] .ref-mobile-nav .ref-mobile-login {
+  border-color: rgba(116,239,91,.3);
+  color: #d8ffd1;
+}
 html[data-theme='dark'] .ref-hero {
   background: linear-gradient(118deg, #171b09 0%, #07100f 46%, #0b2715 100%);
 }

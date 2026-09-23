@@ -165,7 +165,14 @@ export function ReferenceLanding() {
             <a href="#services" onClick={() => setMobileNavOpen(false)}>Services</a>
             <a href="#how-it-works" onClick={() => setMobileNavOpen(false)}>How it works</a>
             <a href="#faq" onClick={() => setMobileNavOpen(false)}>FAQ</a>
-            <Link className="ref-mobile-login" href="/login">Log in <ArrowRight /></Link>
+            <div className="ref-mobile-auth">
+              <Link className="ref-mobile-signup" href="/signup" onClick={() => setMobileNavOpen(false)}>
+                Sign up <ArrowRight />
+              </Link>
+              <Link className="ref-mobile-login" href="/login" onClick={() => setMobileNavOpen(false)}>
+                Log in
+              </Link>
+            </div>
           </nav>
         ) : null}
       </header>
