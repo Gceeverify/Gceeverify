@@ -68,7 +68,8 @@ export default function VirtualEmailPage() {
       })
       .filter(
         (service): service is ServiceOffer & { offer: DomainOffer } =>
-          Boolean(service) && (!query || service.name.toLowerCase().includes(query)),
+          service !== null &&
+          (!query || service.name.toLowerCase().includes(query)),
       )
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [catalog, domain, search]);

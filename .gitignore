@@ -32,9 +32,13 @@ yarn-error.log*
 
 # deployment and generated files
 .vercel
+.vercel-cli-config/
 next-env.d.ts
 /dist/
 /.wrangler/
 /outputs/
 /work/
 /tmp/
+
+.vercel
+.env*
