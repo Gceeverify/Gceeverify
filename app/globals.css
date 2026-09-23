@@ -97,6 +97,25 @@ button {
   background: #08110f;
   transition: transform 0.25s ease;
 }
+.sidebar-nav {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 0.75rem;
+  scrollbar-color: rgba(190, 242, 100, 0.3) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+.sidebar-nav::-webkit-scrollbar {
+  width: 5px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(190, 242, 100, 0.3);
+}
 .nav-eyebrow,
 .eyebrow {
   font-size: 0.6875rem;
