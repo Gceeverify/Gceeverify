@@ -1,5 +1,6 @@
 import { getLogProducts, placeLogOrder } from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
+import { recordOrder } from '@/lib/orders';
 
 export async function GET(request: Request) {
   try {
@@ -20,12 +21,18 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!(await getCurrentUser())) {
+    const user = await getCurrentUser();
+    if (!user) {
       return Response.json({ error: 'Sign in to continue.' }, { status: 401 });
     }
     const body = (await request.json()) as { productCode?: string; quantity?: number };
     if (!body.productCode || !Number.isInteger(body.quantity) || body.quantity! <= 0) return Response.json({ error: 'Choose a product and quantity.' }, { status: 400 });
-    return Response.json(await placeLogOrder(body.productCode, body.quantity!), { status: 201 });
+    const catalog = await getLogProducts(1, 1000);
+    const product = catalog.items.find((item) => item.code === body.productCode);
+    if (!product) return Response.json({ error: 'That product is no longer available.' }, { status: 409 });
+    const result = await placeLogOrder(body.productCode, body.quantity!);
+    await recordOrder({ userId: user.id, category: 'digital-accounts', serviceName: product.name, provider: 'Bulkacc', providerOrderId: result.orderCode, amount: product.price * body.quantity!, currency: 'USD', status: 'completed', metadata: { quantity: body.quantity! } });
+    return Response.json(result, { status: 201 });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : 'The order could not be placed.' }, { status: 400 });
   }

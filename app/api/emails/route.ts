@@ -6,6 +6,7 @@ import {
   setVirtualEmailStatus,
 } from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
+import { recordOrder, updateTrackedOrder } from '@/lib/orders';
 
 export async function GET(request: Request) {
   try {
@@ -35,7 +36,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!(await getCurrentUser())) {
+    const user = await getCurrentUser();
+    if (!user) {
       return Response.json({ error: 'Sign in to continue.' }, { status: 401 });
     }
     const body = (await request.json()) as {
@@ -51,15 +53,14 @@ export async function POST(request: Request) {
       body.domain &&
       Number.isFinite(body.maxPrice)
     ) {
-      return Response.json(
-        await purchaseVirtualEmail(body.service, body.domain, body.maxPrice!),
-        { status: 201 },
-      );
+      const result = await purchaseVirtualEmail(body.service, body.domain, body.maxPrice!);
+      await recordOrder({ userId: user.id, category: 'virtual-email', serviceName: body.service, provider: 'SMSBower', providerOrderId: result.activationId, amount: result.price, currency: 'USD', status: 'processing', metadata: { domain: result.domain } });
+      return Response.json(result, { status: 201 });
     }
     if ((body.action === 'complete' || body.action === 'cancel') && body.id) {
-      return Response.json(
-        await setVirtualEmailStatus(body.id, body.action === 'complete' ? '3' : '2'),
-      );
+      const result = await setVirtualEmailStatus(body.id, body.action === 'complete' ? '3' : '2');
+      await updateTrackedOrder('SMSBower', body.id, body.action === 'complete' ? 'completed' : 'cancelled');
+      return Response.json(result);
     }
     return Response.json({ error: 'Complete the virtual email request.' }, { status: 400 });
   } catch (error) {

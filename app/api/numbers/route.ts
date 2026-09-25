@@ -1,5 +1,6 @@
 import { getNumberCatalog, getNumberQuote, getNumberStatus, purchaseNumber, setNumberStatus } from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
+import { recordOrder, updateTrackedOrder } from '@/lib/orders';
 
 export async function GET(request: Request) {
   try {
@@ -23,12 +24,21 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!(await getCurrentUser())) {
+    const user = await getCurrentUser();
+    if (!user) {
       return Response.json({ error: 'Sign in to continue.' }, { status: 401 });
     }
     const body = (await request.json()) as { action?: 'purchase' | 'complete' | 'cancel'; service?: string; country?: string; maxPrice?: number; providerId?: string; id?: string };
-    if (body.action === 'purchase' && body.service && body.country && body.providerId && Number.isFinite(body.maxPrice)) return Response.json(await purchaseNumber(body.service, body.country, body.maxPrice!, body.providerId), { status: 201 });
-    if ((body.action === 'complete' || body.action === 'cancel') && body.id) return Response.json(await setNumberStatus(body.id, body.action === 'complete' ? '6' : '8'));
+    if (body.action === 'purchase' && body.service && body.country && body.providerId && Number.isFinite(body.maxPrice)) {
+      const result = await purchaseNumber(body.service, body.country, body.maxPrice!, body.providerId);
+      await recordOrder({ userId: user.id, category: 'virtual-number', serviceName: body.service, provider: '5sim', providerOrderId: result.activationId, amount: result.activationCost, currency: 'USD', status: 'processing', metadata: { country: body.country } });
+      return Response.json(result, { status: 201 });
+    }
+    if ((body.action === 'complete' || body.action === 'cancel') && body.id) {
+      const result = await setNumberStatus(body.id, body.action === 'complete' ? '6' : '8');
+      await updateTrackedOrder('5sim', body.id, body.action === 'complete' ? 'completed' : 'cancelled');
+      return Response.json(result);
+    }
     return Response.json({ error: 'Complete the number request.' }, { status: 400 });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : 'The request could not be completed.' }, { status: 400 });

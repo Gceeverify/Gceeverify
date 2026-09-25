@@ -1,5 +1,6 @@
 import { getBoostServices, placeBoostOrder } from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
+import { recordOrder } from '@/lib/orders';
 
 const platforms = [
   'instagram',
@@ -71,7 +72,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!(await getCurrentUser())) {
+    const user = await getCurrentUser();
+    if (!user) {
       return Response.json(
         { error: 'Sign in to place an order.' },
         { status: 401 },
@@ -94,10 +96,21 @@ export async function POST(request: Request) {
       );
     }
     new URL(body.link);
-    return Response.json(
-      await placeBoostOrder(body.service!, body.link, body.quantity!),
-      { status: 201 },
-    );
+    const service = (await getBoostServices()).find((item) => item.service === body.service);
+    if (!service) return Response.json({ error: 'That service is no longer available.' }, { status: 409 });
+    const result = await placeBoostOrder(body.service!, body.link, body.quantity!);
+    await recordOrder({
+      userId: user.id,
+      category: 'social-boosting',
+      serviceName: service.name,
+      provider: 'JAP',
+      providerOrderId: result.order,
+      amount: (Number(service.rate) * body.quantity!) / 1000,
+      currency: 'USD',
+      status: 'processing',
+      metadata: { quantity: body.quantity! },
+    });
+    return Response.json(result, { status: 201 });
   } catch (error) {
     return Response.json(
       {

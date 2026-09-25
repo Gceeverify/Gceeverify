@@ -284,6 +284,7 @@ export function ReferenceLanding() {
           object-fit: cover;
         }
         .ref-phone { display: none; }
+        .ref-mobile-customer-frame { display: none; }
         .ref-mobile-hero-dark { display: none !important; }
         .ref-mobile-customer-dark { display: none !important; }
         .ref-floating-theme {
@@ -454,14 +455,131 @@ export function ReferenceLanding() {
             width: 11px;
             height: 11px;
           }
-          .ref-mobile-customer-reference {
+          .ref-mobile-customer-frame {
             grid-column: 2;
             grid-row: 1;
+            position: relative;
             align-self: end;
-            width: min(50vw, 204px) !important;
+            display: block;
+            width: min(48vw, 204px);
+            aspect-ratio: 0.78;
             max-width: none;
             margin: 0 auto !important;
-            transform: translate(4px, -30px) !important;
+            overflow: visible;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+            translate: 4px -22px;
+          }
+          .ref-mobile-customer-frame::before {
+            position: absolute;
+            inset: 18px 3px 8px 5px;
+            z-index: 0;
+            border: 1px solid rgba(64, 188, 74, 0.2);
+            border-radius: 48% 48% 27% 35%;
+            background:
+              radial-gradient(circle at 35% 23%, rgba(255, 255, 255, 0.84), transparent 28%),
+              linear-gradient(145deg, #eaffdf 0%, #a8f49e 46%, #54de61 100%);
+            box-shadow:
+              0 20px 35px rgba(34, 119, 46, 0.16),
+              inset 0 0 0 7px rgba(255, 255, 255, 0.2);
+            content: '';
+            pointer-events: none;
+            transform: rotate(4deg);
+          }
+          .ref-mobile-customer-frame::after {
+            position: absolute;
+            top: 30px;
+            right: -8px;
+            z-index: 0;
+            width: 43px;
+            height: 43px;
+            border: 1px solid rgba(55, 190, 68, 0.32);
+            border-radius: 50%;
+            background: rgba(123, 239, 112, 0.12);
+            box-shadow: inset 0 0 0 8px rgba(104, 226, 96, 0.08);
+            content: '';
+          }
+          .ref-mobile-customer-reference {
+            position: absolute !important;
+            inset: -2px -8px 0;
+            z-index: 1;
+            display: block;
+            width: calc(100% + 16px) !important;
+            height: calc(100% + 2px) !important;
+            margin: 0 !important;
+            object-fit: cover;
+            object-position: center;
+            mix-blend-mode: multiply;
+            -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 88%, transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 0%, #000 88%, transparent 100%);
+            transform: none !important;
+          }
+          .ref-customer-frame-label {
+            position: absolute;
+            right: auto;
+            bottom: 4px;
+            left: 8px;
+            z-index: 4;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 22px;
+            border: 1px solid rgba(39, 123, 48, 0.18);
+            border-radius: 999px;
+            padding: 0 8px;
+            color: #173f20;
+            background: rgba(244, 255, 240, 0.94);
+            box-shadow: 0 8px 18px rgba(27, 69, 35, 0.13);
+            font-size: 7px;
+            font-weight: 750;
+            backdrop-filter: blur(8px);
+          }
+          .ref-customer-frame-label::before {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #4bdb55;
+            box-shadow: 0 0 0 3px rgba(75, 219, 85, 0.15);
+            content: '';
+          }
+          html[data-theme='dark'] .ref-mobile-customer-frame {
+            border: 0;
+            background: transparent;
+            box-shadow: none;
+          }
+          html[data-theme='dark'] .ref-mobile-customer-frame::before {
+            inset: 18px 3px 8px 5px;
+            border-color: rgba(123, 248, 108, 0.3);
+            background:
+              radial-gradient(circle at 35% 23%, rgba(183, 255, 175, 0.2), transparent 28%),
+              linear-gradient(145deg, #3ee85a 0%, #15953b 48%, #063f1d 100%);
+            box-shadow:
+              0 22px 42px rgba(0, 0, 0, 0.38),
+              0 8px 22px rgba(39, 222, 77, 0.16),
+              inset 0 0 0 7px rgba(198, 255, 190, 0.06);
+          }
+          html[data-theme='dark'] .ref-mobile-customer-reference {
+            inset: -2px -8px 0;
+            width: calc(100% + 16px) !important;
+            height: calc(100% + 2px) !important;
+            border-radius: 0;
+            mix-blend-mode: normal;
+            -webkit-mask-image:
+              radial-gradient(ellipse 78% 82% at 50% 48%, #000 61%, transparent 100%),
+              linear-gradient(to bottom, #000 0%, #000 88%, transparent 100%);
+            mask-image:
+              radial-gradient(ellipse 78% 82% at 50% 48%, #000 61%, transparent 100%),
+              linear-gradient(to bottom, #000 0%, #000 88%, transparent 100%);
+            -webkit-mask-composite: source-in;
+            mask-composite: intersect;
+          }
+          html[data-theme='dark'] .ref-customer-frame-label {
+            border-color: rgba(108, 243, 96, 0.18);
+            color: #caffc4;
+            background: rgba(7, 23, 11, 0.82);
+            box-shadow: none;
           }
           html[data-theme='dark'] .ref-simple-copy > a {
             border-color: rgba(108, 243, 96, 0.42);
@@ -673,6 +791,10 @@ export function ReferenceLanding() {
             width: 15px !important;
             height: 15px !important;
           }
+          .ref-header-actions .theme-toggle {
+            border: 0 !important;
+            box-shadow: none;
+          }
           .ref-floating-theme { display: none; }
           html[data-theme='dark'] .ref-header {
             border-bottom: 0;
@@ -841,24 +963,25 @@ export function ReferenceLanding() {
           alt="Gceeverify services section from the supplied reference design"
           unoptimized
         />
-        <Image
-          className="ref-mobile-customer-reference ref-mobile-customer-light"
-          data-reveal="right"
-          src="/gceeverify-mobile-customer.jpg"
-          width={1050}
-          height={1275}
-          alt="The original Gceeverify customer using her phone"
-          unoptimized
-        />
-        <Image
-          className="ref-mobile-customer-reference ref-mobile-customer-dark"
-          data-reveal="right"
-          src="/gceeverify-mobile-customer-dark.png?v=1"
-          width={1050}
-          height={1275}
-          alt="The original Gceeverify customer on a dark blended background"
-          unoptimized
-        />
+        <div className="ref-mobile-customer-frame" data-reveal="right">
+          <span className="ref-customer-frame-label">Instant access</span>
+          <Image
+            className="ref-mobile-customer-reference ref-mobile-customer-light"
+            src="/gceeverify-mobile-customer.jpg"
+            width={1050}
+            height={1275}
+            alt="The original Gceeverify customer using her phone"
+            unoptimized
+          />
+          <Image
+            className="ref-mobile-customer-reference ref-mobile-customer-dark"
+            src="/gceeverify-mobile-customer-dark.png?v=1"
+            width={1050}
+            height={1275}
+            alt="The original Gceeverify customer on a dark blended background"
+            unoptimized
+          />
+        </div>
         <div className="ref-simple-copy" data-reveal="left">
           <h2>Fast, simple, and reliable digital services</h2>
           <p>Access a wide range of digital services from one convenient platform. Gceeverify makes it easy to get the services you need quickly, securely, and reliably.</p>

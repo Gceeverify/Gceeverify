@@ -13,6 +13,7 @@ import {
   verifyBigisubElectricity,
 } from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
+import { providerReference, recordOrder } from '@/lib/orders';
 
 const phonePattern = /^0[789]\d{9}$/;
 const pinPattern = /^\d{4}$/;
@@ -83,7 +84,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!(await getCurrentUser())) {
+    const user = await getCurrentUser();
+    if (!user) {
       return Response.json({ error: 'Sign in to continue.' }, { status: 401 });
     }
     const body = (await request.json()) as Record<string, unknown>;
@@ -152,10 +154,9 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      return Response.json(
-        await purchaseBigisubAirtime(network, account, amount, pin),
-        { status: 201 },
-      );
+      const result = await purchaseBigisubAirtime(network, account, amount, pin);
+      await recordOrder({ userId: user.id, category: 'vtu-airtime', serviceName: 'Airtime recharge', provider: 'Bigisub', providerOrderId: providerReference(result), amount, currency: 'NGN', status: 'completed', metadata: { network } });
+      return Response.json(result, { status: 201 });
     }
 
     if (service === 'data') {
@@ -182,10 +183,9 @@ export async function POST(request: Request) {
           { error: 'That data plan is no longer available.' },
           { status: 409 },
         );
-      return Response.json(
-        await purchaseBigisubData(network, plan, account, pin),
-        { status: 201 },
-      );
+      const result = await purchaseBigisubData(network, plan, account, pin);
+      await recordOrder({ userId: user.id, category: 'vtu-data', serviceName: `${matchingPlan.network_name} ${matchingPlan.plan_volume || matchingPlan.size}`, provider: 'Bigisub', providerOrderId: providerReference(result), amount: matchingPlan.plan_amount || matchingPlan.amount, currency: 'NGN', status: 'completed', metadata: { network, plan } });
+      return Response.json(result, { status: 201 });
     }
 
     if (service === 'cable') {
@@ -212,17 +212,16 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       }
-      return Response.json(
-        await purchaseBigisubCable({
+      const result = await purchaseBigisubCable({
           cableType: provider,
           cardNumber: account,
           phone,
           amount: plan.amount,
           customerName: verified.customer_name,
           pin,
-        }),
-        { status: 201 },
-      );
+        });
+      await recordOrder({ userId: user.id, category: 'vtu-cable', serviceName: plan.product_name, provider: 'Bigisub', providerOrderId: providerReference(result), amount: plan.amount, currency: 'NGN', status: 'completed', metadata: { cableProvider: provider } });
+      return Response.json(result, { status: 201 });
     }
 
     if (service === 'electricity') {
@@ -252,8 +251,7 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      return Response.json(
-        await purchaseBigisubElectricity({
+      const result = await purchaseBigisubElectricity({
           company: provider,
           meterNumber: account,
           meterType,
@@ -262,9 +260,9 @@ export async function POST(request: Request) {
           customerName: verified.customer_name,
           customerAddress: verified.customer_address,
           pin,
-        }),
-        { status: 201 },
-      );
+        });
+      await recordOrder({ userId: user.id, category: 'vtu-electricity', serviceName: `${selectedProvider.name} electricity`, provider: 'Bigisub', providerOrderId: providerReference(result), amount, currency: 'NGN', status: 'completed', metadata: { meterType } });
+      return Response.json(result, { status: 201 });
     }
 
     if (service === 'exam') {
@@ -285,10 +283,9 @@ export async function POST(request: Request) {
           { error: 'That exam PIN is no longer available.' },
           { status: 409 },
         );
-      return Response.json(
-        await purchaseBigisubExam(price.code, quantity, pin),
-        { status: 201 },
-      );
+      const result = await purchaseBigisubExam(price.code, quantity, pin);
+      await recordOrder({ userId: user.id, category: 'exam-pin', serviceName: price.name || price.exam_type, provider: 'Bigisub', providerOrderId: providerReference(result), amount: price.amount * quantity, currency: 'NGN', status: 'completed', metadata: { quantity } });
+      return Response.json(result, { status: 201 });
     }
 
     return Response.json(
