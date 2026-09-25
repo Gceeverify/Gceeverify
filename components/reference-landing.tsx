@@ -79,23 +79,23 @@ const reviews = [
   {
     quote:
       'Gceeverify makes it really easy to get virtual numbers whenever I need them. The process is quick, simple, and hassle-free.',
-    name: 'Mark Lukky',
+    name: 'Mark Lukary',
     role: 'Visual Designer',
-    initials: 'ML',
+    avatar: '/reviewer-mark-lukary.png',
   },
   {
     quote:
       'I love how clear everything is. I can find what I need, pay securely, and follow my order without any confusion.',
     name: 'Chizoba Edna',
     role: 'Digital Marketer',
-    initials: 'CE',
+    avatar: '/reviewer-chizoba-edna.png',
   },
   {
     quote:
       'Creating content means I am always opening new accounts. Gceeverify makes verification and access feel effortless.',
     name: 'Mary Adeyemi',
     role: 'Content Creator',
-    initials: 'MA',
+    avatar: '/reviewer-mary-adeyemi.png',
   },
 ];
 
@@ -125,8 +125,22 @@ const faqs = [
 function Brand({ inverse = false }: { inverse?: boolean }) {
   return (
     <span className={`ref-brand ${inverse ? 'ref-brand-inverse' : ''}`}>
-      <Image src="/favicon.svg" width={32} height={32} alt="" priority />
-      <strong>Gceeverify</strong>
+      <Image
+        className="ref-logo-dark"
+        src="/gcverify-logo-dark.png"
+        width={178}
+        height={40}
+        alt="Gceeverify"
+        priority
+      />
+      <Image
+        className="ref-logo-light"
+        src="/gcverify-logo-light.png"
+        width={178}
+        height={40}
+        alt="Gceeverify"
+        priority
+      />
     </span>
   );
 }
@@ -136,6 +150,332 @@ export function ReferenceLanding() {
 
   return (
     <main className="ref-landing">
+      <style>{`
+        .ref-brand { gap: 0; }
+        .ref-brand img {
+          width: 128px;
+          height: auto;
+        }
+        .ref-brand .ref-logo-dark { display: block; }
+        .ref-brand .ref-logo-light { display: none; }
+        html[data-theme='dark'] .ref-brand .ref-logo-dark { display: none; }
+        html[data-theme='dark'] .ref-brand .ref-logo-light { display: block; }
+        .ref-brand-inverse .ref-logo-dark { display: none !important; }
+        .ref-brand-inverse .ref-logo-light { display: block !important; }
+        .ref-reviewer-avatar {
+          width: 38px !important;
+          height: 38px !important;
+          flex: 0 0 38px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+        .ref-phone { display: none; }
+        .ref-phone-logo-light { display: none; }
+        .ref-mobile-hero-dark { display: none !important; }
+        .ref-mobile-customer-dark { display: none !important; }
+        .ref-floating-theme {
+          position: fixed;
+          right: 18px;
+          bottom: 18px;
+          z-index: 80;
+          display: grid;
+          padding: 5px;
+          border: 1px solid rgba(98, 239, 85, 0.4);
+          border-radius: 16px;
+          background: rgba(8, 28, 13, 0.9);
+          box-shadow: 0 14px 36px rgba(4, 19, 8, 0.25);
+          backdrop-filter: blur(12px);
+        }
+        .ref-floating-theme .theme-toggle {
+          border-color: transparent;
+          background: transparent;
+        }
+        html[data-theme='dark'] .ref-landing {
+          --ref-ink: #f6fff4;
+          --ref-green: #6cf360;
+          background: #07110a;
+          color: #f6fff4;
+        }
+        html[data-theme='dark'] .ref-services,
+        html[data-theme='dark'] .ref-dashboard,
+        html[data-theme='dark'] .ref-reviews,
+        html[data-theme='dark'] .ref-faq { background: #07110a; }
+        html[data-theme='dark'] .ref-section-title h2,
+        html[data-theme='dark'] .ref-simple-copy h2,
+        html[data-theme='dark'] .ref-dashboard-copy h2,
+        html[data-theme='dark'] .ref-service-card h3,
+        html[data-theme='dark'] .ref-step-grid h3,
+        html[data-theme='dark'] .ref-reviewer strong { color: #f7fff5; }
+        html[data-theme='dark'] .ref-service-card.mint {
+          border: 1px solid rgba(108, 243, 96, 0.15);
+          background: #10271a;
+        }
+        html[data-theme='dark'] .ref-service-card.lemon {
+          border: 1px solid rgba(236, 238, 116, 0.14);
+          background: #252616;
+        }
+        html[data-theme='dark'] .ref-service-card p,
+        html[data-theme='dark'] .ref-simple-copy p,
+        html[data-theme='dark'] .ref-dashboard-copy p,
+        html[data-theme='dark'] .ref-section-title > p,
+        html[data-theme='dark'] .ref-step-grid p,
+        html[data-theme='dark'] .ref-review-grid article > p,
+        html[data-theme='dark'] .ref-faq-list details p { color: #9aaba0; }
+        html[data-theme='dark'] .ref-steps { background: #0d2114; }
+        html[data-theme='dark'] .ref-step-grid article {
+          border-color: rgba(108, 243, 96, 0.12);
+        }
+        html[data-theme='dark'] .ref-step-link { color: #dffffa; }
+        html[data-theme='dark'] .ref-simple { background: #07110a; }
+        html[data-theme='dark'] .ref-simple-copy > a {
+          border-color: #62ef55;
+          color: #caffc4;
+        }
+        html[data-theme='dark'] .ref-dashboard-link {
+          background: #48d658;
+          color: #08200d;
+        }
+        html[data-theme='dark'] .ref-review-grid article {
+          border-color: rgba(108, 243, 96, 0.12);
+          background: #0d1d14;
+        }
+        html[data-theme='dark'] .ref-faq-list,
+        html[data-theme='dark'] .ref-faq-list details {
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        html[data-theme='dark'] .ref-metrics { background: #061b0d; }
+        @media (max-width: 700px) {
+          .ref-header {
+            grid-template-columns: 1fr auto auto !important;
+            min-height: 66px !important;
+            gap: 7px;
+          }
+          .ref-brand { gap: 0 !important; }
+          .ref-brand img {
+            width: 94px !important;
+            height: auto !important;
+          }
+          .ref-mobile-hero-reference {
+            width: 100% !important;
+            align-self: stretch;
+            margin-left: 0;
+            object-fit: contain;
+            object-position: center bottom;
+          }
+          .ref-dashboard {
+            grid-template-columns: 1fr !important;
+            justify-items: center;
+          }
+          .ref-dashboard-copy {
+            width: 100%;
+            justify-self: stretch;
+          }
+          .ref-laptop {
+            display: none !important;
+          }
+          .ref-phone {
+            position: relative;
+            display: block;
+            width: min(236px, 66vw);
+            aspect-ratio: 9 / 19.4;
+            margin: 44px auto 0;
+            border: 2px solid #5c625e;
+            border-radius: 43px;
+            background:
+              linear-gradient(145deg, #555b57 0%, #171a18 18%, #070908 52%, #353a36 100%);
+            padding: 8px;
+            box-shadow:
+              0 36px 52px rgba(7, 24, 12, 0.22),
+              0 14px 20px rgba(6, 15, 9, 0.2),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+              inset 0 0 0 3px #090b0a;
+          }
+          .ref-phone::before,
+          .ref-phone::after {
+            position: absolute;
+            content: '';
+            background: linear-gradient(#3c413e, #111311);
+            box-shadow: inset 1px 0 rgba(255, 255, 255, 0.18);
+          }
+          .ref-phone::before {
+            top: 94px;
+            left: -5px;
+            width: 3px;
+            height: 62px;
+            border-radius: 3px 0 0 3px;
+          }
+          .ref-phone::after {
+            top: 119px;
+            right: -5px;
+            width: 3px;
+            height: 72px;
+            border-radius: 0 3px 3px 0;
+          }
+          .ref-phone-screen {
+            position: relative;
+            display: grid;
+            width: 100%;
+            height: 100%;
+            place-items: center;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 34px;
+            background:
+              radial-gradient(circle at 50% 46%, rgba(106, 239, 91, 0.12), transparent 34%),
+              #fff;
+            box-shadow:
+              inset 0 0 0 1px rgba(0, 0, 0, 0.32),
+              inset 0 0 18px rgba(18, 34, 22, 0.06);
+          }
+          .ref-phone-screen::before {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            border-radius: inherit;
+            background: linear-gradient(118deg, rgba(255, 255, 255, 0.2), transparent 24%, transparent 72%, rgba(255, 255, 255, 0.06));
+            content: '';
+            pointer-events: none;
+          }
+          .ref-phone-island {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            z-index: 4;
+            width: 70px;
+            height: 21px;
+            border-radius: 999px;
+            background: #050605;
+            box-shadow:
+              inset 0 -1px rgba(255, 255, 255, 0.08),
+              0 1px 2px rgba(0, 0, 0, 0.35);
+            transform: translateX(-50%);
+          }
+          .ref-phone-island::after {
+            position: absolute;
+            top: 7px;
+            right: 9px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #31547a, #07111c 55%, #000);
+            box-shadow: 0 0 0 1px rgba(100, 150, 190, 0.24);
+            content: '';
+          }
+          .ref-phone-logo {
+            position: relative;
+            z-index: 1;
+            width: 126px;
+            height: auto;
+          }
+          .ref-phone-home {
+            position: absolute;
+            bottom: 14px;
+            left: 50%;
+            z-index: 4;
+            width: 78px;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(17, 30, 20, 0.78);
+            transform: translateX(-50%);
+          }
+          html[data-theme='dark'] .ref-phone {
+            border-color: #626b65;
+            background: linear-gradient(145deg, #59615c 0%, #171a18 18%, #050706 54%, #343a36 100%);
+            box-shadow:
+              0 38px 56px rgba(0, 0, 0, 0.42),
+              0 15px 22px rgba(0, 0, 0, 0.28),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+              inset 0 0 0 3px #030504;
+          }
+          html[data-theme='dark'] .ref-phone-screen {
+            background:
+              radial-gradient(circle at 50% 46%, rgba(108, 243, 96, 0.16), transparent 35%),
+              #07110a;
+          }
+          html[data-theme='dark'] .ref-phone-logo-dark { display: none; }
+          html[data-theme='dark'] .ref-phone-logo-light { display: block; }
+          html[data-theme='dark'] .ref-phone-home {
+            background: rgba(230, 255, 229, 0.78);
+          }
+          html[data-theme='dark'] .ref-mobile-hero-light {
+            display: none !important;
+          }
+          html[data-theme='dark'] .ref-mobile-hero-dark {
+            display: block !important;
+          }
+          .ref-brand .ref-logo-light { display: none; }
+          .ref-header-actions {
+            display: flex !important;
+            gap: 7px;
+          }
+          .ref-header-actions .ref-signup,
+          .ref-header-actions .ref-login { display: none !important; }
+          .ref-header-actions .theme-toggle,
+          .ref-menu {
+            display: grid !important;
+            width: 38px !important;
+            height: 38px !important;
+            place-items: center;
+            border: 1px solid rgba(28, 91, 42, 0.22) !important;
+            border-radius: 50% !important;
+            background: rgba(255, 255, 255, 0.72) !important;
+            color: #17351f !important;
+            box-shadow: 0 5px 14px rgba(12, 48, 20, 0.1);
+          }
+          .ref-menu svg {
+            width: 18px !important;
+            height: 18px !important;
+            stroke-width: 2.25;
+          }
+          .ref-header-actions .theme-toggle svg {
+            width: 15px !important;
+            height: 15px !important;
+          }
+          .ref-floating-theme { display: none; }
+          html[data-theme='dark'] .ref-header {
+            border-bottom: 0;
+            background: transparent;
+            backdrop-filter: none;
+          }
+          html[data-theme='dark'] .ref-brand { color: #f4fff1; }
+          html[data-theme='dark'] .ref-brand .ref-logo-dark { display: none; }
+          html[data-theme='dark'] .ref-brand .ref-logo-light { display: block; }
+          html[data-theme='dark'] .ref-header-actions .theme-toggle,
+          html[data-theme='dark'] .ref-menu {
+            border-color: rgba(108, 243, 96, 0.5) !important;
+            background: rgba(108, 243, 96, 0.12) !important;
+            color: #6cf360 !important;
+            box-shadow: none;
+          }
+          html[data-theme='dark'] .ref-mobile-nav {
+            border-color: rgba(108, 243, 96, 0.18);
+            background: rgba(8, 25, 12, 0.98);
+          }
+          html[data-theme='dark'] .ref-mobile-nav a { color: #e8f5e8; }
+          html[data-theme='dark'] .ref-hero {
+            background:
+              radial-gradient(circle at 80% 75%, rgba(74, 205, 83, 0.2), transparent 38%),
+              radial-gradient(circle at 8% -8%, rgba(215, 206, 68, 0.1), transparent 36%),
+              #07110a;
+          }
+          html[data-theme='dark'] .ref-hero h1 { color: #f8fff6; }
+          html[data-theme='dark'] .ref-hero-copy > p { color: #a6b2a8; }
+          html[data-theme='dark'] .ref-mobile-hero-reference {
+            border: 0;
+          }
+          html[data-theme='dark'] .ref-mobile-customer-reference {
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+          }
+          html[data-theme='dark'] .ref-mobile-customer-light {
+            display: none !important;
+          }
+          html[data-theme='dark'] .ref-mobile-customer-dark {
+            display: block !important;
+          }
+        }
+      `}</style>
       <header className="ref-header">
         <a href="#top" aria-label="Gceeverify home">
           <Brand />
@@ -148,8 +488,8 @@ export function ReferenceLanding() {
         </nav>
         <div className="ref-header-actions">
           <ThemeToggle />
-          <Link className="ref-signup" href="/signup">Sign up</Link>
-          <Link className="ref-login" href="/login">Log in</Link>
+          <Link className="ref-signup" href="/signup">SignUp</Link>
+          <Link className="ref-login" href="/login">Log In</Link>
         </div>
         <button
           className="ref-menu"
@@ -176,19 +516,45 @@ export function ReferenceLanding() {
           </nav>
         ) : null}
       </header>
+      <div className="ref-floating-theme" aria-label="Appearance controls">
+        <ThemeToggle />
+      </div>
 
       <section id="top" className="ref-hero">
+        <Image
+          className="ref-exact-hero"
+          src="/gceeverify-reference-hero.jpg"
+          width={3456}
+          height={1615}
+          alt="Gceeverify hero from the supplied reference design"
+          priority
+          unoptimized
+        />
+        <Image
+          className="ref-mobile-hero-reference ref-mobile-hero-light"
+          src="/gceeverify-mobile-hero-person.jpg"
+          width={1716}
+          height={1375}
+          alt="The original Gceeverify hero customer"
+          priority
+          unoptimized
+        />
+        <Image
+          className="ref-mobile-hero-reference ref-mobile-hero-dark"
+          src="/gceeverify-mobile-hero-person-dark.png?v=2"
+          width={1716}
+          height={1375}
+          alt="The original Gceeverify hero customer on a dark background"
+          priority
+          unoptimized
+        />
         <div className="ref-hero-orb ref-orb-yellow" />
         <div className="ref-hero-orb ref-orb-green" />
         <div className="ref-hero-inner">
           <div className="ref-hero-copy">
-            <span className="ref-eyebrow"><i /> Everything digital, one account</span>
-            <h1>Verify. Boost.<br />Access. <em>All in<br />one Place.</em></h1>
+            <h1>Verify Boost.<br />Access. <em>All in<br />one Place.</em></h1>
+            <span className="ref-title-rule" />
             <p>Get social media services, virtual numbers and digital accounts instantly from a simple, secure platform.</p>
-            <div className="ref-hero-cta">
-              <Link className="ref-primary-cta" href="/signup">Get started <ArrowRight /></Link>
-              <a className="ref-secondary-cta" href="#services">Explore services</a>
-            </div>
           </div>
           <div className="ref-hero-visual" aria-label="A happy Gceeverify customer using the platform">
             <div className="ref-platform-chip chip-instagram"><Camera /></div>
@@ -202,17 +568,12 @@ export function ReferenceLanding() {
               alt="Smiling customer holding a phone and giving a thumbs-up"
               priority
             />
-            <div className="ref-proof-card">
-              <span><BadgeCheck /></span>
-              <div><strong>Verified access</strong><small>Delivered instantly</small></div>
-            </div>
           </div>
         </div>
       </section>
 
       <section id="services" className="ref-services ref-container">
         <div className="ref-section-title">
-          <span>All the essentials</span>
           <h2>Everything you need for<br />your <em>digital journey</em></h2>
         </div>
         <div className="ref-service-grid">
@@ -228,8 +589,31 @@ export function ReferenceLanding() {
       </section>
 
       <section className="ref-simple ref-container">
+        <Image
+          className="ref-exact-simple"
+          src="/gceeverify-reference-simple.jpg"
+          width={3456}
+          height={1315}
+          alt="Gceeverify services section from the supplied reference design"
+          unoptimized
+        />
+        <Image
+          className="ref-mobile-customer-reference ref-mobile-customer-light"
+          src="/gceeverify-mobile-customer.jpg"
+          width={1050}
+          height={1275}
+          alt="The original Gceeverify customer using her phone"
+          unoptimized
+        />
+        <Image
+          className="ref-mobile-customer-reference ref-mobile-customer-dark"
+          src="/gceeverify-mobile-customer-dark.png?v=1"
+          width={1050}
+          height={1275}
+          alt="The original Gceeverify customer on a dark blended background"
+          unoptimized
+        />
         <div className="ref-simple-copy">
-          <span className="ref-eyebrow"><i /> Built for everyday speed</span>
           <h2>Fast, simple, and reliable digital services</h2>
           <p>Access a wide range of digital services from one convenient platform. Gceeverify makes it easy to get the services you need quickly, securely, and reliably.</p>
           <a href="#how-it-works">Learn more <ArrowRight /></a>
@@ -243,8 +627,7 @@ export function ReferenceLanding() {
       <section id="how-it-works" className="ref-steps">
         <div className="ref-container">
           <div className="ref-section-title">
-            <span>Three simple steps</span>
-            <h2>Grow fast. Reach more.</h2>
+            <h2>Grow Fast Reach more</h2>
             <p>Get started in three simple steps and access the services you need in minutes.</p>
           </div>
           <div className="ref-step-grid">
@@ -262,7 +645,6 @@ export function ReferenceLanding() {
 
       <section className="ref-dashboard ref-container">
         <div className="ref-dashboard-copy">
-          <span className="ref-eyebrow"><i /> Everything in view</span>
           <h2>An easy-to-use dashboard</h2>
           <p>Manage your orders, track transactions and access every service from one clean, focused workspace.</p>
           <Link className="ref-dashboard-link" href="/login">See dashboard <ArrowRight /></Link>
@@ -286,20 +668,39 @@ export function ReferenceLanding() {
           </div>
           <div className="ref-laptop-base" />
         </div>
+        <div className="ref-phone" aria-label="Gceeverify mobile preview">
+          <div className="ref-phone-screen">
+            <span className="ref-phone-island" aria-hidden="true" />
+            <Image
+              className="ref-phone-logo ref-phone-logo-dark"
+              src="/gcverify-logo-dark.png"
+              width={4138}
+              height={928}
+              alt="Gceeverify"
+            />
+            <Image
+              className="ref-phone-logo ref-phone-logo-light"
+              src="/gcverify-logo-light.png"
+              width={4138}
+              height={928}
+              alt="Gceeverify"
+            />
+            <span className="ref-phone-home" aria-hidden="true" />
+          </div>
+        </div>
       </section>
 
       <section className="ref-metrics">
         <div className="ref-container">
-          <div><strong>100k+</strong><span>Users served</span></div>
-          <div><strong>10k+</strong><span>Successful verifications</span></div>
-          <div><strong>24/7</strong><span>Platform accessibility</span></div>
+          <article><strong>100k+</strong><span>Users served</span></article>
+          <article><strong>10k+</strong><span>Successful verifications</span></article>
+          <article><strong>24/7</strong><span>Platform accessibility</span></article>
         </div>
       </section>
 
       <section className="ref-reviews ref-container">
         <div className="ref-section-title">
-          <span>Loved by our users</span>
-          <h2>Trusted by a growing<br />global community</h2>
+          <h2>Trusted by a growing global community</h2>
         </div>
         <div className="ref-review-grid">
           {reviews.map((review) => (
@@ -308,7 +709,16 @@ export function ReferenceLanding() {
                 {[0, 1, 2, 3, 4].map((star) => <Star key={star} />)}
               </div>
               <p>“{review.quote}”</p>
-              <div className="ref-reviewer"><span>{review.initials}</span><div><strong>{review.name}</strong><small>{review.role}</small></div></div>
+              <div className="ref-reviewer">
+                <Image
+                  className="ref-reviewer-avatar"
+                  src={review.avatar}
+                  width={140}
+                  height={140}
+                  alt={`${review.name}, ${review.role}`}
+                />
+                <div><strong>{review.name}</strong><small>{review.role}</small></div>
+              </div>
             </article>
           ))}
         </div>
@@ -316,8 +726,8 @@ export function ReferenceLanding() {
 
       <section id="faq" className="ref-faq ref-container">
         <div className="ref-section-title">
-          <span>Frequently asked questions</span>
-          <h2>Do you have any questions?</h2>
+          <span>FREQUENT QUESTION</span>
+          <h2>Do you have any question</h2>
         </div>
         <div className="ref-faq-list">
           {faqs.map((faq, index) => (
