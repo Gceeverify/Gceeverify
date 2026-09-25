@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { GceeverifyHome } from '@/app/page';
 import { createClient } from '@/lib/supabase/server';
+import { isAdminUser } from '@/lib/admin';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -26,6 +27,7 @@ export default async function DashboardPage() {
       initialView="dashboard"
       userName={userName}
       balance={Number(wallet?.balance ?? 0)}
+      isAdmin={isAdminUser(user)}
     />
   );
 }

@@ -25,7 +25,7 @@ export function ServicePageShell({
       <header className="market-topbar dashboard-topbar">
         <div className="service-header-identity">
           <Link
-            href="/#dashboard"
+            href="/dashboard"
             className="brand-logo"
             aria-label="Gceeverify dashboard"
           >
@@ -51,7 +51,7 @@ export function ServicePageShell({
         </div>
       </header>
       <div className="market-wrap">
-        <Link href="/#dashboard" className="market-back">
+        <Link href="/dashboard" className="market-back">
           <ArrowLeft /> Back to dashboard
         </Link>
         <div className="market-heading-row">

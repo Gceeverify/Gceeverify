@@ -22,6 +22,7 @@ import {
   Plus,
   RadioTower,
   Search,
+  ShieldCheck,
   ShoppingBag,
   Server,
   Smartphone,
@@ -373,10 +374,12 @@ export function GceeverifyHome({
   initialView = 'landing',
   userName = 'Ola',
   balance = 0,
+  isAdmin = false,
 }: {
   initialView?: 'landing' | 'dashboard';
   userName?: string;
   balance?: number;
+  isAdmin?: boolean;
 }) {
   const view = initialView;
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -457,6 +460,16 @@ export function GceeverifyHome({
                 )}
               </button>
             ))}
+            {isAdmin ? (
+              <Link
+                href="/admin"
+                className="nav-item"
+                onClick={() => setMobileOpen(false)}
+              >
+                <ShieldCheck />
+                <span>Admin center</span>
+              </Link>
+            ) : null}
           </div>
           <p className="nav-eyebrow mt-7">Marketplace</p>
           <div className="space-y-1">

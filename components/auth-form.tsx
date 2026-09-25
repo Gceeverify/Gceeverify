@@ -2,9 +2,22 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useActionState } from 'react';
-import { ArrowRight, CheckCircle2, LockKeyhole, Mail, UserRound } from 'lucide-react';
-import { resendConfirmation, signIn, signUp, type AuthState } from '@/app/auth/actions';
+import { useActionState, useState } from 'react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Mail,
+  UserRound,
+} from 'lucide-react';
+import {
+  resendConfirmation,
+  signIn,
+  signUp,
+  type AuthState,
+} from '@/app/auth/actions';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 const initialState: AuthState = {};
@@ -24,6 +37,7 @@ export function AuthForm({
     resendConfirmation,
     initialState,
   );
+  const [showPassword, setShowPassword] = useState(false);
   const isLogin = mode === 'login';
 
   return (
@@ -41,7 +55,9 @@ export function AuthForm({
       <section className="auth-card">
         <div className="auth-card-copy">
           <span>{isLogin ? 'Welcome back' : 'Create your account'}</span>
-          <h1>{isLogin ? 'Sign in to your dashboard' : 'Start using Gceeverify'}</h1>
+          <h1>
+            {isLogin ? 'Sign in to your dashboard' : 'Start using Gceeverify'}
+          </h1>
           <p>
             {isLogin
               ? 'Access your wallet, orders, and every digital service from one secure workspace.'
@@ -54,16 +70,57 @@ export function AuthForm({
           {!isLogin && (
             <label>
               <span>Full name</span>
-              <div><UserRound /><input name="fullName" autoComplete="name" placeholder="Your full name" required minLength={2} /></div>
+              <div>
+                <UserRound />
+                <input
+                  name="fullName"
+                  autoComplete="name"
+                  placeholder="Your full name"
+                  required
+                  minLength={2}
+                />
+              </div>
             </label>
           )}
           <label>
             <span>Email address</span>
-            <div><Mail /><input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></div>
+            <div>
+              <Mail />
+              <input
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
           </label>
           <label>
             <span>Password</span>
-            <div><LockKeyhole /><input name="password" type="password" autoComplete={isLogin ? 'current-password' : 'new-password'} placeholder="At least 8 characters" required minLength={8} /></div>
+            <div>
+              <LockKeyhole />
+              <input
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
+                placeholder="At least 8 characters"
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((visible) => !visible)}
+              >
+                {showPassword ? (
+                  <EyeOff aria-hidden="true" />
+                ) : (
+                  <Eye aria-hidden="true" />
+                )}
+              </button>
+            </div>
           </label>
 
           {(state.error || confirmationError) && (
@@ -72,7 +129,10 @@ export function AuthForm({
             </p>
           )}
           {state.success && (
-            <output className="auth-notice auth-success"><CheckCircle2 />{state.success}</output>
+            <output className="auth-notice auth-success">
+              <CheckCircle2 />
+              {state.success}
+            </output>
           )}
 
           <button type="submit" disabled={pending} className="auth-submit">
@@ -85,15 +145,22 @@ export function AuthForm({
           <form action={resendAction} className="auth-resend">
             <input type="hidden" name="email" value={state.email} />
             {resendState.error && (
-              <p className="auth-notice auth-error" role="alert">{resendState.error}</p>
+              <p className="auth-notice auth-error" role="alert">
+                {resendState.error}
+              </p>
             )}
             {resendState.success && (
               <output className="auth-notice auth-success">
-                <CheckCircle2 />{resendState.success}
+                <CheckCircle2 />
+                {resendState.success}
               </output>
             )}
             {!resendState.success && (
-              <button type="submit" disabled={resendPending} className="auth-resend-button">
+              <button
+                type="submit"
+                disabled={resendPending}
+                className="auth-resend-button"
+              >
                 <Mail />
                 {resendPending ? 'Sending…' : 'Resend confirmation email'}
               </button>
@@ -103,9 +170,13 @@ export function AuthForm({
 
         <p className="auth-switch">
           {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
-          <Link href={isLogin ? '/signup' : '/login'}>{isLogin ? 'Create one' : 'Sign in'}</Link>
+          <Link href={isLogin ? '/signup' : '/login'}>
+            {isLogin ? 'Create one' : 'Sign in'}
+          </Link>
         </p>
-        <p className="auth-security"><LockKeyhole /> Secured with encrypted Supabase authentication</p>
+        <p className="auth-security">
+          <LockKeyhole /> Secured with encrypted Supabase authentication
+        </p>
       </section>
     </main>
   );

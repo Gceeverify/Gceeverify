@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -126,21 +126,14 @@ function Brand({ inverse = false }: { inverse?: boolean }) {
   return (
     <span className={`ref-brand ${inverse ? 'ref-brand-inverse' : ''}`}>
       <Image
-        className="ref-logo-dark"
-        src="/gcverify-logo-dark.png"
-        width={178}
-        height={40}
-        alt="Gceeverify"
+        className="ref-brand-mark"
+        src="/gceeverify-mark.png"
+        width={928}
+        height={928}
+        alt=""
         priority
       />
-      <Image
-        className="ref-logo-light"
-        src="/gcverify-logo-light.png"
-        width={178}
-        height={40}
-        alt="Gceeverify"
-        priority
-      />
+      <strong>GCEEVerify</strong>
     </span>
   );
 }
@@ -148,20 +141,141 @@ function Brand({ inverse = false }: { inverse?: boolean }) {
 export function ReferenceLanding() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  useEffect(() => {
+    const elements = Array.from(
+      document.querySelectorAll<HTMLElement>('.ref-landing [data-reveal]'),
+    );
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (reducedMotion || !('IntersectionObserver' in window)) {
+      elements.forEach((element) => element.classList.add('is-visible'));
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.14, rootMargin: '0px 0px -8% 0px' },
+    );
+
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const counters = Array.from(
+      document.querySelectorAll<HTMLElement>('.ref-metrics [data-count-to]'),
+    );
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const frameIds = new Set<number>();
+
+    const setFinalValue = (counter: HTMLElement) => {
+      counter.textContent = `${counter.dataset.countTo ?? '0'}${counter.dataset.countSuffix ?? ''}`;
+    };
+
+    if (reducedMotion || !('IntersectionObserver' in window)) {
+      counters.forEach(setFinalValue);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const counter = entry.target as HTMLElement;
+          const target = Number(counter.dataset.countTo ?? 0);
+          const suffix = counter.dataset.countSuffix ?? '';
+          const startedAt = performance.now();
+          const duration = 1500;
+
+          const update = (now: number) => {
+            const progress = Math.min((now - startedAt) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            counter.textContent = `${Math.round(target * eased)}${suffix}`;
+
+            if (progress < 1) {
+              const frameId = requestAnimationFrame(update);
+              frameIds.add(frameId);
+            } else {
+              setFinalValue(counter);
+            }
+          };
+
+          const frameId = requestAnimationFrame(update);
+          frameIds.add(frameId);
+          observer.unobserve(counter);
+        });
+      },
+      { threshold: 0.55 },
+    );
+
+    counters.forEach((counter) => observer.observe(counter));
+    return () => {
+      observer.disconnect();
+      frameIds.forEach((frameId) => cancelAnimationFrame(frameId));
+    };
+  }, []);
+
   return (
     <main className="ref-landing">
       <style>{`
+        .ref-landing [data-reveal] {
+          --reveal-delay: 0ms;
+          opacity: 0;
+          transform: translate3d(0, 30px, 0);
+          transition:
+            opacity 700ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay),
+            transform 700ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay);
+          will-change: opacity, transform;
+        }
+        .ref-landing [data-reveal='left'] {
+          transform: translate3d(-34px, 0, 0);
+        }
+        .ref-landing [data-reveal='right'] {
+          transform: translate3d(34px, 0, 0);
+        }
+        .ref-landing [data-reveal='down'] {
+          transform: translate3d(0, -22px, 0);
+        }
+        .ref-landing [data-reveal='scale'] {
+          transform: translate3d(0, 16px, 0) scale(0.97);
+        }
+        .ref-landing [data-reveal].is-visible {
+          opacity: 1;
+          transform: translate3d(0, 0, 0) scale(1);
+        }
+        .ref-service-grid > [data-reveal]:nth-child(2),
+        .ref-step-grid > [data-reveal]:nth-child(2),
+        .ref-metrics .ref-container > [data-reveal]:nth-child(2),
+        .ref-review-grid > [data-reveal]:nth-child(2) {
+          --reveal-delay: 90ms;
+        }
+        .ref-service-grid > [data-reveal]:nth-child(3),
+        .ref-step-grid > [data-reveal]:nth-child(3),
+        .ref-metrics .ref-container > [data-reveal]:nth-child(3),
+        .ref-review-grid > [data-reveal]:nth-child(3) {
+          --reveal-delay: 180ms;
+        }
+        .ref-service-grid > [data-reveal]:nth-child(4) {
+          --reveal-delay: 270ms;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ref-landing [data-reveal] {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+          }
+        }
         .ref-brand { gap: 0; }
         .ref-brand img {
-          width: 128px;
-          height: auto;
+          width: 25px;
+          height: 25px;
         }
-        .ref-brand .ref-logo-dark { display: block; }
-        .ref-brand .ref-logo-light { display: none; }
-        html[data-theme='dark'] .ref-brand .ref-logo-dark { display: none; }
-        html[data-theme='dark'] .ref-brand .ref-logo-light { display: block; }
-        .ref-brand-inverse .ref-logo-dark { display: none !important; }
-        .ref-brand-inverse .ref-logo-light { display: block !important; }
         .ref-reviewer-avatar {
           width: 38px !important;
           height: 38px !important;
@@ -170,7 +284,6 @@ export function ReferenceLanding() {
           object-fit: cover;
         }
         .ref-phone { display: none; }
-        .ref-phone-logo-light { display: none; }
         .ref-mobile-hero-dark { display: none !important; }
         .ref-mobile-customer-dark { display: none !important; }
         .ref-floating-theme {
@@ -245,6 +358,39 @@ export function ReferenceLanding() {
         }
         html[data-theme='dark'] .ref-metrics { background: #061b0d; }
         @media (max-width: 700px) {
+          .ref-metrics > .ref-container {
+            width: calc(100% - 24px);
+            min-height: 142px !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            padding: 20px 0 !important;
+          }
+          .ref-metrics article {
+            min-width: 0;
+            padding: 0 6px !important;
+          }
+          .ref-metrics article:not(:last-child)::after {
+            position: absolute !important;
+            top: 12% !important;
+            right: 0 !important;
+            bottom: auto !important;
+            left: auto !important;
+            display: block !important;
+            width: 1px !important;
+            height: 76% !important;
+            background: rgba(255, 255, 255, 0.18) !important;
+            content: '' !important;
+          }
+          .ref-metrics strong {
+            font-size: clamp(25px, 8.5vw, 38px) !important;
+            line-height: 1;
+            white-space: nowrap;
+          }
+          .ref-metrics span {
+            min-height: 24px;
+            margin-top: 9px;
+            font-size: clamp(7px, 2.05vw, 9px) !important;
+            line-height: 1.35;
+          }
           .ref-header {
             grid-template-columns: 1fr auto auto !important;
             min-height: 66px !important;
@@ -252,8 +398,12 @@ export function ReferenceLanding() {
           }
           .ref-brand { gap: 0 !important; }
           .ref-brand img {
-            width: 94px !important;
-            height: auto !important;
+            width: 23px !important;
+            height: 23px !important;
+          }
+          .ref-brand strong {
+            font-size: 14px;
+            letter-spacing: -0.035em;
           }
           .ref-mobile-hero-reference {
             width: 100% !important;
@@ -262,13 +412,97 @@ export function ReferenceLanding() {
             object-fit: contain;
             object-position: center bottom;
           }
+          .ref-simple {
+            display: grid !important;
+            min-height: 278px !important;
+            grid-template-columns: minmax(0, 1.12fr) minmax(138px, 0.88fr);
+            align-items: end;
+            gap: 0;
+            overflow: hidden;
+            padding: 30px 14px 0 !important;
+          }
+          .ref-simple > .ref-simple-copy {
+            grid-column: 1;
+            grid-row: 1;
+            align-self: center;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 4px 30px 0 !important;
+          }
+          .ref-simple-copy h2 {
+            max-width: 190px;
+            font-size: clamp(17px, 4.8vw, 21px) !important;
+            line-height: 1.05;
+          }
+          .ref-simple-copy p {
+            max-width: 205px;
+            margin-top: 12px;
+            font-size: clamp(8px, 2.25vw, 10px) !important;
+            line-height: 1.55 !important;
+          }
+          .ref-simple-copy > a {
+            min-height: 29px;
+            margin-top: 14px;
+            padding: 0 11px;
+            border-color: rgba(69, 196, 75, 0.42);
+            background: rgba(99, 237, 86, 0.06);
+            font-size: 8px;
+            font-weight: 750;
+            box-shadow: 0 6px 14px rgba(44, 118, 48, 0.08);
+          }
+          .ref-simple-copy > a svg {
+            width: 11px;
+            height: 11px;
+          }
+          .ref-mobile-customer-reference {
+            grid-column: 2;
+            grid-row: 1;
+            align-self: end;
+            width: min(50vw, 204px) !important;
+            max-width: none;
+            margin: 0 auto !important;
+            transform: translate(4px, -30px) !important;
+          }
+          html[data-theme='dark'] .ref-simple-copy > a {
+            border-color: rgba(108, 243, 96, 0.42);
+            background: rgba(108, 243, 96, 0.08);
+            box-shadow: none;
+          }
           .ref-dashboard {
-            grid-template-columns: 1fr !important;
-            justify-items: center;
+            min-height: 390px !important;
+            grid-template-columns: minmax(0, 1.12fr) minmax(122px, 0.88fr) !important;
+            align-items: center;
+            justify-items: stretch;
+            gap: 8px;
+            padding: 52px 0 !important;
           }
           .ref-dashboard-copy {
             width: 100%;
             justify-self: stretch;
+            padding: 0 4px 0 0 !important;
+          }
+          .ref-dashboard-copy h2 {
+            max-width: 155px;
+            font-size: clamp(18px, 5vw, 22px) !important;
+            line-height: 1.04;
+          }
+          .ref-dashboard-copy p {
+            max-width: 175px;
+            margin-top: 13px;
+            font-size: clamp(8px, 2.25vw, 10px) !important;
+            line-height: 1.55 !important;
+          }
+          .ref-dashboard-link {
+            min-height: 30px;
+            margin-top: 15px;
+            padding: 0 11px;
+            font-size: 8px;
+            font-weight: 750;
+            box-shadow: 0 7px 15px rgba(42, 166, 55, 0.16);
+          }
+          .ref-dashboard-link svg {
+            width: 11px;
+            height: 11px;
           }
           .ref-laptop {
             display: none !important;
@@ -276,19 +510,19 @@ export function ReferenceLanding() {
           .ref-phone {
             position: relative;
             display: block;
-            width: min(236px, 66vw);
-            aspect-ratio: 9 / 19.4;
-            margin: 44px auto 0;
-            border: 2px solid #5c625e;
-            border-radius: 43px;
+            width: min(42vw, 174px);
+            aspect-ratio: 9 / 18.2;
+            justify-self: end;
+            margin: 0;
+            border: 1px solid #454b47;
+            border-radius: 34px;
             background:
-              linear-gradient(145deg, #555b57 0%, #171a18 18%, #070908 52%, #353a36 100%);
-            padding: 8px;
+              linear-gradient(145deg, #505652 0%, #181b19 20%, #080a09 57%, #353a36 100%);
+            padding: 5px;
             box-shadow:
-              0 36px 52px rgba(7, 24, 12, 0.22),
-              0 14px 20px rgba(6, 15, 9, 0.2),
-              inset 0 0 0 1px rgba(255, 255, 255, 0.18),
-              inset 0 0 0 3px #090b0a;
+              0 24px 38px rgba(7, 24, 12, 0.2),
+              0 8px 14px rgba(6, 15, 9, 0.14),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.16);
           }
           .ref-phone::before,
           .ref-phone::after {
@@ -298,17 +532,17 @@ export function ReferenceLanding() {
             box-shadow: inset 1px 0 rgba(255, 255, 255, 0.18);
           }
           .ref-phone::before {
-            top: 94px;
-            left: -5px;
-            width: 3px;
-            height: 62px;
+            top: 27%;
+            left: -3px;
+            width: 2px;
+            height: 48px;
             border-radius: 3px 0 0 3px;
           }
           .ref-phone::after {
-            top: 119px;
-            right: -5px;
-            width: 3px;
-            height: 72px;
+            top: 34%;
+            right: -3px;
+            width: 2px;
+            height: 54px;
             border-radius: 0 3px 3px 0;
           }
           .ref-phone-screen {
@@ -319,30 +553,30 @@ export function ReferenceLanding() {
             place-items: center;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 34px;
+            border-radius: 29px;
             background:
               radial-gradient(circle at 50% 46%, rgba(106, 239, 91, 0.12), transparent 34%),
               #fff;
             box-shadow:
-              inset 0 0 0 1px rgba(0, 0, 0, 0.32),
-              inset 0 0 18px rgba(18, 34, 22, 0.06);
+              inset 0 0 0 1px rgba(0, 0, 0, 0.26),
+              inset 0 0 14px rgba(18, 34, 22, 0.045);
           }
           .ref-phone-screen::before {
             position: absolute;
             inset: 0;
             z-index: 2;
             border-radius: inherit;
-            background: linear-gradient(118deg, rgba(255, 255, 255, 0.2), transparent 24%, transparent 72%, rgba(255, 255, 255, 0.06));
+            background: linear-gradient(118deg, rgba(255, 255, 255, 0.12), transparent 23%, transparent 78%, rgba(255, 255, 255, 0.04));
             content: '';
             pointer-events: none;
           }
           .ref-phone-island {
             position: absolute;
-            top: 10px;
+            top: 7px;
             left: 50%;
             z-index: 4;
-            width: 70px;
-            height: 21px;
+            width: 48px;
+            height: 14px;
             border-radius: 999px;
             background: #050605;
             box-shadow:
@@ -352,48 +586,57 @@ export function ReferenceLanding() {
           }
           .ref-phone-island::after {
             position: absolute;
-            top: 7px;
-            right: 9px;
-            width: 7px;
-            height: 7px;
+            top: 5px;
+            right: 7px;
+            width: 4px;
+            height: 4px;
             border-radius: 50%;
             background: radial-gradient(circle at 35% 35%, #31547a, #07111c 55%, #000);
             box-shadow: 0 0 0 1px rgba(100, 150, 190, 0.24);
             content: '';
           }
-          .ref-phone-logo {
+          .ref-phone-wordmark {
             position: relative;
             z-index: 1;
-            width: 126px;
-            height: auto;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #1d301f;
+          }
+          .ref-phone-wordmark img {
+            width: 25px;
+            height: 25px;
+          }
+          .ref-phone-wordmark strong {
+            font-size: clamp(10px, 2.9vw, 12px);
+            font-weight: 650;
+            letter-spacing: -0.04em;
           }
           .ref-phone-home {
             position: absolute;
-            bottom: 14px;
+            bottom: 9px;
             left: 50%;
             z-index: 4;
-            width: 78px;
-            height: 4px;
+            width: 48px;
+            height: 3px;
             border-radius: 999px;
             background: rgba(17, 30, 20, 0.78);
             transform: translateX(-50%);
           }
           html[data-theme='dark'] .ref-phone {
-            border-color: #626b65;
-            background: linear-gradient(145deg, #59615c 0%, #171a18 18%, #050706 54%, #343a36 100%);
+            border-color: #515852;
+            background: linear-gradient(145deg, #505752 0%, #161917 20%, #050706 58%, #303531 100%);
             box-shadow:
-              0 38px 56px rgba(0, 0, 0, 0.42),
-              0 15px 22px rgba(0, 0, 0, 0.28),
-              inset 0 0 0 1px rgba(255, 255, 255, 0.16),
-              inset 0 0 0 3px #030504;
+              0 26px 42px rgba(0, 0, 0, 0.38),
+              0 9px 16px rgba(0, 0, 0, 0.24),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.13);
           }
           html[data-theme='dark'] .ref-phone-screen {
             background:
               radial-gradient(circle at 50% 46%, rgba(108, 243, 96, 0.16), transparent 35%),
               #07110a;
           }
-          html[data-theme='dark'] .ref-phone-logo-dark { display: none; }
-          html[data-theme='dark'] .ref-phone-logo-light { display: block; }
+          html[data-theme='dark'] .ref-phone-wordmark { color: #f4fff1; }
           html[data-theme='dark'] .ref-phone-home {
             background: rgba(230, 255, 229, 0.78);
           }
@@ -403,7 +646,6 @@ export function ReferenceLanding() {
           html[data-theme='dark'] .ref-mobile-hero-dark {
             display: block !important;
           }
-          .ref-brand .ref-logo-light { display: none; }
           .ref-header-actions {
             display: flex !important;
             gap: 7px;
@@ -438,8 +680,6 @@ export function ReferenceLanding() {
             backdrop-filter: none;
           }
           html[data-theme='dark'] .ref-brand { color: #f4fff1; }
-          html[data-theme='dark'] .ref-brand .ref-logo-dark { display: none; }
-          html[data-theme='dark'] .ref-brand .ref-logo-light { display: block; }
           html[data-theme='dark'] .ref-header-actions .theme-toggle,
           html[data-theme='dark'] .ref-menu {
             border-color: rgba(108, 243, 96, 0.5) !important;
@@ -523,6 +763,7 @@ export function ReferenceLanding() {
       <section id="top" className="ref-hero">
         <Image
           className="ref-exact-hero"
+          data-reveal="scale"
           src="/gceeverify-reference-hero.jpg"
           width={3456}
           height={1615}
@@ -532,6 +773,7 @@ export function ReferenceLanding() {
         />
         <Image
           className="ref-mobile-hero-reference ref-mobile-hero-light"
+          data-reveal="right"
           src="/gceeverify-mobile-hero-person.jpg"
           width={1716}
           height={1375}
@@ -541,6 +783,7 @@ export function ReferenceLanding() {
         />
         <Image
           className="ref-mobile-hero-reference ref-mobile-hero-dark"
+          data-reveal="right"
           src="/gceeverify-mobile-hero-person-dark.png?v=2"
           width={1716}
           height={1375}
@@ -551,7 +794,7 @@ export function ReferenceLanding() {
         <div className="ref-hero-orb ref-orb-yellow" />
         <div className="ref-hero-orb ref-orb-green" />
         <div className="ref-hero-inner">
-          <div className="ref-hero-copy">
+          <div className="ref-hero-copy" data-reveal="left">
             <h1>Verify Boost.<br />Access. <em>All in<br />one Place.</em></h1>
             <span className="ref-title-rule" />
             <p>Get social media services, virtual numbers and digital accounts instantly from a simple, secure platform.</p>
@@ -573,12 +816,12 @@ export function ReferenceLanding() {
       </section>
 
       <section id="services" className="ref-services ref-container">
-        <div className="ref-section-title">
+        <div className="ref-section-title" data-reveal="up">
           <h2>Everything you need for<br />your <em>digital journey</em></h2>
         </div>
         <div className="ref-service-grid">
           {services.map(({ href, icon: Icon, title, copy, className }) => (
-            <Link className={`ref-service-card ${className}`} href={href} key={title}>
+            <Link className={`ref-service-card ${className}`} href={href} key={title} data-reveal="scale">
               <span><Icon /></span>
               <h3>{title}</h3>
               <p>{copy}</p>
@@ -591,6 +834,7 @@ export function ReferenceLanding() {
       <section className="ref-simple ref-container">
         <Image
           className="ref-exact-simple"
+          data-reveal="scale"
           src="/gceeverify-reference-simple.jpg"
           width={3456}
           height={1315}
@@ -599,6 +843,7 @@ export function ReferenceLanding() {
         />
         <Image
           className="ref-mobile-customer-reference ref-mobile-customer-light"
+          data-reveal="right"
           src="/gceeverify-mobile-customer.jpg"
           width={1050}
           height={1275}
@@ -607,13 +852,14 @@ export function ReferenceLanding() {
         />
         <Image
           className="ref-mobile-customer-reference ref-mobile-customer-dark"
+          data-reveal="right"
           src="/gceeverify-mobile-customer-dark.png?v=1"
           width={1050}
           height={1275}
           alt="The original Gceeverify customer on a dark blended background"
           unoptimized
         />
-        <div className="ref-simple-copy">
+        <div className="ref-simple-copy" data-reveal="left">
           <h2>Fast, simple, and reliable digital services</h2>
           <p>Access a wide range of digital services from one convenient platform. Gceeverify makes it easy to get the services you need quickly, securely, and reliably.</p>
           <a href="#how-it-works">Learn more <ArrowRight /></a>
@@ -626,13 +872,13 @@ export function ReferenceLanding() {
 
       <section id="how-it-works" className="ref-steps">
         <div className="ref-container">
-          <div className="ref-section-title">
+          <div className="ref-section-title" data-reveal="up">
             <h2>Grow Fast Reach more</h2>
             <p>Get started in three simple steps and access the services you need in minutes.</p>
           </div>
           <div className="ref-step-grid">
             {steps.map((step) => (
-              <article key={step.number}>
+              <article key={step.number} data-reveal="up">
                 <strong className="ref-step-number">{step.number}</strong>
                 <h3>{step.title}</h3>
                 <p>{step.copy}</p>
@@ -644,12 +890,12 @@ export function ReferenceLanding() {
       </section>
 
       <section className="ref-dashboard ref-container">
-        <div className="ref-dashboard-copy">
+        <div className="ref-dashboard-copy" data-reveal="left">
           <h2>An easy-to-use dashboard</h2>
           <p>Manage your orders, track transactions and access every service from one clean, focused workspace.</p>
           <Link className="ref-dashboard-link" href="/login">See dashboard <ArrowRight /></Link>
         </div>
-        <div className="ref-laptop" aria-label="Gceeverify dashboard preview">
+        <div className="ref-laptop" aria-label="Gceeverify dashboard preview" data-reveal="right">
           <div className="ref-laptop-screen">
             <Image
               className="ref-dashboard-shot ref-dashboard-shot-light"
@@ -668,23 +914,18 @@ export function ReferenceLanding() {
           </div>
           <div className="ref-laptop-base" />
         </div>
-        <div className="ref-phone" aria-label="Gceeverify mobile preview">
+        <div className="ref-phone" aria-label="Gceeverify mobile preview" data-reveal="right">
           <div className="ref-phone-screen">
             <span className="ref-phone-island" aria-hidden="true" />
-            <Image
-              className="ref-phone-logo ref-phone-logo-dark"
-              src="/gcverify-logo-dark.png"
-              width={4138}
-              height={928}
-              alt="Gceeverify"
-            />
-            <Image
-              className="ref-phone-logo ref-phone-logo-light"
-              src="/gcverify-logo-light.png"
-              width={4138}
-              height={928}
-              alt="Gceeverify"
-            />
+            <div className="ref-phone-wordmark" aria-label="GCEEVerify">
+              <Image
+                src="/gceeverify-mark.png"
+                width={928}
+                height={928}
+                alt=""
+              />
+              <strong>GCEEVerify</strong>
+            </div>
             <span className="ref-phone-home" aria-hidden="true" />
           </div>
         </div>
@@ -692,19 +933,19 @@ export function ReferenceLanding() {
 
       <section className="ref-metrics">
         <div className="ref-container">
-          <article><strong>100k+</strong><span>Users served</span></article>
-          <article><strong>10k+</strong><span>Successful verifications</span></article>
-          <article><strong>24/7</strong><span>Platform accessibility</span></article>
+          <article data-reveal="up"><strong data-count-to="100" data-count-suffix="k+">0k+</strong><span>Users served</span></article>
+          <article data-reveal="up"><strong data-count-to="10" data-count-suffix="k+">0k+</strong><span>Successful verifications</span></article>
+          <article data-reveal="up"><strong data-count-to="24" data-count-suffix="/7">0/7</strong><span>Platform accessibility</span></article>
         </div>
       </section>
 
       <section className="ref-reviews ref-container">
-        <div className="ref-section-title">
+        <div className="ref-section-title" data-reveal="up">
           <h2>Trusted by a growing global community</h2>
         </div>
         <div className="ref-review-grid">
           {reviews.map((review) => (
-            <article key={review.name}>
+            <article key={review.name} data-reveal="scale">
               <div className="ref-stars" aria-label="5 out of 5 stars">
                 {[0, 1, 2, 3, 4].map((star) => <Star key={star} />)}
               </div>
@@ -725,11 +966,11 @@ export function ReferenceLanding() {
       </section>
 
       <section id="faq" className="ref-faq ref-container">
-        <div className="ref-section-title">
+        <div className="ref-section-title" data-reveal="up">
           <span>FREQUENT QUESTION</span>
           <h2>Do you have any question</h2>
         </div>
-        <div className="ref-faq-list">
+        <div className="ref-faq-list" data-reveal="up">
           {faqs.map((faq, index) => (
             <details key={faq.question} open={index === 2}>
               <summary><span><Plus /></span>{faq.question}</summary>
@@ -741,7 +982,7 @@ export function ReferenceLanding() {
 
       <footer className="ref-footer">
         <div className="ref-footer-curve" />
-        <div className="ref-container ref-footer-grid">
+        <div className="ref-container ref-footer-grid" data-reveal="up">
           <div className="ref-footer-brand"><Brand inverse /><p>Fast, reliable and seamless digital services.</p><div><button type="button" aria-label="Instagram"><Camera /></button><button type="button" aria-label="YouTube"><Play /></button></div></div>
           <div><h3>Services</h3><Link href="/boost">Social boost</Link><Link href="/numbers">Virtual numbers</Link><Link href="/logs">Digital accounts</Link></div>
           <div><h3>Company</h3><a href="#how-it-works">About</a><a href="#faq">Support</a><Link href="/login">Dashboard</Link></div>

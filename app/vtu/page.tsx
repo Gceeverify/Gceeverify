@@ -806,7 +806,7 @@ export default function VtuPage() {
       </section>
       <p className="vtu-help">
         Need another service?{' '}
-        <Link href="/#dashboard">Return to your dashboard</Link>
+        <Link href="/dashboard">Return to your dashboard</Link>
       </p>
     </ServicePageShell>
   );
