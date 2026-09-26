@@ -481,7 +481,10 @@ export async function getNumberCatalog() {
       .map(([code]) => ({ code, name: productLabel(code) }))
       .sort((a, b) => a.name.localeCompare(b.name)),
     countries: Object.entries(countries)
-      .map(([id, country]) => ({ id, name: country.text_en }))
+      .map(([id, country]) => ({
+        id,
+        name: id === 'england' ? 'UK' : country.text_en,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   };
 }

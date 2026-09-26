@@ -2,6 +2,23 @@ const USD_NGN_RATE_URL = 'https://open.er-api.com/v6/latest/USD';
 const FALLBACK_USD_NGN_RATE = 1327.93;
 const DEFAULT_BOOST_MARKUP_PERCENT = 30;
 const DEFAULT_NUMBER_MARKUP_PERCENT = 30;
+const NUMBER_TIER_INCREASE_PERCENT = {
+  gold: 10,
+  silver: 0,
+  bronze: 20,
+} as const;
+const SNAPCHAT_MINIMUM_PRICE_NGN = {
+  gold: 3700,
+  silver: 2800,
+  bronze: 1200,
+} as const;
+const USA_FACEBOOK_FIXED_PRICE_NGN = {
+  gold: 1670,
+  silver: 1350,
+  bronze: 1000,
+} as const;
+
+export type NumberPriceTier = keyof typeof NUMBER_TIER_INCREASE_PERCENT;
 
 type ExchangeRateResponse = {
   result?: string;
@@ -78,7 +95,47 @@ export function getNumberMarkupPercent() {
 export function getNumberPriceNgn(
   providerPriceUsd: number,
   usdToNgnRate: number,
+  tier: NumberPriceTier,
+  service: string,
+  country: string,
 ) {
-  const multiplier = 1 + getNumberMarkupPercent() / 100;
-  return convertUsdToNgn(providerPriceUsd * multiplier, usdToNgnRate);
+  const baseMarkupMultiplier = 1 + getNumberMarkupPercent() / 100;
+  const tierMultiplier = 1 + getNumberTierIncreasePercent(tier) / 100;
+  const multiplier = baseMarkupMultiplier * tierMultiplier;
+  const calculatedPrice = convertUsdToNgn(
+    providerPriceUsd * multiplier,
+    usdToNgnRate,
+  );
+  const fixedPrice = getNumberFixedPriceNgn(service, tier, country);
+  if (fixedPrice !== null) return fixedPrice;
+  return Math.max(
+    calculatedPrice,
+    getNumberMinimumPriceNgn(service, tier, country),
+  );
+}
+
+export function getNumberTierIncreasePercent(tier: NumberPriceTier) {
+  return NUMBER_TIER_INCREASE_PERCENT[tier];
+}
+
+export function getNumberMinimumPriceNgn(
+  service: string,
+  tier: NumberPriceTier,
+  _country: string,
+) {
+  const normalizedService = service.toLowerCase();
+  if (normalizedService === 'snapchat') {
+    return SNAPCHAT_MINIMUM_PRICE_NGN[tier];
+  }
+  return 0;
+}
+
+export function getNumberFixedPriceNgn(
+  service: string,
+  tier: NumberPriceTier,
+  country: string,
+) {
+  return service.toLowerCase() === 'facebook' && country.toLowerCase() === 'usa'
+    ? USA_FACEBOOK_FIXED_PRICE_NGN[tier]
+    : null;
 }

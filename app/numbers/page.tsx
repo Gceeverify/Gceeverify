@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   Check,
+  ChevronDown,
   Clock3,
   Globe2,
   Grid2X2,
@@ -17,6 +18,19 @@ import {
 } from 'lucide-react';
 import { Notice, ServicePageShell } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 type Catalog = {
   services: Array<{ code: string; name: string }>;
@@ -31,6 +45,7 @@ type QuoteOption = {
   tier: 'gold' | 'silver' | 'bronze';
   reliability: string;
 };
+type ServerTier = QuoteOption['tier'];
 type Quote = {
   lowestPrice: number;
   totalAvailable: number;
@@ -53,10 +68,30 @@ type Activation = {
 };
 
 const serverDetails = [
-  { label: 'Server 1', badge: 'Gold', note: 'Best delivery route' },
-  { label: 'Server 2', badge: 'Silver', note: 'Next-best delivery route' },
-  { label: 'Server 3', badge: 'Bronze', note: 'Budget alternative route' },
-];
+  {
+    tier: 'gold',
+    label: 'Server 1',
+    badge: 'Gold',
+    note: 'Best delivery route',
+  },
+  {
+    tier: 'silver',
+    label: 'Server 2',
+    badge: 'Silver',
+    note: 'Next-best delivery route',
+  },
+  {
+    tier: 'bronze',
+    label: 'Server 3',
+    badge: 'Bronze',
+    note: 'Budget alternative route',
+  },
+] satisfies Array<{
+  tier: ServerTier;
+  label: string;
+  badge: string;
+  note: string;
+}>;
 
 const popularServiceCodes = ['wa', 'tg', 'fb', 'ig'];
 const nairaFormatter = new Intl.NumberFormat('en-NG', {
@@ -70,12 +105,80 @@ function formatNaira(value: number) {
   return nairaFormatter.format(value);
 }
 
+type SearchableOption = {
+  value: string;
+  label: string;
+};
+
+function SearchableSelect({
+  value,
+  options,
+  placeholder,
+  searchPlaceholder,
+  emptyMessage,
+  ariaLabel,
+  disabled = false,
+  onValueChange,
+}: {
+  value: string;
+  options: SearchableOption[];
+  placeholder: string;
+  searchPlaceholder: string;
+  emptyMessage: string;
+  ariaLabel: string;
+  disabled?: boolean;
+  onValueChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.value === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        type="button"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        disabled={disabled}
+        className="number-checkout-select number-combobox-trigger"
+      >
+        <span>{selected?.label ?? placeholder}</span>
+        <ChevronDown />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="number-combobox-popover">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={`${option.label} ${option.value}`}
+                  data-checked={option.value === value}
+                  onSelect={() => {
+                    onValueChange(option.value);
+                    setOpen(false);
+                  }}
+                >
+                  <span>{option.label}</span>
+                  <small>{option.value}</small>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function NumbersPage() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [country, setCountry] = useState('');
   const [service, setService] = useState('');
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [selectedServer, setSelectedServer] = useState(0);
+  const [selectedServer, setSelectedServer] = useState<ServerTier>('gold');
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [activation, setActivation] = useState<Activation | null>(null);
@@ -112,8 +215,12 @@ export default function NumbersPage() {
     })();
   }, []);
 
-  const serverOptions = quote?.options.slice(0, 3) ?? [];
-  const selectedOption = serverOptions[selectedServer];
+  const selectedOption = quote?.options.find(
+    (option) => option.tier === selectedServer,
+  );
+  const selectedServerDetails =
+    serverDetails.find((server) => server.tier === selectedServer) ??
+    serverDetails[0];
   const selectedServiceName = catalog?.services.find(
     (item) => item.code === service,
   )?.name;
@@ -125,12 +232,22 @@ export default function NumbersPage() {
       catalog?.services.find((item) => item.code.toLowerCase() === code),
     )
     .filter((item): item is { code: string; name: string } => Boolean(item));
+  const countryOptions =
+    catalog?.countries.map((item) => ({
+      value: item.id,
+      label: item.name,
+    })) ?? [];
+  const serviceOptions =
+    catalog?.services.map((item) => ({
+      value: item.code,
+      label: item.name,
+    })) ?? [];
 
   const resetSelection = (nextCountry = country) => {
     setCountry(nextCountry);
     setService('');
     setQuote(null);
-    setSelectedServer(0);
+    setSelectedServer('gold');
     setConfirming(false);
     setMessage('');
   };
@@ -148,7 +265,9 @@ export default function NumbersPage() {
       );
       const result = (await response.json()) as Quote;
       if (!response.ok) throw new Error(result.error);
-      if (!result.options[selectedServer]) setSelectedServer(0);
+      if (!result.options.some((option) => option.tier === selectedServer)) {
+        setSelectedServer(result.options[0]?.tier ?? 'gold');
+      }
       setQuote(result);
     } catch (error) {
       setMessage(
@@ -254,15 +373,20 @@ export default function NumbersPage() {
               aria-label="Select server"
               value={selectedServer}
               onChange={(event) => {
-                setSelectedServer(Number(event.target.value));
+                setSelectedServer(event.target.value as ServerTier);
                 setConfirming(false);
               }}
             >
-              {serverDetails.map((server, index) => (
+              {serverDetails.map((server) => (
                 <option
                   key={server.label}
-                  value={index}
-                  disabled={Boolean(quote) && !serverOptions[index]}
+                  value={server.tier}
+                  disabled={
+                    Boolean(quote) &&
+                    !quote?.options.some(
+                      (option) => option.tier === server.tier,
+                    )
+                  }
                 >
                   {server.label} — {server.badge}
                 </option>
@@ -279,18 +403,16 @@ export default function NumbersPage() {
               </div>
               <Globe2 />
             </div>
-            <select
-              className="number-checkout-select"
-              aria-label="Select country"
+            <SearchableSelect
+              ariaLabel="Select country"
               value={country}
-              onChange={(event) => resetSelection(event.target.value)}
-            >
-              {catalog?.countries.map((item) => (
-                <option value={item.id} key={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+              options={countryOptions}
+              disabled={!catalog}
+              placeholder="Select a country"
+              searchPlaceholder="Search countries..."
+              emptyMessage="No matching countries"
+              onValueChange={resetSelection}
+            />
           </div>
 
           <div className="number-step">
@@ -319,24 +441,18 @@ export default function NumbersPage() {
                 ))}
               </div>
             )}
-            <select
-              className="number-checkout-select"
-              aria-label="Select service"
+            <SearchableSelect
+              ariaLabel="Select service"
               value={service}
+              options={serviceOptions}
               disabled={!catalog || loading}
-              onChange={(event) => void loadQuote(event.target.value)}
-            >
-              <option value="">
-                {loading && !catalog
-                  ? 'Loading services...'
-                  : 'Select a service'}
-              </option>
-              {catalog?.services.map((item) => (
-                <option value={item.code} key={item.code}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+              placeholder={
+                loading && !catalog ? 'Loading services...' : 'Select a service'
+              }
+              searchPlaceholder="Search services..."
+              emptyMessage="No matching services"
+              onValueChange={(value) => void loadQuote(value)}
+            />
           </div>
 
           <div className="number-step provider-step">
@@ -359,9 +475,7 @@ export default function NumbersPage() {
                   <Signal />
                 </span>
                 <span>
-                  <strong>
-                    {serverDetails[selectedServer].badge} SMS Provider
-                  </strong>
+                  <strong>{selectedServerDetails.badge} SMS Provider</strong>
                   <small>
                     <Check />
                     {selectedOption.reliability}
@@ -430,10 +544,10 @@ export default function NumbersPage() {
                     Server
                   </span>
                   <strong>
-                    {serverDetails[selectedServer].label}
+                    {selectedServerDetails.label}
                     <small>
-                      {serverDetails[selectedServer].badge} ·{' '}
-                      {serverDetails[selectedServer].note}
+                      {selectedServerDetails.badge} ·{' '}
+                      {selectedServerDetails.note}
                     </small>
                   </strong>
                 </div>

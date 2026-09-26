@@ -1,7 +1,10 @@
 import { getCurrentUser } from '@/lib/auth';
 import {
+  getNumberFixedPriceNgn,
   getNumberMarkupPercent,
+  getNumberMinimumPriceNgn,
   getNumberPriceNgn,
+  getNumberTierIncreasePercent,
   getUsdToNgnRate,
 } from '@/lib/exchange-rates';
 import { recordOrder, updateTrackedOrder } from '@/lib/orders';
@@ -21,7 +24,13 @@ async function getPricedNumberQuote(service: string, country: string) {
   const options = quote.options.map(
     ({ price: providerPriceUsd, ...option }) => ({
       ...option,
-      price: getNumberPriceNgn(providerPriceUsd, exchangeRate.rate),
+      price: getNumberPriceNgn(
+        providerPriceUsd,
+        exchangeRate.rate,
+        option.tier,
+        service,
+        country,
+      ),
     }),
   );
 
@@ -36,6 +45,21 @@ async function getPricedNumberQuote(service: string, country: string) {
       updatedAt: exchangeRate.updatedAt,
       source: exchangeRate.source,
       sourceUrl: exchangeRate.sourceUrl,
+      tierIncreasePercent: {
+        gold: getNumberTierIncreasePercent('gold'),
+        silver: getNumberTierIncreasePercent('silver'),
+        bronze: getNumberTierIncreasePercent('bronze'),
+      },
+      minimumPriceNgn: {
+        gold: getNumberMinimumPriceNgn(service, 'gold', country),
+        silver: getNumberMinimumPriceNgn(service, 'silver', country),
+        bronze: getNumberMinimumPriceNgn(service, 'bronze', country),
+      },
+      fixedPriceNgn: {
+        gold: getNumberFixedPriceNgn(service, 'gold', country),
+        silver: getNumberFixedPriceNgn(service, 'silver', country),
+        bronze: getNumberFixedPriceNgn(service, 'bronze', country),
+      },
     },
   };
 }
@@ -118,6 +142,9 @@ export async function POST(request: Request) {
       const customerPriceNgn = getNumberPriceNgn(
         offer.price,
         exchangeRate.rate,
+        offer.tier,
+        body.service,
+        body.country,
       );
       if (Math.abs(customerPriceNgn - body.quotedPriceNgn!) > 0.01) {
         return Response.json(
@@ -148,6 +175,17 @@ export async function POST(request: Request) {
           quotedProviderCostUsd: offer.price,
           usdToNgnRate: exchangeRate.rate,
           markupPercent: getNumberMarkupPercent(),
+          tierIncreasePercent: getNumberTierIncreasePercent(offer.tier),
+          minimumPriceNgn: getNumberMinimumPriceNgn(
+            body.service,
+            offer.tier,
+            body.country,
+          ),
+          fixedPriceNgn: getNumberFixedPriceNgn(
+            body.service,
+            offer.tier,
+            body.country,
+          ),
         },
       });
       return Response.json(
