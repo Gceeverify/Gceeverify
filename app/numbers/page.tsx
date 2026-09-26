@@ -27,6 +27,7 @@ type QuoteOption = {
   providerId: string;
   price: number;
   count: number;
+  rate: number | null;
   tier: 'gold' | 'silver' | 'bronze';
   reliability: string;
 };
@@ -34,6 +35,14 @@ type Quote = {
   lowestPrice: number;
   totalAvailable: number;
   options: QuoteOption[];
+  pricing: {
+    currency: 'NGN';
+    markupPercent: number;
+    usdToNgnRate: number;
+    updatedAt: string | null;
+    source: string;
+    sourceUrl: string;
+  };
   error?: string;
 };
 type Activation = {
@@ -44,12 +53,22 @@ type Activation = {
 };
 
 const serverDetails = [
-  { label: 'Server 1', badge: 'Gold', note: 'Fastest & most confirmed' },
-  { label: 'Server 2', badge: 'Silver', note: 'Reliable fallback route' },
-  { label: 'Server 3', badge: 'Bronze', note: 'Budget delivery route' },
+  { label: 'Server 1', badge: 'Gold', note: 'Best delivery route' },
+  { label: 'Server 2', badge: 'Silver', note: 'Next-best delivery route' },
+  { label: 'Server 3', badge: 'Bronze', note: 'Budget alternative route' },
 ];
 
 const popularServiceCodes = ['wa', 'tg', 'fb', 'ig'];
+const nairaFormatter = new Intl.NumberFormat('en-NG', {
+  style: 'currency',
+  currency: 'NGN',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function formatNaira(value: number) {
+  return nairaFormatter.format(value);
+}
 
 export default function NumbersPage() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -155,7 +174,7 @@ export default function NumbersPage() {
           action: 'purchase',
           service,
           country,
-          maxPrice: selectedOption.price,
+          quotedPriceNgn: selectedOption.price,
           providerId: selectedOption.providerId,
         }),
       });
@@ -340,7 +359,9 @@ export default function NumbersPage() {
                   <Signal />
                 </span>
                 <span>
-                  <strong>{serverDetails[selectedServer].badge} SMS Provider</strong>
+                  <strong>
+                    {serverDetails[selectedServer].badge} SMS Provider
+                  </strong>
                   <small>
                     <Check />
                     {selectedOption.reliability}
@@ -350,7 +371,7 @@ export default function NumbersPage() {
                   <small>
                     {selectedOption.count.toLocaleString()} available
                   </small>
-                  <b>${selectedOption.price.toFixed(3)}</b>
+                  <b>{formatNaira(selectedOption.price)}</b>
                 </span>
               </div>
             ) : (
@@ -445,9 +466,7 @@ export default function NumbersPage() {
                     Price
                   </span>
                   <strong className="summary-price">
-                    {selectedOption
-                      ? `$${selectedOption.price.toFixed(3)}`
-                      : '—'}
+                    {selectedOption ? formatNaira(selectedOption.price) : '—'}
                   </strong>
                 </div>
                 <div>

@@ -1,6 +1,7 @@
 const USD_NGN_RATE_URL = 'https://open.er-api.com/v6/latest/USD';
 const FALLBACK_USD_NGN_RATE = 1327.93;
 const DEFAULT_BOOST_MARKUP_PERCENT = 30;
+const DEFAULT_NUMBER_MARKUP_PERCENT = 30;
 
 type ExchangeRateResponse = {
   result?: string;
@@ -65,4 +66,19 @@ export function getBoostMarkupPercent() {
 export function getBoostRateNgn(providerRateUsd: number, usdToNgnRate: number) {
   const multiplier = 1 + getBoostMarkupPercent() / 100;
   return convertUsdToNgn(providerRateUsd * multiplier, usdToNgnRate);
+}
+
+export function getNumberMarkupPercent() {
+  const configuredMarkup = Number(process.env.NUMBER_MARKUP_PERCENT);
+  return Number.isFinite(configuredMarkup) && configuredMarkup >= 0
+    ? configuredMarkup
+    : DEFAULT_NUMBER_MARKUP_PERCENT;
+}
+
+export function getNumberPriceNgn(
+  providerPriceUsd: number,
+  usdToNgnRate: number,
+) {
+  const multiplier = 1 + getNumberMarkupPercent() / 100;
+  return convertUsdToNgn(providerPriceUsd * multiplier, usdToNgnRate);
 }

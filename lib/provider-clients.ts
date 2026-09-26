@@ -429,6 +429,12 @@ async function fiveSimRequest<T>(path: string, authenticated = false) {
 type FiveSimProduct = { Category: string; Qty: number; Price: number };
 type FiveSimCountry = { text_en: string };
 type FiveSimOffer = { cost: number; count: number; rate?: number };
+type NumberProviderOffer = {
+  providerId: string;
+  price: number;
+  count: number;
+  rate: number | null;
+};
 type FiveSimOrder = {
   id: number;
   phone: string;
@@ -486,41 +492,73 @@ export async function getNumberQuote(service: string, country: string) {
     Record<string, Record<string, Record<string, FiveSimOffer>>>
   >(`/guest/prices?${query}`);
   const providerMap = prices[country]?.[service] ?? {};
-  const available = Object.entries(providerMap)
-    .map(([operator, offer]) => ({
-      providerId: operator,
-      price: Number(offer.cost),
-      count: Number(offer.count),
-      rate: Number(offer.rate ?? 0),
-    }))
+  const available: NumberProviderOffer[] = Object.entries(providerMap)
+    .map(([operator, offer]) => {
+      const rate = Number(offer.rate);
+      return {
+        providerId: operator,
+        price: Number(offer.cost),
+        count: Number(offer.count),
+        rate: offer.rate === undefined || !Number.isFinite(rate) ? null : rate,
+      };
+    })
     .filter(
       (provider) => Number.isFinite(provider.price) && provider.count > 0,
     );
-  const ranked = [...available].sort(
-    (a, b) => b.rate - a.rate || b.count - a.count || a.price - b.price,
-  );
-  const cheapest = [...available].sort(
-    (a, b) => a.price - b.price || b.rate - a.rate || b.count - a.count,
-  )[0];
-  const chosen = [ranked[0], ranked[1], cheapest].filter(
-    (item, index, list) =>
-      item &&
-      list.findIndex((other) => other?.providerId === item.providerId) ===
-        index,
-  );
-  const tiers = ['gold', 'silver', 'bronze'] as const;
-  const options = chosen.map((provider, index) => ({
-    ...provider,
-    tier: tiers[index],
-    reliability: provider.rate
-      ? `${provider.rate.toFixed(1)}% recent SMS delivery rate`
-      : index === 2
-        ? 'Lowest-cost available operator'
-        : 'High-stock available operator',
-  }));
 
-  if (!options.length)
+  if (!available.length)
     throw new Error('No numbers are currently available for this selection.');
+
+  const deliveryRate = (offer: NumberProviderOffer) => offer.rate ?? -1;
+  const ranked = [...available].sort(
+    (a, b) =>
+      deliveryRate(b) - deliveryRate(a) ||
+      b.count - a.count ||
+      a.price - b.price,
+  );
+  const premium = ranked[0];
+  const balanced = ranked[1] ?? null;
+  const usedProviderIds = new Set(
+    [premium, balanced]
+      .filter((offer): offer is NumberProviderOffer => Boolean(offer))
+      .map((offer) => offer.providerId),
+  );
+  const economy = [...available]
+    .filter((offer) => !usedProviderIds.has(offer.providerId))
+    .sort(
+      (a, b) =>
+        a.price - b.price ||
+        deliveryRate(b) - deliveryRate(a) ||
+        b.count - a.count,
+    )[0];
+
+  const describeRate = (provider: NumberProviderOffer) => {
+    if (provider.rate === null) return 'Not enough recent delivery data';
+    if (provider.rate === 0) return 'No recent successful delivery reported';
+    return `${provider.rate.toFixed(1)}% recent SMS delivery rate`;
+  };
+  const options = [
+    {
+      ...premium,
+      tier: 'gold' as const,
+      reliability: `${describeRate(premium)} · best available route`,
+    },
+    balanced
+      ? {
+          ...balanced,
+          tier: 'silver' as const,
+          reliability: `${describeRate(balanced)} · next-best delivery route`,
+        }
+      : null,
+    economy
+      ? {
+          ...economy,
+          tier: 'bronze' as const,
+          reliability: `${describeRate(economy)} · lowest-cost remaining route`,
+        }
+      : null,
+  ].filter((option): option is NonNullable<typeof option> => Boolean(option));
+
   return {
     lowestPrice: Math.min(...options.map((option) => option.price)),
     totalAvailable: options.reduce((sum, item) => sum + item.count, 0),
@@ -531,7 +569,7 @@ export async function getNumberQuote(service: string, country: string) {
 export async function purchaseNumber(
   service: string,
   country: string,
-  maxPrice: number,
+  expectedProviderPrice: number,
   providerId: string,
 ) {
   const path = `/user/buy/activation/${encodeURIComponent(country)}/${encodeURIComponent(providerId)}/${encodeURIComponent(service)}`;
@@ -542,7 +580,9 @@ export async function purchaseNumber(
   return {
     activationId: String(order.id),
     phoneNumber: order.phone,
-    activationCost: Number.isFinite(order.price) ? order.price : maxPrice,
+    providerCostUsd: Number.isFinite(order.price)
+      ? order.price
+      : expectedProviderPrice,
     countryCode: order.country || country,
   };
 }
