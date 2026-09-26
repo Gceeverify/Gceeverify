@@ -1,6 +1,11 @@
 import { getBoostServices, placeBoostOrder } from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
 import { recordOrder } from '@/lib/orders';
+import {
+  getBoostMarkupPercent,
+  getBoostRateNgn,
+  getUsdToNgnRate,
+} from '@/lib/exchange-rates';
 
 const platforms = [
   'instagram',
@@ -27,7 +32,10 @@ export async function GET(request: Request) {
     const platform = searchParams.get('platform')?.toLowerCase() || 'all';
     const query = searchParams.get('query')?.trim().toLowerCase() || '';
     const category = searchParams.get('category') || 'all';
-    const all = await getBoostServices();
+    const [all, exchangeRate] = await Promise.all([
+      getBoostServices(),
+      getUsdToNgnRate(),
+    ]);
     const platformCounts = all.reduce<Record<string, number>>(
       (counts, item) => {
         const key = platformFor(item.name, item.category);
@@ -51,11 +59,26 @@ export async function GET(request: Request) {
       return matchesCategory && matchesQuery;
     });
     return Response.json({
-      services: category === 'all' ? [] : filtered,
+      services:
+        category === 'all'
+          ? []
+          : filtered.map((item) => ({
+              ...item,
+              rate: String(
+                getBoostRateNgn(Number(item.rate), exchangeRate.rate),
+              ),
+            })),
       total: filtered.length,
       totalServices: all.length,
       categories,
       platformCounts,
+      pricing: {
+        currency: 'NGN',
+        usdToNgnRate: exchangeRate.rate,
+        updatedAt: exchangeRate.updatedAt,
+        source: exchangeRate.source,
+        sourceUrl: exchangeRate.sourceUrl,
+      },
     });
   } catch (error) {
     return Response.json(
@@ -96,19 +119,41 @@ export async function POST(request: Request) {
       );
     }
     new URL(body.link);
-    const service = (await getBoostServices()).find((item) => item.service === body.service);
-    if (!service) return Response.json({ error: 'That service is no longer available.' }, { status: 409 });
-    const result = await placeBoostOrder(body.service!, body.link, body.quantity!);
+    const [services, exchangeRate] = await Promise.all([
+      getBoostServices(),
+      getUsdToNgnRate(),
+    ]);
+    const service = services.find((item) => item.service === body.service);
+    if (!service)
+      return Response.json(
+        { error: 'That service is no longer available.' },
+        { status: 409 },
+      );
+    const result = await placeBoostOrder(
+      body.service!,
+      body.link,
+      body.quantity!,
+    );
+    const customerRateNgn = getBoostRateNgn(
+      Number(service.rate),
+      exchangeRate.rate,
+    );
+    const customerAmountNgn =
+      Math.round((customerRateNgn * body.quantity! * 100) / 1000) / 100;
     await recordOrder({
       userId: user.id,
       category: 'social-boosting',
       serviceName: service.name,
       provider: 'JAP',
       providerOrderId: result.order,
-      amount: (Number(service.rate) * body.quantity!) / 1000,
-      currency: 'USD',
+      amount: customerAmountNgn,
+      currency: 'NGN',
       status: 'processing',
-      metadata: { quantity: body.quantity! },
+      metadata: {
+        quantity: body.quantity!,
+        usdToNgnRate: exchangeRate.rate,
+        markupPercent: getBoostMarkupPercent(),
+      },
     });
     return Response.json(result, { status: 201 });
   } catch (error) {

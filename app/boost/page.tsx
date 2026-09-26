@@ -21,6 +21,7 @@ import {
   Music2,
   Pin,
   Play,
+  Rocket,
   Search,
   Send,
   ShieldCheck,
@@ -47,8 +48,26 @@ type BoostData = {
   totalServices: number;
   categories: string[];
   platformCounts: Record<string, number>;
+  pricing: {
+    currency: 'NGN';
+    usdToNgnRate: number;
+    updatedAt: string | null;
+    source: string;
+    sourceUrl: string;
+  };
   error?: string;
 };
+
+const nairaFormatter = new Intl.NumberFormat('en-NG', {
+  style: 'currency',
+  currency: 'NGN',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function formatNaira(value: number) {
+  return nairaFormatter.format(value);
+}
 
 const platformOptions = [
   { id: 'all', label: 'All', icon: ShoppingBag, tone: 'all' },
@@ -110,8 +129,8 @@ export default function BoostPage() {
     data?.services.find((item) => item.service === selectedId) ?? null;
   const charge =
     selected && Number(quantity)
-      ? ((Number(selected.rate) * Number(quantity)) / 1000).toFixed(2)
-      : '0.00';
+      ? (Number(selected.rate) * Number(quantity)) / 1000
+      : 0;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -214,7 +233,7 @@ export default function BoostPage() {
               <ShoppingBag />
             </span>
             <div>
-              <p>Service selection</p>
+              <p>Step 01 · Service selection</p>
               <h2>Find the right service</h2>
             </div>
           </div>
@@ -315,12 +334,147 @@ export default function BoostPage() {
                 </option>
                 {data?.services.map((item) => (
                   <option key={item.service} value={item.service}>
-                    {item.name} — ${Number(item.rate).toFixed(2)} / 1K
+                    {item.name} — {formatNaira(Number(item.rate))} / 1K
                   </option>
                 ))}
               </select>
               <ChevronDown />
             </div>
+          </div>
+
+          <div className="boost-inline-order">
+            <div className="boost-order-heading">
+              <div className="boost-order-title">
+                <span className="boost-order-icon">
+                  <Rocket />
+                </span>
+                <div>
+                  <p>Step 02 · Campaign details</p>
+                  <h2>
+                    {selected
+                      ? 'Set your link and quantity'
+                      : 'Choose a service to continue'}
+                  </h2>
+                </div>
+              </div>
+              <span className="boost-secure-pill">
+                <ShieldCheck /> <span>Protected checkout</span>
+              </span>
+            </div>
+
+            {selected ? (
+              <div className="boost-order-content">
+                <div className="boost-checkout-service">
+                  <span>Selected service</span>
+                  <div>
+                    <strong>{selected.name}</strong>
+                    <small>{selected.category}</small>
+                  </div>
+                </div>
+
+                <dl className="boost-service-facts">
+                  <div>
+                    <dt>Minimum</dt>
+                    <dd>{Number(selected.min).toLocaleString()}</dd>
+                  </div>
+                  <div>
+                    <dt>Maximum</dt>
+                    <dd>{Number(selected.max).toLocaleString()}</dd>
+                  </div>
+                  <div>
+                    <dt>Rate</dt>
+                    <dd>{formatNaira(Number(selected.rate))} per 1,000</dd>
+                  </div>
+                </dl>
+
+                {data?.pricing && (
+                  <p className="boost-exchange-note">
+                    Converted at {formatNaira(data.pricing.usdToNgnRate)} per
+                    US dollar -{' '}
+                    <a
+                      href={data.pricing.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Rates by {data.pricing.source}
+                    </a>
+                  </p>
+                )}
+
+                <div className="boost-order-fields">
+                  <label htmlFor="boost-link">
+                    <span>Link</span>
+                    <div>
+                      <Link2 />
+                      <Input
+                        id="boost-link"
+                        type="url"
+                        value={link}
+                        onChange={(event) => {
+                          setLink(event.target.value);
+                          setConfirming(false);
+                        }}
+                        placeholder="Paste your link here"
+                      />
+                    </div>
+                  </label>
+
+                  <label htmlFor="boost-quantity">
+                    <span>Quantity</span>
+                    <div>
+                      <Hash />
+                      <Input
+                        id="boost-quantity"
+                        type="number"
+                        min={selected.min}
+                        max={selected.max}
+                        value={quantity}
+                        onChange={(event) => {
+                          setQuantity(event.target.value);
+                          setConfirming(false);
+                        }}
+                      />
+                    </div>
+                  </label>
+                </div>
+
+                <div className="boost-checkout-row">
+                  <div className="boost-checkout-total">
+                    <span>Total cost</span>
+                    <strong>{formatNaira(charge)}</strong>
+                  </div>
+                  <Button
+                    onClick={() => void order()}
+                    disabled={loading}
+                    className={`boost-order-button ${confirming ? 'confirming' : ''}`}
+                  >
+                    {loading ? (
+                      <LoaderCircle className="animate-spin" />
+                    ) : confirming ? (
+                      'Confirm purchase'
+                    ) : (
+                      'Review purchase'
+                    )}
+                    {!loading && <ArrowRight />}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="boost-order-empty boost-order-empty-inline">
+                <Grid2X2 />
+                <div>
+                  <strong>Your checkout is ready</strong>
+                  <p>Choose a category and service to continue here.</p>
+                </div>
+              </div>
+            )}
+
+            {message && (
+              <Notice
+                message={message}
+                tone={message.includes('successfully') ? 'success' : 'error'}
+              />
+            )}
           </div>
         </div>
 
@@ -347,121 +501,6 @@ export default function BoostPage() {
         </div>
       </section>
 
-      <section className="boost-order-card">
-        <div className="boost-order-heading">
-          <div>
-            <p>Campaign details</p>
-            <h2>
-              {selected
-                ? 'Set your link and quantity'
-                : 'Your selection will appear here'}
-            </h2>
-          </div>
-          <span className="boost-secure-pill">
-            <ShieldCheck /> Protected checkout
-          </span>
-        </div>
-
-        {selected ? (
-          <div className="boost-order-content">
-            <div className="boost-checkout-service">
-              <span>Service</span>
-              <div>
-                <strong>{selected.name}</strong>
-                <small>{selected.category}</small>
-              </div>
-            </div>
-
-            <dl className="boost-service-facts">
-              <div>
-                <dt>Minimum</dt>
-                <dd>{Number(selected.min).toLocaleString()}</dd>
-              </div>
-              <div>
-                <dt>Maximum</dt>
-                <dd>{Number(selected.max).toLocaleString()}</dd>
-              </div>
-              <div>
-                <dt>Rate</dt>
-                <dd>${Number(selected.rate).toFixed(2)} per 1,000</dd>
-              </div>
-            </dl>
-
-            <div className="boost-order-fields">
-              <label htmlFor="boost-link">
-                <span>Link</span>
-                <div>
-                  <Link2 />
-                  <Input
-                    id="boost-link"
-                    type="url"
-                    value={link}
-                    onChange={(event) => {
-                      setLink(event.target.value);
-                      setConfirming(false);
-                    }}
-                    placeholder="Paste your link here"
-                  />
-                </div>
-              </label>
-
-              <label htmlFor="boost-quantity">
-                <span>Quantity</span>
-                <div>
-                  <Hash />
-                  <Input
-                    id="boost-quantity"
-                    type="number"
-                    min={selected.min}
-                    max={selected.max}
-                    value={quantity}
-                    onChange={(event) => {
-                      setQuantity(event.target.value);
-                      setConfirming(false);
-                    }}
-                  />
-                </div>
-              </label>
-            </div>
-
-            <div className="boost-checkout-row">
-              <div className="boost-checkout-total">
-                <span>Total cost</span>
-                <strong>${charge}</strong>
-              </div>
-              <Button
-                onClick={() => void order()}
-                disabled={loading}
-                className={`boost-order-button ${confirming ? 'confirming' : ''}`}
-              >
-                {loading ? (
-                  <LoaderCircle className="animate-spin" />
-                ) : confirming ? (
-                  'Confirm purchase'
-                ) : (
-                  'Review purchase'
-                )}
-                {!loading && <ArrowRight />}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="boost-order-empty">
-            <Grid2X2 />
-            <div>
-              <strong>No service selected</strong>
-              <p>Use the controls above to build your campaign.</p>
-            </div>
-          </div>
-        )}
-
-        {message && (
-          <Notice
-            message={message}
-            tone={message.includes('successfully') ? 'success' : 'error'}
-          />
-        )}
-      </section>
     </ServicePageShell>
   );
 }

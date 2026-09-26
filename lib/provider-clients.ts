@@ -1,3 +1,5 @@
+import { unstable_cache } from 'next/cache';
+
 const PROVIDER_TIMEOUT_MS = 12_000;
 
 async function timedFetch(input: string, init?: RequestInit) {
@@ -291,7 +293,7 @@ export type BoostService = {
   cancel?: boolean;
 };
 
-export async function getBoostServices(): Promise<BoostService[]> {
+async function fetchBoostServices(): Promise<BoostService[]> {
   const body = new URLSearchParams({
     key: requiredKey('JAP_API_KEY'),
     action: 'services',
@@ -306,6 +308,15 @@ export async function getBoostServices(): Promise<BoostService[]> {
     throw new Error('Boost services could not be loaded.');
   return data as BoostService[];
 }
+
+export const getBoostServices = unstable_cache(
+  fetchBoostServices,
+  ['jap-boost-services-v1'],
+  {
+    revalidate: 600,
+    tags: ['boost-services'],
+  },
+);
 
 export async function placeBoostOrder(
   service: number,
