@@ -2777,12 +2777,52 @@ html[data-theme='light'] .number-provider-card {
   border-color: rgba(116, 239, 91, 0.45);
   color: #e7edfa;
 }
-.boost-platform svg {
+.boost-platform > svg {
   width: 22px;
   height: 22px;
   color: var(--boost-platform-color, #74ef5b);
 }
-.boost-platform span {
+.boost-platform-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 11px;
+  color: var(--boost-platform-icon-color, #fff);
+  background: var(--boost-platform-icon-bg, #31523b);
+  box-shadow: 0 7px 16px rgba(0, 0, 0, 0.2);
+}
+.boost-platform-icon svg {
+  width: 19px;
+  height: 19px;
+}
+.boost-tiktok-mark {
+  position: relative;
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+.boost-tiktok-mark svg {
+  position: absolute;
+  inset: 0;
+  width: 20px;
+  height: 20px;
+}
+.boost-tiktok-cyan {
+  color: #25f4ee;
+  transform: translate(-1.3px, 1.1px);
+}
+.boost-tiktok-red {
+  color: #fe2c55;
+  transform: translate(1.3px, -1.1px);
+}
+.boost-tiktok-core {
+  color: #fff;
+}
+.boost-platform-label {
   overflow: hidden;
   width: 100%;
   font-size: 0.72rem;
@@ -2796,38 +2836,52 @@ html[data-theme='light'] .number-provider-card {
   color: #102515;
   box-shadow: 0 12px 30px rgba(116, 239, 91, 0.2);
 }
-.boost-platform.active svg {
+.boost-platform.active > svg {
   color: #102515;
 }
-.boost-platform-facebook,
-.boost-platform-telegram,
-.boost-platform-linkedin {
-  --boost-platform-color: #287cff;
+.boost-platform-all {
+  --boost-platform-icon-bg: #48c85b;
+  --boost-platform-icon-color: #09290f;
+}
+.boost-platform-facebook {
+  --boost-platform-icon-bg: #1877f2;
 }
 .boost-platform-instagram {
-  --boost-platform-color: #ff2e9c;
+  --boost-platform-icon-bg: linear-gradient(135deg, #833ab4 5%, #fd1d1d 54%, #fcb045 100%);
 }
-.boost-platform-whatsapp,
-.boost-platform-spotify {
-  --boost-platform-color: #04d875;
+.boost-platform-whatsapp {
+  --boost-platform-icon-bg: #25d366;
 }
 .boost-platform-tiktok {
-  --boost-platform-color: #f5f7ff;
+  --boost-platform-icon-bg: #050505;
+  --boost-platform-icon-color: #fff;
+}
+.boost-platform-spotify {
+  --boost-platform-icon-bg: #1ed760;
+  --boost-platform-icon-color: #07190d;
 }
 .boost-platform-youtube {
-  --boost-platform-color: #ff172f;
+  --boost-platform-icon-bg: #ff0033;
+}
+.boost-platform-telegram {
+  --boost-platform-icon-bg: #229ed9;
 }
 .boost-platform-twitter {
-  --boost-platform-color: #22b8f5;
+  --boost-platform-icon-bg: #050505;
+  --boost-platform-icon-color: #fff;
+}
+.boost-platform-linkedin {
+  --boost-platform-icon-bg: #0a66c2;
 }
 .boost-platform-snapchat {
-  --boost-platform-color: #f7df1e;
+  --boost-platform-icon-bg: #fffc00;
+  --boost-platform-icon-color: #050505;
 }
 .boost-platform-pinterest {
-  --boost-platform-color: #e60023;
+  --boost-platform-icon-bg: #e60023;
 }
 .boost-platform-more {
-  --boost-platform-color: #9aa4bb;
+  --boost-platform-icon-bg: #475267;
 }
 .boost-platform-more.expanded {
   border-color: rgba(116, 239, 91, 0.45);

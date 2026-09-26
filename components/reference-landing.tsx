@@ -287,6 +287,21 @@ export function ReferenceLanding() {
         .ref-mobile-customer-frame { display: none; }
         .ref-mobile-hero-dark { display: none !important; }
         .ref-mobile-customer-dark { display: none !important; }
+        .ref-hero-blend {
+          position: absolute;
+          right: 0;
+          bottom: -1px;
+          left: 0;
+          z-index: 12;
+          height: clamp(28px, 3.4vw, 52px);
+          background: linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0),
+            rgba(255, 255, 255, 0.72) 68%,
+            #fff 100%
+          );
+          pointer-events: none;
+        }
         .ref-floating-theme {
           position: fixed;
           right: 18px;
@@ -341,6 +356,14 @@ export function ReferenceLanding() {
         }
         html[data-theme='dark'] .ref-step-link { color: #dffffa; }
         html[data-theme='dark'] .ref-simple { background: #07110a; }
+        html[data-theme='dark'] .ref-hero-blend {
+          background: linear-gradient(
+            to bottom,
+            rgba(7, 17, 10, 0),
+            rgba(7, 17, 10, 0.76) 68%,
+            #07110a 100%
+          );
+        }
         html[data-theme='dark'] .ref-simple-copy > a {
           border-color: #62ef55;
           color: #caffc4;
@@ -412,6 +435,9 @@ export function ReferenceLanding() {
             margin-left: 0;
             object-fit: contain;
             object-position: center bottom;
+          }
+          .ref-hero-blend {
+            height: 34px;
           }
           .ref-simple {
             display: grid !important;
@@ -913,6 +939,7 @@ export function ReferenceLanding() {
           priority
           unoptimized
         />
+        <span className="ref-hero-blend" aria-hidden="true" />
         <div className="ref-hero-orb ref-orb-yellow" />
         <div className="ref-hero-orb ref-orb-green" />
         <div className="ref-hero-inner">

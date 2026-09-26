@@ -4,30 +4,32 @@ import { useEffect, useState } from 'react';
 import {
   AlertCircle,
   ArrowRight,
-  AtSign,
-  BriefcaseBusiness,
-  Camera,
   ChevronDown,
   ChevronUp,
   CircleEllipsis,
-  Ghost,
   Grid2X2,
   Hash,
-  Headphones,
   Info,
   Link2,
   LoaderCircle,
-  MessageCircle,
-  Music2,
-  Pin,
-  Play,
   Rocket,
   Search,
-  Send,
   ShieldCheck,
   ShoppingBag,
-  Users,
 } from 'lucide-react';
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaLinkedinIn,
+  FaPinterestP,
+  FaSnapchat,
+  FaSpotify,
+  FaTelegram,
+  FaTiktok,
+  FaWhatsapp,
+  FaXTwitter,
+  FaYoutube,
+} from 'react-icons/fa6';
 import { Notice, ServicePageShell } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,27 +71,42 @@ function formatNaira(value: number) {
   return nairaFormatter.format(value);
 }
 
+function TikTokBrandIcon() {
+  return (
+    <span className="boost-tiktok-mark">
+      <FaTiktok className="boost-tiktok-cyan" />
+      <FaTiktok className="boost-tiktok-red" />
+      <FaTiktok className="boost-tiktok-core" />
+    </span>
+  );
+}
+
 const platformOptions = [
   { id: 'all', label: 'All', icon: ShoppingBag, tone: 'all' },
-  { id: 'facebook', label: 'Facebook', icon: Users, tone: 'facebook' },
-  { id: 'instagram', label: 'Instagram', icon: Camera, tone: 'instagram' },
-  { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, tone: 'whatsapp' },
-  { id: 'tiktok', label: 'TikTok', icon: Music2, tone: 'tiktok' },
-  { id: 'spotify', label: 'Spotify', icon: Headphones, tone: 'spotify' },
-  { id: 'youtube', label: 'YouTube', icon: Play, tone: 'youtube' },
-  { id: 'telegram', label: 'Telegram', icon: Send, tone: 'telegram' },
-  { id: 'twitter', label: 'Twitter', icon: AtSign, tone: 'twitter' },
+  { id: 'facebook', label: 'Facebook', icon: FaFacebookF, tone: 'facebook' },
+  { id: 'instagram', label: 'Instagram', icon: FaInstagram, tone: 'instagram' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: FaWhatsapp, tone: 'whatsapp' },
+  { id: 'tiktok', label: 'TikTok', icon: TikTokBrandIcon, tone: 'tiktok' },
+  { id: 'spotify', label: 'Spotify', icon: FaSpotify, tone: 'spotify' },
+  { id: 'youtube', label: 'YouTube', icon: FaYoutube, tone: 'youtube' },
+  { id: 'telegram', label: 'Telegram', icon: FaTelegram, tone: 'telegram' },
+  { id: 'twitter', label: 'X', icon: FaXTwitter, tone: 'twitter' },
   {
     id: 'linkedin',
     label: 'LinkedIn',
-    icon: BriefcaseBusiness,
+    icon: FaLinkedinIn,
     tone: 'linkedin',
   },
 ];
 
 const additionalPlatformOptions = [
-  { id: 'snapchat', label: 'Snapchat', icon: Ghost, tone: 'snapchat' },
-  { id: 'pinterest', label: 'Pinterest', icon: Pin, tone: 'pinterest' },
+  { id: 'snapchat', label: 'Snapchat', icon: FaSnapchat, tone: 'snapchat' },
+  {
+    id: 'pinterest',
+    label: 'Pinterest',
+    icon: FaPinterestP,
+    tone: 'pinterest',
+  },
   { id: 'more', label: 'Other', icon: CircleEllipsis, tone: 'more' },
 ];
 
@@ -257,8 +274,10 @@ export default function BoostPage() {
                 }}
                 className={`boost-platform boost-platform-${tone} ${platform === id ? 'active' : ''}`}
               >
-                <Icon />
-                <span>{label}</span>
+                <span className="boost-platform-icon" aria-hidden="true">
+                  <Icon />
+                </span>
+                <span className="boost-platform-label">{label}</span>
               </button>
             ))}
             <button
@@ -268,7 +287,9 @@ export default function BoostPage() {
               className={`boost-platform boost-platform-more ${showMorePlatforms ? 'expanded' : ''}`}
             >
               {showMorePlatforms ? <ChevronUp /> : <ChevronDown />}
-              <span>{showMorePlatforms ? 'Less' : 'More'}</span>
+              <span className="boost-platform-label">
+                {showMorePlatforms ? 'Less' : 'More'}
+              </span>
             </button>
           </div>
 
@@ -389,8 +410,8 @@ export default function BoostPage() {
 
                 {data?.pricing && (
                   <p className="boost-exchange-note">
-                    Converted at {formatNaira(data.pricing.usdToNgnRate)} per
-                    US dollar -{' '}
+                    Converted at {formatNaira(data.pricing.usdToNgnRate)} per US
+                    dollar -{' '}
                     <a
                       href={data.pricing.sourceUrl}
                       target="_blank"
@@ -500,7 +521,6 @@ export default function BoostPage() {
           </div>
         </div>
       </section>
-
     </ServicePageShell>
   );
 }
