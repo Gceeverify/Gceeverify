@@ -1,9 +1,14 @@
 import { getCurrentUser } from '@/lib/auth';
 import {
+  getNumberCountryIncreasePercent,
   getNumberFixedPriceNgn,
+  getNumberLowPriceIncreasePercent,
+  getNumberLowPriceThresholdNgn,
   getNumberMarkupPercent,
   getNumberMinimumPriceNgn,
   getNumberPriceNgn,
+  getNumberRegionalLowPriceIncreaseApplications,
+  getNumberRegionalLowPriceIncreasePercent,
   getNumberTierIncreasePercent,
   getUsdToNgnRate,
 } from '@/lib/exchange-rates';
@@ -60,6 +65,15 @@ async function getPricedNumberQuote(service: string, country: string) {
         silver: getNumberFixedPriceNgn(service, 'silver', country),
         bronze: getNumberFixedPriceNgn(service, 'bronze', country),
       },
+      lowPriceIncreasePercent: getNumberLowPriceIncreasePercent(),
+      regionalLowPriceIncreasePercent: getNumberRegionalLowPriceIncreasePercent(
+        service,
+        country,
+      ),
+      regionalLowPriceIncreaseApplications:
+        getNumberRegionalLowPriceIncreaseApplications(service, country),
+      lowPriceThresholdNgn: getNumberLowPriceThresholdNgn(),
+      countryIncreasePercent: getNumberCountryIncreasePercent(country),
     },
   };
 }
@@ -186,6 +200,19 @@ export async function POST(request: Request) {
             offer.tier,
             body.country,
           ),
+          lowPriceIncreasePercent: getNumberLowPriceIncreasePercent(),
+          regionalLowPriceIncreasePercent:
+            getNumberRegionalLowPriceIncreasePercent(
+              body.service,
+              body.country,
+            ),
+          regionalLowPriceIncreaseApplications:
+            getNumberRegionalLowPriceIncreaseApplications(
+              body.service,
+              body.country,
+            ),
+          lowPriceThresholdNgn: getNumberLowPriceThresholdNgn(),
+          countryIncreasePercent: getNumberCountryIncreasePercent(body.country),
         },
       });
       return Response.json(

@@ -2,6 +2,9 @@ const USD_NGN_RATE_URL = 'https://open.er-api.com/v6/latest/USD';
 const FALLBACK_USD_NGN_RATE = 1327.93;
 const DEFAULT_BOOST_MARKUP_PERCENT = 30;
 const DEFAULT_NUMBER_MARKUP_PERCENT = 30;
+const DEFAULT_LOG_MARKUP_PERCENT = 30;
+const DEFAULT_VIRTUAL_EMAIL_MARKUP_PERCENT = 100;
+const DEFAULT_VTU_MARKUP_PERCENT = 100;
 const NUMBER_TIER_INCREASE_PERCENT = {
   gold: 10,
   silver: 0,
@@ -17,6 +20,35 @@ const USA_FACEBOOK_FIXED_PRICE_NGN = {
   silver: 1350,
   bronze: 1000,
 } as const;
+const UK_FACEBOOK_FIXED_PRICE_NGN = {
+  gold: 800,
+  silver: 638,
+  bronze: 500,
+} as const;
+const UK_TIKTOK_FIXED_PRICE_NGN = {
+  gold: 216,
+  silver: 170,
+  bronze: 100,
+} as const;
+const UK_DISCORD_FIXED_PRICE_NGN = {
+  gold: 1900,
+  silver: 1500,
+  bronze: 1000,
+} as const;
+const NUMBER_LOW_PRICE_THRESHOLD_NGN = 1000;
+const NUMBER_LOW_PRICE_INCREASE_PERCENT = 50;
+const REGIONAL_LOW_PRICE_INCREASE_PERCENT = 30;
+const OTHER_COUNTRIES_INCREASE_PERCENT = 40;
+const SOCIAL_NUMBER_SERVICES = new Set([
+  'whatsapp',
+  'telegram',
+  'facebook',
+  'instagram',
+  'tiktok',
+  'snapchat',
+  'twitter',
+  'discord',
+]);
 
 export type NumberPriceTier = keyof typeof NUMBER_TIER_INCREASE_PERCENT;
 
@@ -85,6 +117,39 @@ export function getBoostRateNgn(providerRateUsd: number, usdToNgnRate: number) {
   return convertUsdToNgn(providerRateUsd * multiplier, usdToNgnRate);
 }
 
+export function getLogMarkupPercent() {
+  const configuredMarkup = Number(process.env.LOG_MARKUP_PERCENT);
+  return Number.isFinite(configuredMarkup) && configuredMarkup >= 0
+    ? configuredMarkup
+    : DEFAULT_LOG_MARKUP_PERCENT;
+}
+
+export function getLogPriceNgn(providerPriceUsd: number, usdToNgnRate: number) {
+  const multiplier = 1 + getLogMarkupPercent() / 100;
+  return convertUsdToNgn(providerPriceUsd * multiplier, usdToNgnRate);
+}
+
+export function getVirtualEmailPriceNgn(
+  providerPriceUsd: number,
+  usdToNgnRate: number,
+) {
+  const configuredMarkup = Number(process.env.VIRTUAL_EMAIL_MARKUP_PERCENT);
+  const markup =
+    Number.isFinite(configuredMarkup) && configuredMarkup >= 0
+      ? configuredMarkup
+      : DEFAULT_VIRTUAL_EMAIL_MARKUP_PERCENT;
+  return convertUsdToNgn(providerPriceUsd * (1 + markup / 100), usdToNgnRate);
+}
+
+export function getVtuPriceNgn(providerPriceNgn: number) {
+  const configuredMarkup = Number(process.env.VTU_MARKUP_PERCENT);
+  const markup =
+    Number.isFinite(configuredMarkup) && configuredMarkup >= 0
+      ? configuredMarkup
+      : DEFAULT_VTU_MARKUP_PERCENT;
+  return Math.round(providerPriceNgn * (1 + markup / 100) * 100) / 100;
+}
+
 export function getNumberMarkupPercent() {
   const configuredMarkup = Number(process.env.NUMBER_MARKUP_PERCENT);
   return Number.isFinite(configuredMarkup) && configuredMarkup >= 0
@@ -107,11 +172,37 @@ export function getNumberPriceNgn(
     usdToNgnRate,
   );
   const fixedPrice = getNumberFixedPriceNgn(service, tier, country);
-  if (fixedPrice !== null) return fixedPrice;
-  return Math.max(
-    calculatedPrice,
-    getNumberMinimumPriceNgn(service, tier, country),
+  let adjustedPrice =
+    fixedPrice ??
+    Math.max(calculatedPrice, getNumberMinimumPriceNgn(service, tier, country));
+  const regionalIncreasePercent = getNumberRegionalLowPriceIncreasePercent(
+    service,
+    country,
   );
+  const regionalIncreaseApplications =
+    getNumberRegionalLowPriceIncreaseApplications(service, country);
+  if (
+    adjustedPrice < NUMBER_LOW_PRICE_THRESHOLD_NGN &&
+    regionalIncreasePercent > 0
+  ) {
+    for (let step = 0; step < regionalIncreaseApplications; step += 1) {
+      adjustedPrice =
+        Math.round(adjustedPrice * (1 + regionalIncreasePercent / 100) * 100) /
+        100;
+    }
+  }
+  const priceAfterLowPriceIncrease =
+    adjustedPrice < NUMBER_LOW_PRICE_THRESHOLD_NGN
+      ? Math.round(
+          adjustedPrice * (1 + getNumberLowPriceIncreasePercent() / 100) * 100,
+        ) / 100
+      : adjustedPrice;
+  const countryIncreasePercent = getNumberCountryIncreasePercent(country);
+  return countryIncreasePercent > 0
+    ? Math.round(
+        priceAfterLowPriceIncrease * (1 + countryIncreasePercent / 100) * 100,
+      ) / 100
+    : priceAfterLowPriceIncrease;
 }
 
 export function getNumberTierIncreasePercent(tier: NumberPriceTier) {
@@ -135,7 +226,67 @@ export function getNumberFixedPriceNgn(
   tier: NumberPriceTier,
   country: string,
 ) {
-  return service.toLowerCase() === 'facebook' && country.toLowerCase() === 'usa'
-    ? USA_FACEBOOK_FIXED_PRICE_NGN[tier]
-    : null;
+  const normalizedService = service.toLowerCase();
+  const normalizedCountry = country.toLowerCase();
+  if (normalizedService === 'facebook' && normalizedCountry === 'usa') {
+    return USA_FACEBOOK_FIXED_PRICE_NGN[tier];
+  }
+  if (normalizedCountry === 'england') {
+    if (normalizedService === 'facebook') {
+      return UK_FACEBOOK_FIXED_PRICE_NGN[tier];
+    }
+    if (normalizedService === 'tiktok') {
+      return UK_TIKTOK_FIXED_PRICE_NGN[tier];
+    }
+    if (normalizedService === 'discord') {
+      return UK_DISCORD_FIXED_PRICE_NGN[tier];
+    }
+  }
+  return null;
+}
+
+export function getNumberLowPriceIncreasePercent() {
+  return NUMBER_LOW_PRICE_INCREASE_PERCENT;
+}
+
+export function getNumberLowPriceThresholdNgn() {
+  return NUMBER_LOW_PRICE_THRESHOLD_NGN;
+}
+
+export function getNumberCountryIncreasePercent(country: string) {
+  const normalizedCountry = country.toLowerCase();
+  return normalizedCountry === 'usa' || normalizedCountry === 'england'
+    ? 0
+    : OTHER_COUNTRIES_INCREASE_PERCENT;
+}
+
+export function getNumberRegionalLowPriceIncreasePercent(
+  service: string,
+  country: string,
+) {
+  const hasFixedPrice =
+    getNumberFixedPriceNgn(service, 'gold', country) !== null;
+  const normalizedCountry = country.toLowerCase();
+  const normalizedService = service.toLowerCase();
+  const eligibleCountryAndService =
+    normalizedCountry === 'england' ||
+    (normalizedCountry === 'usa' &&
+      SOCIAL_NUMBER_SERVICES.has(normalizedService));
+  return eligibleCountryAndService && !hasFixedPrice
+    ? REGIONAL_LOW_PRICE_INCREASE_PERCENT
+    : 0;
+}
+
+export function getNumberRegionalLowPriceIncreaseApplications(
+  service: string,
+  country: string,
+) {
+  if (getNumberRegionalLowPriceIncreasePercent(service, country) === 0) {
+    return 0;
+  }
+  const normalizedService = service.toLowerCase();
+  const receivesSecondUkIncrease =
+    country.toLowerCase() === 'england' &&
+    (normalizedService === 'instagram' || normalizedService === 'twitter');
+  return receivesSecondUkIncrease ? 2 : 1;
 }

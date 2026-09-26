@@ -352,6 +352,20 @@ export type LogProduct = {
   price: number;
 };
 
+type LogProductCatalog = {
+  items: LogProduct[];
+  totalCount: number;
+  pageIndex: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+const LOG_CATALOG_CACHE_MS = 5 * 60 * 1000;
+const LOG_CATALOG_BATCH_SIZE = 18;
+let logCatalogCache: { data: LogProductCatalog; expiresAt: number } | null =
+  null;
+let logCatalogRequest: Promise<LogProductCatalog> | null = null;
+
 export async function getLogProducts(page: number, pageSize: number) {
   const url = new URL('https://bulkacc.com/api/products/list');
   url.searchParams.set('apiKey', requiredKey('BULKACC_API_KEY'));
@@ -359,18 +373,73 @@ export async function getLogProducts(page: number, pageSize: number) {
   url.searchParams.set('pageSize', String(pageSize));
   const response = await timedFetch(url.toString());
   const result = (await response.json()) as {
-    data?: {
-      items: LogProduct[];
-      totalCount: number;
-      pageIndex: number;
-      pageSize: number;
-      totalPages: number;
-    };
+    data?: LogProductCatalog;
     message?: string;
   };
   if (!response.ok || !result.data)
     throw new Error(result.message || 'Account products could not be loaded.');
   return result.data;
+}
+
+async function fetchLogCatalog() {
+  const firstPage = await getLogProducts(1, 100);
+  const pages = [firstPage];
+  const remainingPageNumbers = Array.from(
+    { length: Math.max(0, firstPage.totalPages - 1) },
+    (_, index) => index + 2,
+  );
+
+  for (
+    let start = 0;
+    start < remainingPageNumbers.length;
+    start += LOG_CATALOG_BATCH_SIZE
+  ) {
+    const batch = remainingPageNumbers.slice(
+      start,
+      start + LOG_CATALOG_BATCH_SIZE,
+    );
+    pages.push(
+      ...(await Promise.all(
+        batch.map((page) => getLogProducts(page, firstPage.pageSize)),
+      )),
+    );
+  }
+
+  const items = Array.from(
+    new Map(
+      pages.flatMap((page) => page.items).map((item) => [item.code, item]),
+    ).values(),
+  );
+  const data: LogProductCatalog = {
+    ...firstPage,
+    items,
+    pageIndex: 1,
+    pageSize: items.length,
+    totalPages: 1,
+  };
+  return data;
+}
+
+export async function getAllLogProducts() {
+  if (logCatalogCache && logCatalogCache.expiresAt > Date.now()) {
+    return logCatalogCache.data;
+  }
+  if (logCatalogRequest) return logCatalogRequest;
+
+  logCatalogRequest = (async () => {
+    const data = await fetchLogCatalog();
+    logCatalogCache = {
+      data,
+      expiresAt: Date.now() + LOG_CATALOG_CACHE_MS,
+    };
+    return data;
+  })();
+
+  try {
+    return await logCatalogRequest;
+  } finally {
+    logCatalogRequest = null;
+  }
 }
 
 export async function placeLogOrder(productCode: string, quantity: number) {

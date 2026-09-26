@@ -348,14 +348,6 @@ export default function NumbersPage() {
       eyebrow="Numbers"
       title="Buy Number"
       description="Choose server, country, and service to buy a verification number."
-      action={
-        <button
-          className="buy-usa-button"
-          onClick={() => resetSelection('187')}
-        >
-          <Globe2 /> Buy USA Number
-        </button>
-      }
     >
       <section className="number-checkout-layout">
         <div className="market-surface number-builder">

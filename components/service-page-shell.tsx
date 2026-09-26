@@ -24,11 +24,7 @@ export function ServicePageShell({
       <div className="market-glow" aria-hidden="true" />
       <header className="market-topbar dashboard-topbar">
         <div className="service-header-identity">
-          <Link
-            href="/dashboard"
-            className="brand-logo"
-            aria-label="Gceeverify dashboard"
-          >
+          <Link href="/" className="brand-logo" aria-label="Gceeverify home">
             <Image src="/favicon.svg" width={36} height={36} alt="" priority />
             <span>Gceeverify</span>
           </Link>

@@ -2,8 +2,21 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  AtSign, CheckCircle2, Clock3, Copy, History, Inbox, LoaderCircle,
-  Mail, RefreshCw, Search, ShieldCheck, Sparkles, Ticket, X, Zap,
+  AtSign,
+  CheckCircle2,
+  Clock3,
+  Copy,
+  History,
+  Inbox,
+  LoaderCircle,
+  Mail,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Ticket,
+  X,
+  Zap,
 } from 'lucide-react';
 import { Notice, ServicePageShell } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
@@ -49,7 +62,11 @@ export default function VirtualEmailPage() {
         if (!response.ok) throw new Error(result.error);
         setCatalog(result);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : 'Virtual emails could not be loaded.');
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : 'Virtual emails could not be loaded.',
+        );
       } finally {
         setLoading(false);
       }
@@ -88,7 +105,9 @@ export default function VirtualEmailPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'purchase', service: service.code, domain: offer.domain, maxPrice: offer.price,
+          action: 'purchase',
+          service: service.code,
+          domain: offer.domain,
         }),
       });
       const result = (await response.json()) as Activation & { error?: string };
@@ -96,10 +115,16 @@ export default function VirtualEmailPage() {
       setActivation(result);
       setEmailCode(null);
       setPendingKey('');
-      setMessage('Virtual email reserved. Use it now to receive your verification code.');
+      setMessage(
+        'Virtual email reserved. Use it now to receive your verification code.',
+      );
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'The virtual email could not be reserved.');
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'The virtual email could not be reserved.',
+      );
     } finally {
       setLoading(false);
     }
@@ -113,12 +138,23 @@ export default function VirtualEmailPage() {
       const response = await fetch(
         `/api/emails?action=status&id=${encodeURIComponent(activation.activationId)}`,
       );
-      const result = (await response.json()) as { code: string | null; error?: string };
+      const result = (await response.json()) as {
+        code: string | null;
+        error?: string;
+      };
       if (!response.ok) throw new Error(result.error);
       setEmailCode(result.code);
-      setMessage(result.code ? 'Your email verification code has arrived.' : 'Still waiting for the email. Try again shortly.');
+      setMessage(
+        result.code
+          ? 'Your email verification code has arrived.'
+          : 'Still waiting for the email. Try again shortly.',
+      );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Email status could not be checked.');
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Email status could not be checked.',
+      );
     } finally {
       setLoading(false);
     }
@@ -139,37 +175,69 @@ export default function VirtualEmailPage() {
         <button
           type="button"
           className="email-history-button"
-          onClick={() => activation ? window.scrollTo({ top: 0, behavior: 'smooth' }) : setMessage('You do not have an active virtual email yet.')}
+          onClick={() =>
+            activation
+              ? window.scrollTo({ top: 0, behavior: 'smooth' })
+              : setMessage('You do not have an active virtual email yet.')
+          }
         >
           <History /> My Virtual Emails
         </button>
       }
     >
       {activation && (
-        <section className="market-surface active-email-panel" aria-label="Active virtual email">
+        <section
+          className="market-surface active-email-panel"
+          aria-label="Active virtual email"
+        >
           <div className="active-email-main">
-            <span className="active-email-icon"><Inbox /></span>
+            <span className="active-email-icon">
+              <Inbox />
+            </span>
             <div>
               <small>Active virtual email</small>
               <strong>{activation.email}</strong>
-              <span>{domainLabel(activation.domain)} · Expires in about 25 minutes</span>
+              <span>
+                {domainLabel(activation.domain)} · Expires in about 25 minutes
+              </span>
             </div>
           </div>
-          <button type="button" className="active-email-copy" onClick={() => void copyEmail()}><Copy /> Copy</button>
-          <div className="active-email-code"><small>Verification code</small><strong>{emailCode || 'Waiting…'}</strong></div>
-          <Button className="email-check-button" onClick={() => void checkCode()} disabled={loading}>
+          <button
+            type="button"
+            className="active-email-copy"
+            onClick={() => void copyEmail()}
+          >
+            <Copy /> Copy
+          </button>
+          <div className="active-email-code">
+            <small>Verification code</small>
+            <strong>{emailCode || 'Waiting…'}</strong>
+          </div>
+          <Button
+            className="email-check-button"
+            onClick={() => void checkCode()}
+            disabled={loading}
+          >
             <RefreshCw className={loading ? 'animate-spin' : ''} /> Check inbox
           </Button>
           <button
             type="button"
             className="active-email-close"
             aria-label="Close active email panel"
-            onClick={() => { setActivation(null); setEmailCode(null); }}
-          ><X /></button>
+            onClick={() => {
+              setActivation(null);
+              setEmailCode(null);
+            }}
+          >
+            <X />
+          </button>
         </section>
       )}
 
-      <section className="email-market-controls" aria-label="Virtual email filters">
+      <section
+        className="email-market-controls"
+        aria-label="Virtual email filters"
+      >
         <label className="email-market-search">
           <Search />
           <input
@@ -178,10 +246,22 @@ export default function VirtualEmailPage() {
             placeholder="Search service (e.g. Telegram, OpenAI, Discord...)"
           />
         </label>
-        <div className="email-domain-filters" aria-label="Filter by email domain">
-          <button className={domain === 'all' ? 'active' : ''} onClick={() => setDomain('all')}>All Domains</button>
+        <div
+          className="email-domain-filters"
+          aria-label="Filter by email domain"
+        >
+          <button
+            className={domain === 'all' ? 'active' : ''}
+            onClick={() => setDomain('all')}
+          >
+            All Domains
+          </button>
           {catalog?.domains.map((item) => (
-            <button key={item} className={domain === item ? 'active' : ''} onClick={() => setDomain(item)}>
+            <button
+              key={item}
+              className={domain === item ? 'active' : ''}
+              onClick={() => setDomain(item)}
+            >
               {domainLabel(item)}
             </button>
           ))}
@@ -189,40 +269,77 @@ export default function VirtualEmailPage() {
       </section>
 
       <section className="email-coupon-row">
-        <span><Ticket /> Coupon Code</span>
+        <span>
+          <Ticket /> Coupon Code
+        </span>
         <div>
-          <input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder="ENTER CODE" />
-          <button type="button" disabled={!coupon.trim()} onClick={() => setMessage('This coupon code is not available.')}>Apply</button>
+          <input
+            value={coupon}
+            onChange={(event) => setCoupon(event.target.value)}
+            placeholder="ENTER CODE"
+          />
+          <button
+            type="button"
+            disabled={!coupon.trim()}
+            onClick={() => setMessage('This coupon code is not available.')}
+          >
+            Apply
+          </button>
         </div>
       </section>
 
       {message && (
         <Notice
           message={message}
-          tone={message.includes('reserved') || message.includes('arrived') || message.includes('copied') ? 'success' : 'error'}
+          tone={
+            message.includes('reserved') ||
+            message.includes('arrived') ||
+            message.includes('copied')
+              ? 'success'
+              : 'error'
+          }
         />
       )}
 
       {loading && !catalog ? (
-        <div className="email-market-loading"><LoaderCircle className="animate-spin" /> Loading live email inventory…</div>
+        <div className="email-market-loading">
+          <LoaderCircle className="animate-spin" /> Loading live email
+          inventory…
+        </div>
       ) : visibleOffers.length ? (
-        <section className="email-service-grid" aria-label="Available virtual email services">
+        <section
+          className="email-service-grid"
+          aria-label="Available virtual email services"
+        >
           {visibleOffers.map((service) => {
             const key = `${service.code}:${service.offer.domain}`;
             const confirming = pendingKey === key;
             return (
               <article className="email-service-card" key={key}>
                 <div className="email-card-topline">
-                  <span className="email-service-icon">{service.code === 'ot' ? <AtSign /> : <Mail />}</span>
-                  <span className="email-stock"><CheckCircle2 /> In Stock</span>
+                  <span className="email-service-icon">
+                    {service.code === 'ot' ? <AtSign /> : <Mail />}
+                  </span>
+                  <span className="email-stock">
+                    <CheckCircle2 /> In Stock
+                  </span>
                 </div>
                 <h2>{service.name}</h2>
-                <span className="email-domain-tag">{domainLabel(service.offer.domain)}</span>
+                <span className="email-domain-tag">
+                  {domainLabel(service.offer.domain)}
+                </span>
                 <div className="email-card-footer">
                   <div>
                     <small>PRICE</small>
-                    <strong>${service.offer.price.toFixed(4)}</strong>
-                    <span>{service.offer.count.toLocaleString()} available</span>
+                    <strong>
+                      {new Intl.NumberFormat('en-NG', {
+                        style: 'currency',
+                        currency: 'NGN',
+                      }).format(service.offer.price)}
+                    </strong>
+                    <span>
+                      {service.offer.count.toLocaleString()} available
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -230,7 +347,13 @@ export default function VirtualEmailPage() {
                     onClick={() => void purchase(service, service.offer)}
                     disabled={loading}
                   >
-                    {loading && confirming ? <LoaderCircle className="animate-spin" /> : confirming ? <ShieldCheck /> : <Zap />}
+                    {loading && confirming ? (
+                      <LoaderCircle className="animate-spin" />
+                    ) : confirming ? (
+                      <ShieldCheck />
+                    ) : (
+                      <Zap />
+                    )}
                     {confirming ? 'Confirm' : 'Get Email'}
                   </button>
                 </div>
@@ -239,12 +362,21 @@ export default function VirtualEmailPage() {
           })}
         </section>
       ) : (
-        <div className="email-market-empty"><Search /><h2>No matching services</h2><p>Try another search or choose a different email domain.</p></div>
+        <div className="email-market-empty">
+          <Search />
+          <h2>No matching services</h2>
+          <p>Try another search or choose a different email domain.</p>
+        </div>
       )}
 
       <div className="email-market-footnote">
-        <span><Clock3 /> Temporary inboxes are intended for one-time verification codes.</span>
-        <span><Sparkles /> Live SMSBower inventory</span>
+        <span>
+          <Clock3 /> Temporary inboxes are intended for one-time verification
+          codes.
+        </span>
+        <span>
+          <Sparkles /> Live SMSBower inventory
+        </span>
       </div>
     </ServicePageShell>
   );

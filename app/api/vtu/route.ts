@@ -14,6 +14,7 @@ import {
 } from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
 import { providerReference, recordOrder } from '@/lib/orders';
+import { getVtuPriceNgn } from '@/lib/exchange-rates';
 
 const phonePattern = /^0[789]\d{9}$/;
 const pinPattern = /^\d{4}$/;
@@ -53,7 +54,13 @@ export async function GET(request: Request) {
       const plans = (await getBigisubDataPlans(network)).filter(
         (plan) => !plan.plan_disabled,
       );
-      return Response.json({ plans });
+      return Response.json({
+        plans: plans.map((plan) => ({
+          ...plan,
+          amount: getVtuPriceNgn(plan.amount),
+          plan_amount: getVtuPriceNgn(plan.plan_amount || plan.amount),
+        })),
+      });
     }
     if (service === 'cable') {
       const provider = text(searchParams.get('provider')).toLowerCase();
@@ -63,7 +70,13 @@ export async function GET(request: Request) {
           { status: 400 },
         );
       }
-      return Response.json({ plans: await getBigisubCablePlans(provider) });
+      const plans = await getBigisubCablePlans(provider);
+      return Response.json({
+        plans: plans.map((plan) => ({
+          ...plan,
+          amount: getVtuPriceNgn(plan.amount),
+        })),
+      });
     }
     if (service === 'electricity') {
       return Response.json({
@@ -71,7 +84,13 @@ export async function GET(request: Request) {
       });
     }
     if (service === 'exam') {
-      return Response.json({ prices: await getBigisubExamPrices() });
+      const prices = await getBigisubExamPrices();
+      return Response.json({
+        prices: prices.map((price) => ({
+          ...price,
+          amount: getVtuPriceNgn(price.amount),
+        })),
+      });
     }
     return Response.json(
       { error: 'Choose a valid utility service.' },
@@ -154,8 +173,23 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const result = await purchaseBigisubAirtime(network, account, amount, pin);
-      await recordOrder({ userId: user.id, category: 'vtu-airtime', serviceName: 'Airtime recharge', provider: 'Bigisub', providerOrderId: providerReference(result), amount, currency: 'NGN', status: 'completed', metadata: { network } });
+      const result = await purchaseBigisubAirtime(
+        network,
+        account,
+        amount,
+        pin,
+      );
+      await recordOrder({
+        userId: user.id,
+        category: 'vtu-airtime',
+        serviceName: 'Airtime recharge',
+        provider: 'Bigisub',
+        providerOrderId: providerReference(result),
+        amount: getVtuPriceNgn(amount),
+        currency: 'NGN',
+        status: 'completed',
+        metadata: { network, rechargeValue: amount },
+      });
       return Response.json(result, { status: 201 });
     }
 
@@ -184,7 +218,17 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       const result = await purchaseBigisubData(network, plan, account, pin);
-      await recordOrder({ userId: user.id, category: 'vtu-data', serviceName: `${matchingPlan.network_name} ${matchingPlan.plan_volume || matchingPlan.size}`, provider: 'Bigisub', providerOrderId: providerReference(result), amount: matchingPlan.plan_amount || matchingPlan.amount, currency: 'NGN', status: 'completed', metadata: { network, plan } });
+      await recordOrder({
+        userId: user.id,
+        category: 'vtu-data',
+        serviceName: `${matchingPlan.network_name} ${matchingPlan.plan_volume || matchingPlan.size}`,
+        provider: 'Bigisub',
+        providerOrderId: providerReference(result),
+        amount: getVtuPriceNgn(matchingPlan.plan_amount || matchingPlan.amount),
+        currency: 'NGN',
+        status: 'completed',
+        metadata: { network, plan },
+      });
       return Response.json(result, { status: 201 });
     }
 
@@ -213,14 +257,24 @@ export async function POST(request: Request) {
         );
       }
       const result = await purchaseBigisubCable({
-          cableType: provider,
-          cardNumber: account,
-          phone,
-          amount: plan.amount,
-          customerName: verified.customer_name,
-          pin,
-        });
-      await recordOrder({ userId: user.id, category: 'vtu-cable', serviceName: plan.product_name, provider: 'Bigisub', providerOrderId: providerReference(result), amount: plan.amount, currency: 'NGN', status: 'completed', metadata: { cableProvider: provider } });
+        cableType: provider,
+        cardNumber: account,
+        phone,
+        amount: plan.amount,
+        customerName: verified.customer_name,
+        pin,
+      });
+      await recordOrder({
+        userId: user.id,
+        category: 'vtu-cable',
+        serviceName: plan.product_name,
+        provider: 'Bigisub',
+        providerOrderId: providerReference(result),
+        amount: getVtuPriceNgn(plan.amount),
+        currency: 'NGN',
+        status: 'completed',
+        metadata: { cableProvider: provider },
+      });
       return Response.json(result, { status: 201 });
     }
 
@@ -252,16 +306,26 @@ export async function POST(request: Request) {
         );
       }
       const result = await purchaseBigisubElectricity({
-          company: provider,
-          meterNumber: account,
-          meterType,
-          phone,
-          amount,
-          customerName: verified.customer_name,
-          customerAddress: verified.customer_address,
-          pin,
-        });
-      await recordOrder({ userId: user.id, category: 'vtu-electricity', serviceName: `${selectedProvider.name} electricity`, provider: 'Bigisub', providerOrderId: providerReference(result), amount, currency: 'NGN', status: 'completed', metadata: { meterType } });
+        company: provider,
+        meterNumber: account,
+        meterType,
+        phone,
+        amount,
+        customerName: verified.customer_name,
+        customerAddress: verified.customer_address,
+        pin,
+      });
+      await recordOrder({
+        userId: user.id,
+        category: 'vtu-electricity',
+        serviceName: `${selectedProvider.name} electricity`,
+        provider: 'Bigisub',
+        providerOrderId: providerReference(result),
+        amount: getVtuPriceNgn(amount),
+        currency: 'NGN',
+        status: 'completed',
+        metadata: { meterType, utilityValue: amount },
+      });
       return Response.json(result, { status: 201 });
     }
 
@@ -284,7 +348,17 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       const result = await purchaseBigisubExam(price.code, quantity, pin);
-      await recordOrder({ userId: user.id, category: 'exam-pin', serviceName: price.name || price.exam_type, provider: 'Bigisub', providerOrderId: providerReference(result), amount: price.amount * quantity, currency: 'NGN', status: 'completed', metadata: { quantity } });
+      await recordOrder({
+        userId: user.id,
+        category: 'exam-pin',
+        serviceName: price.name || price.exam_type,
+        provider: 'Bigisub',
+        providerOrderId: providerReference(result),
+        amount: getVtuPriceNgn(price.amount * quantity),
+        currency: 'NGN',
+        status: 'completed',
+        metadata: { quantity },
+      });
       return Response.json(result, { status: 201 });
     }
 

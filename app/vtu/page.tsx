@@ -241,7 +241,7 @@ export default function VtuPage() {
       ' · ' +
       money(selectedExam.amount * Number(amount));
   } else if (amount) {
-    purchaseLabel = money(Number(amount));
+    purchaseLabel = money(Number(amount) * 2);
   }
 
   const formReady = (() => {
