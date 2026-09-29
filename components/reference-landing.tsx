@@ -127,13 +127,13 @@ function Brand({ inverse = false }: { inverse?: boolean }) {
     <span className={`ref-brand ${inverse ? 'ref-brand-inverse' : ''}`}>
       <Image
         className="ref-brand-mark"
-        src="/gceeverify-mark.png"
-        width={928}
-        height={928}
+        src="/favicon.svg"
+        width={512}
+        height={512}
         alt=""
         priority
       />
-      <strong>GCEEVerify</strong>
+      <strong>Gceeverify</strong>
     </span>
   );
 }
@@ -1068,13 +1068,8 @@ export function ReferenceLanding() {
           <div className="ref-phone-screen">
             <span className="ref-phone-island" aria-hidden="true" />
             <div className="ref-phone-wordmark" aria-label="GCEEVerify">
-              <Image
-                src="/gceeverify-mark.png"
-                width={928}
-                height={928}
-                alt=""
-              />
-              <strong>GCEEVerify</strong>
+              <Image src="/favicon.svg" width={512} height={512} alt="" />
+              <strong>Gceeverify</strong>
             </div>
             <span className="ref-phone-home" aria-hidden="true" />
           </div>

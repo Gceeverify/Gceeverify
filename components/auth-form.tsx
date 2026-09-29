@@ -39,6 +39,7 @@ export function AuthForm({
     initialState,
   );
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isLogin = mode === 'login';
 
   return (
@@ -133,6 +134,37 @@ export function AuthForm({
                 onClick={() => setShowPassword((visible) => !visible)}
               >
                 {showPassword ? (
+                  <EyeOff aria-hidden="true" />
+                ) : (
+                  <Eye aria-hidden="true" />
+                )}
+              </button>
+            </div>
+          </label>
+          <label>
+            <span>Confirm password</span>
+            <div>
+              <LockKeyhole />
+              <input
+                name="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
+                placeholder="Enter your password again"
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                aria-label={
+                  showConfirmPassword
+                    ? 'Hide confirmed password'
+                    : 'Show confirmed password'
+                }
+                aria-pressed={showConfirmPassword}
+                onClick={() => setShowConfirmPassword((visible) => !visible)}
+              >
+                {showConfirmPassword ? (
                   <EyeOff aria-hidden="true" />
                 ) : (
                   <Eye aria-hidden="true" />

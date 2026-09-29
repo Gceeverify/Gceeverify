@@ -43,9 +43,15 @@ export async function signIn(
 ): Promise<AuthState> {
   const email = value(formData, 'email').toLowerCase();
   const password = value(formData, 'password');
+  const confirmPassword = value(formData, 'confirmPassword');
   const next = safeNextPath(value(formData, 'next'));
 
-  if (!email || !password) return { error: 'Enter your email and password.' };
+  if (!email || !password || !confirmPassword) {
+    return { error: 'Enter and confirm your password.' };
+  }
+  if (password !== confirmPassword) {
+    return { error: 'The passwords do not match.' };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -69,6 +75,7 @@ export async function signUp(
   const phone = normalizeNigerianPhone(value(formData, 'phone'));
   const email = value(formData, 'email').toLowerCase();
   const password = value(formData, 'password');
+  const confirmPassword = value(formData, 'confirmPassword');
 
   if (fullName.length < 2) return { error: 'Enter your full name.' };
   if (!phone) return { error: 'Enter a valid Nigerian phone number.' };
@@ -80,6 +87,9 @@ export async function signUp(
     !/\d/.test(password)
   ) {
     return { error: 'Use at least 8 characters with a letter and a number.' };
+  }
+  if (password !== confirmPassword) {
+    return { error: 'The passwords do not match.' };
   }
 
   const supabase = await createClient();

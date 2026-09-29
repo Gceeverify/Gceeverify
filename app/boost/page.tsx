@@ -124,8 +124,12 @@ const guidance = [
     Review the selected service&apos;s limits and description before continuing.
   </>,
   <>
-    For views, enter the <strong>video or post link</strong>, not your profile
-    link.
+    For views, likes, or shares, enter the <strong>video or post link</strong>,
+    not your profile link.
+  </>,
+  <>
+    For followers or subscribers, enter the{' '}
+    <strong>profile or channel link</strong>.
   </>,
 ];
 
@@ -144,6 +148,11 @@ export default function BoostPage() {
 
   const selected =
     data?.services.find((item) => item.service === selectedId) ?? null;
+  const needsProfileLink = selected
+    ? /\b(followers?|subscribers?)\b/i.test(
+        `${selected.name} ${selected.category}`,
+      )
+    : false;
   const charge =
     selected && Number(quantity)
       ? (Number(selected.rate) * Number(quantity)) / 1000
@@ -424,7 +433,11 @@ export default function BoostPage() {
 
                 <div className="boost-order-fields">
                   <label htmlFor="boost-link">
-                    <span>Link</span>
+                    <span>
+                      {needsProfileLink
+                        ? 'Profile or channel link'
+                        : 'Video or post link'}
+                    </span>
                     <div>
                       <Link2 />
                       <Input
@@ -435,7 +448,11 @@ export default function BoostPage() {
                           setLink(event.target.value);
                           setConfirming(false);
                         }}
-                        placeholder="Paste your link here"
+                        placeholder={
+                          needsProfileLink
+                            ? 'Paste the profile or channel link'
+                            : 'Paste the video or post link'
+                        }
                       />
                     </div>
                   </label>
