@@ -3,7 +3,10 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { normalizeNigerianPhone } from '@/lib/virtual-accounts';
+import {
+  normalizeNigerianPhone,
+  provisionUserVirtualAccount,
+} from '@/lib/virtual-accounts';
 
 export type AuthState = {
   error?: string;
@@ -95,6 +98,14 @@ export async function signUp(
         ? 'An account already exists for this email.'
         : error.message,
     };
+  }
+  if (data.user) {
+    await provisionUserVirtualAccount({
+      userId: data.user.id,
+      email,
+      fullName,
+      phone,
+    });
   }
   if (data.session) redirect('/dashboard');
 
