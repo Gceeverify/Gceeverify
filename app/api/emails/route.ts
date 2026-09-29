@@ -85,12 +85,7 @@ export async function POST(request: Request) {
       domain?: string;
       id?: string;
     };
-    if (
-      body.action === 'purchase' &&
-      body.service &&
-      body.domain &&
-      body.domain
-    ) {
+    if (body.action === 'purchase' && body.service && body.domain) {
       const [quote, exchangeRate] = await Promise.all([
         getVirtualEmailQuote(body.service, body.domain),
         getUsdToNgnRate(),
@@ -134,14 +129,16 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'The request could not be completed.';
+    const providerUnavailable =
+      message.includes('provider balance is empty') ||
+      message.includes('provider connection needs attention');
     return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'The request could not be completed.',
-      },
-      { status: 400 },
+      { error: message },
+      { status: providerUnavailable ? 503 : 400 },
     );
   }
 }

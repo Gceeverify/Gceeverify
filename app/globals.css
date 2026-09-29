@@ -6268,61 +6268,6 @@ html[data-theme='light'] .vtu-notice-error {
   background: #74ef5b;
   color: #07100f;
 }
-.email-coupon-row {
-  display: flex;
-  min-height: 96px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  border-top: 0;
-  border-radius: 0 0 1rem 1rem;
-  background: rgba(8, 14, 25, 0.72);
-  padding: 1rem 1.5rem;
-}
-.email-coupon-row > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-size: 0.8rem;
-  font-weight: 750;
-}
-.email-coupon-row > span svg {
-  width: 1rem;
-  color: #74ef5b;
-}
-.email-coupon-row > div {
-  display: flex;
-  gap: 0.55rem;
-}
-.email-coupon-row input {
-  width: min(280px, 36vw);
-  height: 52px;
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  border-radius: 0.85rem;
-  outline: none;
-  background: rgba(2, 8, 18, 0.46);
-  padding: 0 1rem;
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-.email-coupon-row input:focus {
-  border-color: rgba(116, 239, 91, 0.65);
-}
-.email-coupon-row button {
-  height: 52px;
-  border-radius: 0.85rem;
-  background: #74ef5b;
-  padding: 0 1.2rem;
-  color: #07100f;
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-.email-coupon-row button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
 .email-service-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -6579,18 +6524,15 @@ html[data-theme='light'] .vtu-notice-error {
   width: 0.9rem;
 }
 html[data-theme='light'] .email-market-controls,
-html[data-theme='light'] .email-coupon-row,
 html[data-theme='light'] .email-service-card {
   border-color: rgba(22, 49, 21, 0.1);
   background: rgba(255, 255, 255, 0.82);
 }
-html[data-theme='light'] .email-market-search,
-html[data-theme='light'] .email-coupon-row input {
+html[data-theme='light'] .email-market-search {
   border-color: rgba(22, 49, 21, 0.1);
   background: #fff;
 }
-html[data-theme='light'] .email-market-search input,
-html[data-theme='light'] .email-coupon-row input {
+html[data-theme='light'] .email-market-search input {
   color: #142414;
 }
 html[data-theme='light'] .email-market-search input::placeholder {
@@ -6650,18 +6592,6 @@ html[data-theme='light'] .active-email-code small {
   }
   .email-market-controls {
     padding: 0.75rem;
-  }
-  .email-coupon-row {
-    align-items: stretch;
-    flex-direction: column;
-    padding: 1rem;
-  }
-  .email-coupon-row > div {
-    width: 100%;
-  }
-  .email-coupon-row input {
-    width: 100%;
-    min-width: 0;
   }
   .email-service-grid {
     grid-template-columns: 1fr;
@@ -9648,7 +9578,6 @@ html[data-theme='light'] .active-email-code small {
   color: #4d6556;
 }
 html[data-theme='light'] .email-history-button,
-html[data-theme='light'] .email-coupon-row > span,
 html[data-theme='light'] .email-card-footer > div small {
   color: #314b3a;
 }

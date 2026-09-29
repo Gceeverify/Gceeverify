@@ -686,6 +686,20 @@ export async function setNumberStatus(id: string, status: '6' | '8') {
   return { status: order.status.toLowerCase() };
 }
 
+function virtualEmailProviderError(message?: string) {
+  const normalized = message?.trim().toLowerCase() ?? '';
+  if (normalized.includes('insufficient balance')) {
+    return 'Virtual email is temporarily unavailable because the provider balance is empty. Please try again later.';
+  }
+  if (normalized.includes('no mails')) {
+    return 'No virtual emails are currently available for this selection. Please choose another service or domain.';
+  }
+  if (normalized.includes('bad key') || normalized.includes('invalid api')) {
+    return 'Virtual email is temporarily unavailable because the provider connection needs attention.';
+  }
+  return message?.trim() || 'Virtual email service could not be reached.';
+}
+
 type MailApiResponse<T> = {
   status: number;
   error?: string;
@@ -700,9 +714,7 @@ async function mailRequest<T>(path: string, params: Record<string, string>) {
   const response = await timedFetch(url.toString());
   const result = (await response.json()) as MailApiResponse<T>;
   if (!response.ok || result.status !== 1) {
-    throw new Error(
-      result.error || 'Virtual email service could not be reached.',
-    );
+    throw new Error(virtualEmailProviderError(result.error));
   }
   return result;
 }

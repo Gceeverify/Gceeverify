@@ -3,7 +3,9 @@ const FALLBACK_USD_NGN_RATE = 1327.93;
 const DEFAULT_BOOST_MARKUP_PERCENT = 30;
 const DEFAULT_NUMBER_MARKUP_PERCENT = 30;
 const DEFAULT_LOG_MARKUP_PERCENT = 30;
-const DEFAULT_VIRTUAL_EMAIL_MARKUP_PERCENT = 100;
+const DEFAULT_VIRTUAL_EMAIL_MARKUP_PERCENT = 300;
+const DEFAULT_VIRTUAL_EMAIL_LOW_PRICE_THRESHOLD_NGN = 90;
+const DEFAULT_VIRTUAL_EMAIL_LOW_PRICE_MARKUP_PERCENT = 1500;
 const DEFAULT_VTU_MARKUP_PERCENT = 100;
 const NUMBER_TIER_INCREASE_PERCENT = {
   gold: 10,
@@ -134,11 +136,28 @@ export function getVirtualEmailPriceNgn(
   usdToNgnRate: number,
 ) {
   const configuredMarkup = Number(process.env.VIRTUAL_EMAIL_MARKUP_PERCENT);
-  const markup =
+  const configuredThreshold = Number(
+    process.env.VIRTUAL_EMAIL_LOW_PRICE_THRESHOLD_NGN,
+  );
+  const configuredLowPriceMarkup = Number(
+    process.env.VIRTUAL_EMAIL_LOW_PRICE_MARKUP_PERCENT,
+  );
+  const standardMarkup =
     Number.isFinite(configuredMarkup) && configuredMarkup >= 0
       ? configuredMarkup
       : DEFAULT_VIRTUAL_EMAIL_MARKUP_PERCENT;
-  return convertUsdToNgn(providerPriceUsd * (1 + markup / 100), usdToNgnRate);
+  const lowPriceThreshold =
+    Number.isFinite(configuredThreshold) && configuredThreshold >= 0
+      ? configuredThreshold
+      : DEFAULT_VIRTUAL_EMAIL_LOW_PRICE_THRESHOLD_NGN;
+  const lowPriceMarkup =
+    Number.isFinite(configuredLowPriceMarkup) && configuredLowPriceMarkup >= 0
+      ? configuredLowPriceMarkup
+      : DEFAULT_VIRTUAL_EMAIL_LOW_PRICE_MARKUP_PERCENT;
+  const providerPriceNgn = providerPriceUsd * usdToNgnRate;
+  const markup =
+    providerPriceNgn < lowPriceThreshold ? lowPriceMarkup : standardMarkup;
+  return Math.round(providerPriceNgn * (1 + markup / 100) * 100) / 100;
 }
 
 export function getVtuPriceNgn(providerPriceNgn: number) {

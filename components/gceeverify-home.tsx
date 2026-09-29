@@ -19,7 +19,6 @@ import {
   Mail,
   Menu,
   PackageSearch,
-  Plus,
   RadioTower,
   Search,
   ShieldCheck,
@@ -37,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationMenu } from '@/components/notification-menu';
 import { ReferenceLanding } from '@/components/reference-landing';
+import { FundWalletDialog } from '@/components/fund-wallet-dialog';
 import { signOut } from '@/app/auth/actions';
 
 const recentOrders = [
@@ -643,13 +643,7 @@ export function GceeverifyHome({
                 <span>Log out</span>
               </button>
             </form>
-            <Button
-              aria-label="Add funds"
-              className="header-add-funds h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200"
-            >
-              <Plus />
-              <span>Add funds</span>
-            </Button>
+            <FundWalletDialog className="header-add-funds h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200" />
           </div>
         </header>
 
@@ -670,9 +664,7 @@ export function GceeverifyHome({
               <span>Available balance</span>
               <strong>{balanceLabel}</strong>
             </div>
-            <Button className="dashboard-balance-button">
-              <Plus /> Add funds
-            </Button>
+            <FundWalletDialog className="dashboard-balance-button" />
           </section>
 
           <section id="dashboard" className="dashboard-services">

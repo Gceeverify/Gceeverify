@@ -14,7 +14,6 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
-  Ticket,
   X,
   Zap,
 } from 'lucide-react';
@@ -47,7 +46,6 @@ export default function VirtualEmailPage() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [search, setSearch] = useState('');
   const [domain, setDomain] = useState('all');
-  const [coupon, setCoupon] = useState('');
   const [pendingKey, setPendingKey] = useState('');
   const [activation, setActivation] = useState<Activation | null>(null);
   const [emailCode, setEmailCode] = useState<string | null>(null);
@@ -120,6 +118,7 @@ export default function VirtualEmailPage() {
       );
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
+      setPendingKey('');
       setMessage(
         error instanceof Error
           ? error.message
@@ -150,6 +149,7 @@ export default function VirtualEmailPage() {
           : 'Still waiting for the email. Try again shortly.',
       );
     } catch (error) {
+      setPendingKey('');
       setMessage(
         error instanceof Error
           ? error.message
@@ -265,26 +265,6 @@ export default function VirtualEmailPage() {
               {domainLabel(item)}
             </button>
           ))}
-        </div>
-      </section>
-
-      <section className="email-coupon-row">
-        <span>
-          <Ticket /> Coupon Code
-        </span>
-        <div>
-          <input
-            value={coupon}
-            onChange={(event) => setCoupon(event.target.value)}
-            placeholder="ENTER CODE"
-          />
-          <button
-            type="button"
-            disabled={!coupon.trim()}
-            onClick={() => setMessage('This coupon code is not available.')}
-          >
-            Apply
-          </button>
         </div>
       </section>
 
