@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { normalizeNigerianPhone } from '@/lib/virtual-accounts';
 
 export type AuthState = {
   error?: string;
@@ -24,10 +25,11 @@ function safeNextPath(candidate: string) {
 
 async function confirmationRedirectUrl() {
   const requestHeaders = await headers();
-  const origin =
-    process.env.NODE_ENV === 'production'
-      ? 'https://gceeverify.vercel.app'
-      : (requestHeaders.get('origin') ?? 'http://localhost:3000');
+  const origin = (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    requestHeaders.get('origin') ||
+    'http://localhost:3000'
+  ).replace(/\/$/, '');
 
   return `${origin}/auth/callback`;
 }
@@ -61,12 +63,19 @@ export async function signUp(
   formData: FormData,
 ): Promise<AuthState> {
   const fullName = value(formData, 'fullName');
+  const phone = normalizeNigerianPhone(value(formData, 'phone'));
   const email = value(formData, 'email').toLowerCase();
   const password = value(formData, 'password');
 
   if (fullName.length < 2) return { error: 'Enter your full name.' };
-  if (!/^\S+@\S+\.\S+$/.test(email)) return { error: 'Enter a valid email address.' };
-  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+  if (!phone) return { error: 'Enter a valid Nigerian phone number.' };
+  if (!/^\S+@\S+\.\S+$/.test(email))
+    return { error: 'Enter a valid email address.' };
+  if (
+    password.length < 8 ||
+    !/[A-Za-z]/.test(password) ||
+    !/\d/.test(password)
+  ) {
     return { error: 'Use at least 8 characters with a letter and a number.' };
   }
 
@@ -75,18 +84,23 @@ export async function signUp(
     email,
     password,
     options: {
-      data: { full_name: fullName },
+      data: { full_name: fullName, phone },
       emailRedirectTo: await confirmationRedirectUrl(),
     },
   });
 
   if (error) {
-    return { error: error.message.includes('already') ? 'An account already exists for this email.' : error.message };
+    return {
+      error: error.message.includes('already')
+        ? 'An account already exists for this email.'
+        : error.message,
+    };
   }
   if (data.session) redirect('/dashboard');
 
   return {
-    success: 'Account created. Check your email to confirm your address, then sign in.',
+    success:
+      'Account created. Check your email to confirm your address, then sign in.',
   };
 }
 
@@ -115,7 +129,10 @@ export async function resendConfirmation(
     };
   }
 
-  return { success: 'A fresh confirmation email has been sent. Use the newest link only.' };
+  return {
+    success:
+      'A fresh confirmation email has been sent. Use the newest link only.',
+  };
 }
 
 export async function signOut() {

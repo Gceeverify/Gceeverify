@@ -83,6 +83,53 @@ export async function confirmPocketFiPayment(paymentId: string) {
   }>('/checkout/confirm', { payment_id: paymentId });
 }
 
+export type PocketFiVirtualAccount = {
+  bank: string;
+  accountNumber: string;
+  accountName: string;
+};
+
+export async function createPocketFiVirtualAccount(input: {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+}): Promise<PocketFiVirtualAccount> {
+  const result = await pocketFiRequest<{
+    status?: boolean;
+    banks?: Array<{
+      bankName?: string;
+      accountNumber?: string;
+      accountName?: string;
+    }>;
+  }>('/virtual-accounts/create', {
+    first_name: input.firstName,
+    last_name: input.lastName,
+    phone: input.phone,
+    email: input.email,
+    businessId: requiredPocketFiSetting('POCKETFI_BUSINESS_ID'),
+    bank: process.env.POCKETFI_VIRTUAL_ACCOUNT_BANK?.trim() || 'kuda',
+  });
+
+  const account = result.banks?.[0];
+  if (
+    !result.status ||
+    !account?.bankName ||
+    !account.accountNumber ||
+    !account.accountName
+  ) {
+    throw new Error(
+      'PocketFi returned an incomplete virtual account response.',
+    );
+  }
+
+  return {
+    bank: account.bankName,
+    accountNumber: account.accountNumber,
+    accountName: account.accountName,
+  };
+}
+
 export function verifyPocketFiSignature(rawBody: string, signature: string) {
   const normalizedSignature = signature.trim().replace(/^sha512=/i, '');
   if (!/^[a-f\d]{128}$/i.test(normalizedSignature)) return false;

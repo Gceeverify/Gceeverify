@@ -10,6 +10,7 @@ import {
   EyeOff,
   LockKeyhole,
   Mail,
+  Phone,
   UserRound,
 } from 'lucide-react';
 import {
@@ -68,19 +69,36 @@ export function AuthForm({
         <form action={formAction} className="auth-form">
           <input type="hidden" name="next" value={next} />
           {!isLogin && (
-            <label>
-              <span>Full name</span>
-              <div>
-                <UserRound />
-                <input
-                  name="fullName"
-                  autoComplete="name"
-                  placeholder="Your full name"
-                  required
-                  minLength={2}
-                />
-              </div>
-            </label>
+            <>
+              <label>
+                <span>Full name</span>
+                <div>
+                  <UserRound />
+                  <input
+                    name="fullName"
+                    autoComplete="name"
+                    placeholder="Your full name"
+                    required
+                    minLength={2}
+                  />
+                </div>
+              </label>
+              <label>
+                <span>Phone number</span>
+                <div>
+                  <Phone />
+                  <input
+                    name="phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="08012345678"
+                    pattern="(?:0[789][0-9]{9}|\\+234[789][0-9]{9})"
+                    required
+                  />
+                </div>
+              </label>
+            </>
           )}
           <label>
             <span>Email address</span>

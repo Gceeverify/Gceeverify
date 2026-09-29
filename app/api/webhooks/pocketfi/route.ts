@@ -6,7 +6,17 @@ import {
 
 type PocketFiWebhook = {
   order?: { amount?: number | string };
-  transaction?: { reference?: string };
+  amount?: number | string;
+  account?: string;
+  account_number?: string;
+  virtual_account_number?: string;
+  transaction?: {
+    reference?: string;
+    amount?: number | string;
+    account?: string;
+    account_number?: string;
+    virtual_account_number?: string;
+  };
 };
 
 const paidStatuses = new Set(['success', 'successful', 'completed', 'paid']);
@@ -31,7 +41,18 @@ export async function POST(request: Request) {
 
     const payload = JSON.parse(rawBody) as PocketFiWebhook;
     const paymentId = payload.transaction?.reference?.trim();
-    const webhookAmount = Number(payload.order?.amount);
+    const webhookAmount = Number(
+      payload.order?.amount ?? payload.transaction?.amount ?? payload.amount,
+    );
+    const accountNumber = (
+      payload.transaction?.virtual_account_number ||
+      payload.transaction?.account_number ||
+      payload.transaction?.account ||
+      payload.virtual_account_number ||
+      payload.account_number ||
+      payload.account ||
+      ''
+    ).replace(/\s/g, '');
     if (!paymentId || !Number.isFinite(webhookAmount) || webhookAmount <= 0) {
       return Response.json({ message: 'Invalid payload' }, { status: 400 });
     }
@@ -57,11 +78,17 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient();
-    const { error } = await admin.rpc('complete_pocketfi_funding', {
-      p_provider_payment_id: paymentId,
-      p_amount: confirmedAmount,
-      p_reference: `pocketfi:${paymentId}`,
-    });
+    const { error } = accountNumber
+      ? await admin.rpc('credit_virtual_account_deposit', {
+          p_account_number: accountNumber,
+          p_amount: confirmedAmount,
+          p_reference: `pocketfi:${paymentId}`,
+        })
+      : await admin.rpc('complete_pocketfi_funding', {
+          p_provider_payment_id: paymentId,
+          p_amount: confirmedAmount,
+          p_reference: `pocketfi:${paymentId}`,
+        });
     if (error) {
       console.error('PocketFi wallet credit failed:', error.message);
       return Response.json(
