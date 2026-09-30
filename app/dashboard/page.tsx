@@ -2,7 +2,10 @@ import { redirect } from 'next/navigation';
 import { GceeverifyHome } from '@/components/gceeverify-home';
 import { createClient } from '@/lib/supabase/server';
 import { isAdminUser } from '@/lib/admin';
-import { provisionUserVirtualAccount } from '@/lib/virtual-accounts';
+import {
+  pocketFiCustomerPhone,
+  provisionUserVirtualAccount,
+} from '@/lib/virtual-accounts';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -16,7 +19,7 @@ export default async function DashboardPage() {
     await Promise.all([
       supabase
         .from('profiles')
-        .select('full_name, phone')
+        .select('full_name')
         .eq('id', user.id)
         .maybeSingle(),
       supabase
@@ -26,7 +29,7 @@ export default async function DashboardPage() {
         .maybeSingle(),
       supabase
         .from('user_virtual_accounts')
-        .select('bank, account_number, account_name, status')
+        .select('bank, account_number, account_name, status, updated_at')
         .eq('user_id', user.id)
         .maybeSingle(),
     ]);
@@ -39,12 +42,13 @@ export default async function DashboardPage() {
     user.email?.split('@')[0] ||
     'there';
   let virtualAccount = savedAccount;
-  if (!virtualAccount && profile?.phone && user.email) {
+  if (virtualAccount?.status !== 'active' && user.email) {
     virtualAccount = await provisionUserVirtualAccount({
       userId: user.id,
       email: user.email,
       fullName: userName,
-      phone: profile.phone,
+      phone: pocketFiCustomerPhone(),
+      retryFailed: true,
     });
   }
 
@@ -64,7 +68,6 @@ export default async function DashboardPage() {
           : null
       }
       virtualAccountStatus={virtualAccount?.status ?? 'missing'}
-      phoneRequired={!profile?.phone}
     />
   );
 }

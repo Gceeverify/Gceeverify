@@ -1,11 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import {
-  normalizeNigerianPhone,
+  pocketFiCustomerPhone,
   provisionUserVirtualAccount,
 } from '@/lib/virtual-accounts';
 
-export async function POST(request: Request) {
+export async function POST() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -14,39 +13,11 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Sign in to continue.' }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as { phone?: unknown };
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, phone')
+    .select('full_name')
     .eq('id', user.id)
     .maybeSingle();
-  const submittedPhone =
-    typeof body.phone === 'string' ? normalizeNigerianPhone(body.phone) : null;
-  const storedPhone =
-    typeof profile?.phone === 'string'
-      ? normalizeNigerianPhone(profile.phone)
-      : null;
-  const phone = submittedPhone || storedPhone;
-  if (!phone) {
-    return Response.json(
-      { error: 'Enter a valid Nigerian phone number.' },
-      { status: 400 },
-    );
-  }
-
-  if (submittedPhone && submittedPhone !== storedPhone) {
-    const admin = createAdminClient();
-    const { error } = await admin
-      .from('profiles')
-      .update({ phone: submittedPhone })
-      .eq('id', user.id);
-    if (error) {
-      return Response.json(
-        { error: 'We could not save your phone number.' },
-        { status: 500 },
-      );
-    }
-  }
 
   const fullName =
     profile?.full_name ||
@@ -58,10 +29,13 @@ export async function POST(request: Request) {
     userId: user.id,
     email: user.email,
     fullName,
-    phone,
+    phone: pocketFiCustomerPhone(),
     retryFailed: true,
   });
 
+  if (account.status === 'provisioning') {
+    return Response.json({ status: 'provisioning' }, { status: 202 });
+  }
   if (account.status !== 'active') {
     return Response.json(
       { error: 'Your bank account could not be created. Please try again.' },

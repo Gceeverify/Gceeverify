@@ -77,10 +77,14 @@ export async function POST(request: Request) {
       return Response.json({ message: 'Amount mismatch' }, { status: 400 });
     }
 
+    const confirmedAccountNumber = (
+      accountNumber || confirmation.account || ''
+    ).replace(/\s/g, '');
+
     const admin = createAdminClient();
-    const { error } = accountNumber
+    const { error } = confirmedAccountNumber
       ? await admin.rpc('credit_virtual_account_deposit', {
-          p_account_number: accountNumber,
+          p_account_number: confirmedAccountNumber,
           p_amount: confirmedAmount,
           p_reference: `pocketfi:${paymentId}`,
         })

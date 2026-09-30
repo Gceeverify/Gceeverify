@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Gceeverify - Digital services, one trusted dashboard',
-  description: 'Access social growth, verification numbers, digital accounts, and more from one fast, reliable dashboard.',
-  icons: { icon: '/favicon.svg' },
+  description:
+    'Access social growth, verification numbers, digital accounts, and more from one fast, reliable dashboard.',
+  icons: { icon: '/logo-transparent.png' },
 };
 
 const themeScript = `
@@ -38,10 +39,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
-      <body
-        className={`${sora.variable} ${geistMono.variable} antialiased`}
-      >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className={`${sora.variable} ${geistMono.variable} antialiased`}>
         {children}
       </body>
     </html>

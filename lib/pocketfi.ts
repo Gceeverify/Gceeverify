@@ -79,6 +79,7 @@ export async function confirmPocketFiPayment(paymentId: string) {
   return pocketFiRequest<{
     status?: string;
     amount?: string | number;
+    account?: string;
     payment_id?: string;
   }>('/checkout/confirm', { payment_id: paymentId });
 }

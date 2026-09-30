@@ -104,6 +104,10 @@
   background: rgba(97, 238, 101, 0.11);
 }
 
+.sidebar nav .mobileHomeNav {
+  display: none;
+}
+
 .sidebar nav svg,
 .sidebarFoot svg {
   width: 18px;
@@ -1056,8 +1060,9 @@
   }
   .brand,
   .sidebarFoot { display: none; }
-  .sidebar nav { display: grid; width: 100%; grid-template-columns: repeat(3, 1fr); }
+  .sidebar nav { display: grid; width: 100%; grid-template-columns: repeat(4, 1fr); }
   .sidebar nav a { justify-content: center; min-height: 46px; padding: 0; font-size: 0; }
+  .sidebar nav .mobileHomeNav { display: flex; }
   .sidebar nav svg { width: 20px; height: 20px; }
   .content { width: 100%; margin-left: 0; padding: 28px 16px 42px; }
   .topbar { align-items: flex-start; }

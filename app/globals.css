@@ -2374,6 +2374,21 @@ html[data-theme='light'] .number-provider-card {
   align-items: center;
   gap: 1.5rem;
 }
+.service-menu-trigger {
+  flex: 0 0 auto;
+}
+.service-navigation-sheet {
+  width: min(86vw, 250px) !important;
+  gap: 0;
+  overflow: hidden;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #08110f;
+  padding: 0;
+  color: #fff;
+}
+.service-navigation-sheet .sidebar-head {
+  flex: 0 0 auto;
+}
 .service-header-breadcrumb {
   display: flex;
   min-width: 0;
@@ -5090,6 +5105,12 @@ html[data-theme='light'] .service-header-breadcrumb {
 html[data-theme='light'] .service-header-breadcrumb span:last-child {
   color: rgba(20, 36, 20, 0.8);
 }
+html[data-theme='light'] .service-navigation-sheet {
+  border-color: rgba(22, 49, 21, 0.1);
+  background: #fff;
+  color: #142414;
+  box-shadow: 14px 0 45px rgba(23, 52, 23, 0.05);
+}
 html[data-theme='light'] .stat-card,
 html[data-theme='light'] .panel,
 html[data-theme='light'] .market-surface,
@@ -5271,6 +5292,88 @@ html[data-theme='light'] .number-trust-strip > div {
 }
 html[data-theme='light'] .number-trust-strip small {
   color: rgba(20, 36, 20, 0.58);
+}
+
+/* Keep the dedicated-account dialog readable in both color modes. */
+html[data-theme='light'] .fund-wallet-dialog {
+  border-color: rgba(22, 49, 21, 0.12) !important;
+  background: #f8fbf7 !important;
+  color: #142414 !important;
+  box-shadow: 0 24px 70px rgba(15, 40, 25, 0.2);
+}
+html[data-theme='light'] .fund-wallet-dialog [class*='bg-white/'] {
+  border-color: rgba(22, 49, 21, 0.1) !important;
+  background: rgba(23, 52, 23, 0.045) !important;
+}
+html[data-theme='light'] .fund-wallet-dialog [class*='bg-emerald-300'] {
+  border-color: rgba(5, 150, 105, 0.2) !important;
+  background: rgba(16, 185, 129, 0.09) !important;
+}
+html[data-theme='light'] .fund-wallet-dialog .text-emerald-300 {
+  color: #087f5b !important;
+}
+html[data-theme='light'] .fund-wallet-dialog [class*='text-white/45'] {
+  color: rgba(20, 36, 20, 0.6) !important;
+}
+html[data-theme='light'] .fund-wallet-dialog [class*='text-white/55'] {
+  color: rgba(20, 36, 20, 0.7) !important;
+}
+html[data-theme='light'] .fund-wallet-dialog [class*='text-white/40'] {
+  color: rgba(20, 36, 20, 0.62) !important;
+}
+html[data-theme='light'] .fund-wallet-dialog [data-slot='dialog-close'] {
+  color: #142414 !important;
+}
+.fund-wallet-transfer-card {
+  border-color: rgba(116, 239, 91, 0.42);
+  background: #183f28;
+  color: #ffffff;
+}
+.fund-wallet-transfer-title {
+  color: #b9ff9f;
+}
+.fund-wallet-transfer-card [class*='text-white/45'] {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+html[data-theme='light'] .fund-wallet-transfer-card {
+  border-color: rgba(26, 112, 61, 0.3);
+  background: #d9f8d5;
+  color: #12351d;
+}
+html[data-theme='light'] .fund-wallet-transfer-title {
+  color: #146c36;
+}
+html[data-theme='light'] .fund-wallet-transfer-card [class*='text-white/45'] {
+  color: rgba(18, 53, 29, 0.72) !important;
+}
+.sign-out-confirm-button {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: #c93333;
+  padding: 0.45rem 0.9rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.sign-out-confirm-button:hover {
+  background: #ad2525;
+}
+html[data-theme='light'] .sign-out-dialog {
+  border-color: rgba(22, 49, 21, 0.12) !important;
+  background: #f8fbf7 !important;
+  color: #142414 !important;
+}
+html[data-theme='light']
+  .sign-out-dialog
+  [data-slot='alert-dialog-description'] {
+  color: rgba(20, 36, 20, 0.66) !important;
+}
+html[data-theme='light'] .sign-out-dialog [data-slot='alert-dialog-footer'] {
+  border-color: rgba(22, 49, 21, 0.1) !important;
+  background: rgba(23, 52, 23, 0.04) !important;
 }
 html[data-theme='light'] .server-card-icon {
   background: rgba(22, 49, 21, 0.06);
@@ -5470,9 +5573,6 @@ html[data-theme='light'] .landing-footer {
   .dashboard-topbar-actions {
     gap: 0.45rem;
   }
-  .header-add-funds {
-    display: none !important;
-  }
   .dashboard-topbar .dashboard-logout-button {
     display: none;
   }
@@ -5515,6 +5615,13 @@ html[data-theme='light'] .landing-footer {
 }
 
 @media (max-width: 520px) {
+  .market-topbar .brand-logo span,
+  .market-topbar .service-header-breadcrumb {
+    display: none;
+  }
+  .service-header-identity {
+    gap: 0.55rem;
+  }
   .mobile-dashboard-brand span {
     display: none;
   }
@@ -5610,12 +5717,36 @@ html[data-theme='light'] .sidebar-account {
   letter-spacing: -0.045em;
 }
 .dashboard-balance-button {
+  display: inline-flex !important;
+  min-width: 6.65rem;
   height: 42px !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 0.4rem;
+  overflow: hidden;
   border-radius: 0.75rem !important;
   background: #74ef5b !important;
   padding: 0 1rem !important;
   color: #142414 !important;
+  font-size: 0.75rem !important;
   font-weight: 750 !important;
+  line-height: 1;
+  white-space: nowrap;
+}
+.dashboard-balance-button svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin: 0;
+  stroke-width: 2.75;
+}
+.dashboard-balance-button span {
+  display: inline;
+  color: inherit !important;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
 }
 .dashboard-services {
   padding: 2.35rem 0 2rem;
@@ -6673,16 +6804,6 @@ html[data-theme='light'] .active-email-code small {
 }
 
 @media (max-width: 380px) {
-  .dashboard-balance-button {
-    width: 42px;
-    padding: 0 !important;
-  }
-  .dashboard-balance-button svg {
-    margin: 0;
-  }
-  .dashboard-balance-button {
-    font-size: 0 !important;
-  }
   .recent-order-icon {
     display: none;
   }
@@ -7954,12 +8075,16 @@ html[data-theme='dark'] .ref-secondary-cta {
 .auth-brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  font-size: 0.92rem;
+  gap: 7px;
+  font-size: 13px;
 }
 .auth-brand img {
-  width: 30px;
-  height: 30px;
+  width: 25px;
+  height: 25px;
+}
+.auth-brand strong {
+  font-weight: 600;
+  letter-spacing: -0.04em;
 }
 .auth-orb {
   position: absolute;

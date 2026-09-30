@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import {
-  normalizeNigerianPhone,
+  pocketFiCustomerPhone,
   provisionUserVirtualAccount,
 } from '@/lib/virtual-accounts';
 
@@ -43,15 +43,9 @@ export async function signIn(
 ): Promise<AuthState> {
   const email = value(formData, 'email').toLowerCase();
   const password = value(formData, 'password');
-  const confirmPassword = value(formData, 'confirmPassword');
   const next = safeNextPath(value(formData, 'next'));
 
-  if (!email || !password || !confirmPassword) {
-    return { error: 'Enter and confirm your password.' };
-  }
-  if (password !== confirmPassword) {
-    return { error: 'The passwords do not match.' };
-  }
+  if (!email || !password) return { error: 'Enter your email and password.' };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -72,13 +66,11 @@ export async function signUp(
   formData: FormData,
 ): Promise<AuthState> {
   const fullName = value(formData, 'fullName');
-  const phone = normalizeNigerianPhone(value(formData, 'phone'));
   const email = value(formData, 'email').toLowerCase();
   const password = value(formData, 'password');
   const confirmPassword = value(formData, 'confirmPassword');
 
   if (fullName.length < 2) return { error: 'Enter your full name.' };
-  if (!phone) return { error: 'Enter a valid Nigerian phone number.' };
   if (!/^\S+@\S+\.\S+$/.test(email))
     return { error: 'Enter a valid email address.' };
   if (
@@ -97,7 +89,7 @@ export async function signUp(
     email,
     password,
     options: {
-      data: { full_name: fullName, phone },
+      data: { full_name: fullName },
       emailRedirectTo: await confirmationRedirectUrl(),
     },
   });
@@ -114,7 +106,7 @@ export async function signUp(
       userId: data.user.id,
       email,
       fullName,
-      phone,
+      phone: pocketFiCustomerPhone(),
     });
   }
   if (data.session) redirect('/dashboard');

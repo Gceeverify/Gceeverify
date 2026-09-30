@@ -1,6 +1,6 @@
 'use client';
 
-import { type SubmitEvent, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Check,
   Copy,
@@ -29,41 +29,41 @@ type VirtualAccountStatus = 'active' | 'provisioning' | 'failed' | 'missing';
 
 export function FundWalletDialog({
   className,
-  virtualAccount,
-  virtualAccountStatus,
-  phoneRequired,
+  virtualAccount = null,
+  virtualAccountStatus = 'missing',
 }: {
   className?: string;
-  virtualAccount: VirtualAccountDetails | null;
-  virtualAccountStatus: VirtualAccountStatus;
-  phoneRequired: boolean;
+  virtualAccount?: VirtualAccountDetails | null;
+  virtualAccountStatus?: VirtualAccountStatus;
 }) {
+  const [open, setOpen] = useState(false);
   const [account, setAccount] = useState(virtualAccount);
   const [status, setStatus] = useState(virtualAccountStatus);
   const [pending, setPending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
 
-  async function createAccount(event?: SubmitEvent<HTMLFormElement>) {
-    event?.preventDefault();
+  const createAccount = useCallback(async () => {
     setPending(true);
     setError('');
-    const form = event ? new FormData(event.currentTarget) : null;
 
     try {
       const response = await fetch('/api/wallet/virtual-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: form?.get('phone') || undefined }),
       });
       const result = (await response.json()) as {
         error?: string;
+        status?: VirtualAccountStatus;
         account?: {
           bank: string;
           account_number: string;
           account_name: string;
         };
       };
+      if (response.status === 202 && result.status === 'provisioning') {
+        setStatus('provisioning');
+        return;
+      }
       if (!response.ok || !result.account) {
         throw new Error(
           result.error || 'Your bank account could not be created.',
@@ -85,7 +85,17 @@ export function FundWalletDialog({
     } finally {
       setPending(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!open || account || pending) return;
+    if (status !== 'missing' && status !== 'provisioning') return;
+    const timer = window.setTimeout(
+      () => void createAccount(),
+      status === 'provisioning' ? 1500 : 0,
+    );
+    return () => window.clearTimeout(timer);
+  }, [account, createAccount, open, pending, status]);
 
   async function copyAccountNumber() {
     if (!account) return;
@@ -95,12 +105,12 @@ export function FundWalletDialog({
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button className={className} />}>
         <Plus />
         <span>Add funds</span>
       </DialogTrigger>
-      <DialogContent className="border-white/10 bg-[#0d1918] text-white sm:max-w-xl">
+      <DialogContent className="fund-wallet-dialog border-white/10 bg-[#0d1918] text-white sm:max-w-xl">
         <DialogHeader className="text-left">
           <div className="mb-2 flex items-center gap-3">
             <span className="grid size-12 place-items-center rounded-2xl bg-emerald-400/10 text-emerald-300">
@@ -129,8 +139,8 @@ export function FundWalletDialog({
               </p>
               <p className="mt-1 font-semibold">{account.accountName}</p>
             </div>
-            <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[.07] p-5">
-              <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-emerald-300">
+            <div className="fund-wallet-transfer-card rounded-2xl border p-5">
+              <p className="fund-wallet-transfer-title flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide">
                 <Landmark className="size-4" />
                 Transfer to this account
               </p>
@@ -176,39 +186,6 @@ export function FundWalletDialog({
               enter an amount here before making a transfer.
             </p>
           </div>
-        ) : phoneRequired ? (
-          <form onSubmit={createAccount} className="grid gap-4">
-            <label className="grid gap-2 text-sm font-medium">
-              Nigerian phone number
-              <input
-                name="phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="08012345678"
-                pattern="(?:0[789][0-9]{9}|\+234[789][0-9]{9})"
-                required
-                className="h-11 rounded-xl border border-white/10 bg-white/[.05] px-3 outline-none placeholder:text-white/25 focus:border-lime-300/60"
-              />
-            </label>
-            <p className="text-xs leading-5 text-white/45">
-              Existing accounts need this once so PocketFi can create your
-              dedicated bank account.
-            </p>
-            {error ? <p className="text-sm text-red-300">{error}</p> : null}
-            <Button
-              type="submit"
-              disabled={pending}
-              className="h-11 bg-lime-300 font-bold text-[#0a1514] hover:bg-lime-200"
-            >
-              {pending ? (
-                <LoaderCircle className="animate-spin" />
-              ) : (
-                <Landmark />
-              )}
-              {pending ? 'Creating account…' : 'Create my bank account'}
-            </Button>
-          </form>
         ) : (
           <div className="grid place-items-center gap-4 rounded-2xl border border-white/10 bg-white/[.035] px-5 py-9 text-center">
             {pending || status === 'provisioning' ? (

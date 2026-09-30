@@ -10,7 +10,6 @@ import {
   EyeOff,
   LockKeyhole,
   Mail,
-  Phone,
   UserRound,
 } from 'lucide-react';
 import {
@@ -48,7 +47,13 @@ export function AuthForm({
       <div className="auth-orb auth-orb-two" />
       <header className="auth-header">
         <Link href="/" className="auth-brand" aria-label="Gceeverify home">
-          <Image src="/favicon.svg" width={34} height={34} alt="" priority />
+          <Image
+            src="/logo-transparent.png"
+            width={512}
+            height={512}
+            alt=""
+            priority
+          />
           <strong>Gceeverify</strong>
         </Link>
         <ThemeToggle />
@@ -84,21 +89,6 @@ export function AuthForm({
                   />
                 </div>
               </label>
-              <label>
-                <span>Phone number</span>
-                <div>
-                  <Phone />
-                  <input
-                    name="phone"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    placeholder="08012345678"
-                    pattern="(?:0[789][0-9]{9}|\\+234[789][0-9]{9})"
-                    required
-                  />
-                </div>
-              </label>
             </>
           )}
           <label>
@@ -122,9 +112,11 @@ export function AuthForm({
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete={isLogin ? 'current-password' : 'new-password'}
-                placeholder="At least 8 characters"
+                placeholder={
+                  isLogin ? 'Enter your password' : 'At least 8 characters'
+                }
                 required
-                minLength={8}
+                minLength={isLogin ? undefined : 8}
               />
               <button
                 type="button"
@@ -141,37 +133,39 @@ export function AuthForm({
               </button>
             </div>
           </label>
-          <label>
-            <span>Confirm password</span>
-            <div>
-              <LockKeyhole />
-              <input
-                name="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                autoComplete={isLogin ? 'current-password' : 'new-password'}
-                placeholder="Enter your password again"
-                required
-                minLength={8}
-              />
-              <button
-                type="button"
-                className="auth-password-toggle"
-                aria-label={
-                  showConfirmPassword
-                    ? 'Hide confirmed password'
-                    : 'Show confirmed password'
-                }
-                aria-pressed={showConfirmPassword}
-                onClick={() => setShowConfirmPassword((visible) => !visible)}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff aria-hidden="true" />
-                ) : (
-                  <Eye aria-hidden="true" />
-                )}
-              </button>
-            </div>
-          </label>
+          {!isLogin && (
+            <label>
+              <span>Confirm password</span>
+              <div>
+                <LockKeyhole />
+                <input
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Enter your password again"
+                  required
+                  minLength={8}
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  aria-label={
+                    showConfirmPassword
+                      ? 'Hide confirmed password'
+                      : 'Show confirmed password'
+                  }
+                  aria-pressed={showConfirmPassword}
+                  onClick={() => setShowConfirmPassword((visible) => !visible)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff aria-hidden="true" />
+                  ) : (
+                    <Eye aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+            </label>
+          )}
 
           {(state.error || confirmationError) && (
             <p className="auth-notice auth-error" role="alert">

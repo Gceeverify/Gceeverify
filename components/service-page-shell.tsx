@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, LayoutDashboard, Plus } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationMenu } from '@/components/notification-menu';
+import { ServiceNavigationMenu } from '@/components/service-navigation-menu';
 
 export function ServicePageShell({
   eyebrow,
@@ -24,8 +24,19 @@ export function ServicePageShell({
       <div className="market-glow" aria-hidden="true" />
       <header className="market-topbar dashboard-topbar">
         <div className="service-header-identity">
-          <Link href="/" className="brand-logo" aria-label="Gceeverify home">
-            <Image src="/favicon.svg" width={36} height={36} alt="" priority />
+          <ServiceNavigationMenu />
+          <Link
+            href="/dashboard"
+            className="brand-logo"
+            aria-label="Go to dashboard"
+          >
+            <Image
+              src="/logo-transparent.png"
+              width={512}
+              height={512}
+              alt=""
+              priority
+            />
             <span>Gceeverify</span>
           </Link>
           <div className="service-header-breadcrumb">
@@ -37,13 +48,6 @@ export function ServicePageShell({
         <div className="dashboard-topbar-actions flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
           <NotificationMenu />
-          <Button
-            aria-label="Add funds"
-            className="header-add-funds h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200"
-          >
-            <Plus />
-            <span>Add funds</span>
-          </Button>
         </div>
       </header>
       <div className="market-wrap">

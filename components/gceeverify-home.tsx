@@ -15,7 +15,6 @@ import {
   LayoutDashboard,
   Lightbulb,
   ListChecks,
-  LogOut,
   Mail,
   Menu,
   PackageSearch,
@@ -40,7 +39,7 @@ import {
   FundWalletDialog,
   type VirtualAccountDetails,
 } from '@/components/fund-wallet-dialog';
-import { signOut } from '@/app/auth/actions';
+import { ConfirmSignOut } from '@/components/confirm-sign-out';
 
 const recentOrders = [
   {
@@ -116,10 +115,16 @@ const vtuServices = [
   },
 ];
 
-function Logo() {
+function Logo({ href = '/' }: { href?: string }) {
   return (
-    <Link href="/" className="brand-logo" aria-label="Gceeverify home">
-      <Image src="/favicon.svg" width={36} height={36} alt="" priority />
+    <Link href={href} className="brand-logo" aria-label="Gceeverify home">
+      <Image
+        src="/logo-transparent.png"
+        width={36}
+        height={36}
+        alt=""
+        priority
+      />
       <span>Gceeverify</span>
     </Link>
   );
@@ -201,7 +206,12 @@ export function LegacyLanding({ onEnter }: { onEnter: () => void }) {
           </div>
           <div className="service-panel-title">
             <div>
-              <Image src="/favicon.svg" width={48} height={48} alt="" />
+              <Image
+                src="/logo-transparent.png"
+                width={48}
+                height={48}
+                alt=""
+              />
               <div>
                 <strong>What do you need today?</strong>
                 <span>Choose a service to get started</span>
@@ -380,7 +390,6 @@ export function GceeverifyHome({
   isAdmin = false,
   virtualAccount = null,
   virtualAccountStatus = 'missing',
-  phoneRequired = false,
 }: {
   initialView?: 'landing' | 'dashboard';
   userName?: string;
@@ -388,7 +397,6 @@ export function GceeverifyHome({
   isAdmin?: boolean;
   virtualAccount?: VirtualAccountDetails | null;
   virtualAccountStatus?: 'active' | 'provisioning' | 'failed' | 'missing';
-  phoneRequired?: boolean;
 }) {
   const view = initialView;
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -438,7 +446,7 @@ export function GceeverifyHome({
         aria-label="Dashboard navigation"
       >
         <div className="sidebar-head flex items-center justify-between px-5 pb-7 pt-6">
-          <Logo />
+          <Logo href="/dashboard" />
           <button
             className="icon-button md:hidden"
             onClick={() => setMobileOpen(false)}
@@ -590,11 +598,9 @@ export function GceeverifyHome({
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{displayName}</p>
           </div>
-          <form action={signOut} className="ml-auto">
-            <button type="submit" className="sidebar-account-logout">
-              Log out
-            </button>
-          </form>
+          <div className="ml-auto">
+            <ConfirmSignOut compact />
+          </div>
         </div>
       </aside>
       {mobileOpen && (
@@ -618,11 +624,16 @@ export function GceeverifyHome({
               <Menu />
             </button>
             <Link
-              href="/"
+              href="/dashboard"
               className="mobile-dashboard-brand md:hidden"
               aria-label="Gceeverify home"
             >
-              <Image src="/favicon.svg" width={28} height={28} alt="" />
+              <Image
+                src="/logo-transparent.png"
+                width={28}
+                height={28}
+                alt=""
+              />
               <span>Gceeverify</span>
             </Link>
             <div className="hidden items-center gap-2 text-sm text-white/35 sm:flex">
@@ -641,23 +652,7 @@ export function GceeverifyHome({
             </div>
             <ThemeToggle />
             <NotificationMenu />
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="dashboard-logout-button"
-                aria-label="Log out of Gceeverify"
-                title="Log out"
-              >
-                <LogOut />
-                <span>Log out</span>
-              </button>
-            </form>
-            <FundWalletDialog
-              className="header-add-funds h-10 rounded-xl bg-lime-300 px-4 font-bold text-[#0a1514] hover:bg-lime-200"
-              virtualAccount={virtualAccount}
-              virtualAccountStatus={virtualAccountStatus}
-              phoneRequired={phoneRequired}
-            />
+            <ConfirmSignOut />
           </div>
         </header>
 
@@ -673,7 +668,11 @@ export function GceeverifyHome({
             <p>Manage your digital services from one place.</p>
           </div>
 
-          <section className="dashboard-balance" aria-label="Wallet balance">
+          <section
+            id="balance"
+            className="dashboard-balance"
+            aria-label="Wallet balance"
+          >
             <div>
               <span>Available balance</span>
               <strong>{balanceLabel}</strong>
@@ -682,7 +681,6 @@ export function GceeverifyHome({
               className="dashboard-balance-button"
               virtualAccount={virtualAccount}
               virtualAccountStatus={virtualAccountStatus}
-              phoneRequired={phoneRequired}
             />
           </section>
 
@@ -727,7 +725,7 @@ export function GceeverifyHome({
             </div>
           </section>
 
-          <section className="panel recent-activity">
+          <section id="orders" className="panel recent-activity">
             <div className="recent-activity-head">
               <div>
                 <p className="eyebrow">Activity</p>
