@@ -3732,6 +3732,15 @@ html[data-theme='light'] .boost-checkout-row {
   color: #a9b5bd;
   font-size: 0.82rem;
 }
+.catalog-refresh-note {
+  margin: 0.75rem 0 0;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.75rem;
+  text-align: center;
+}
+html[data-theme='light'] .catalog-refresh-note {
+  color: rgba(20, 36, 20, 0.58);
+}
 .catalog-loading svg {
   width: 1rem;
 }
@@ -4630,9 +4639,9 @@ html[data-theme='light'] .boost-checkout-row {
   color: #1d301d !important;
 }
 .logs-surface .category-rail button.active {
-  background: #4057ff !important;
-  color: #ffffff !important;
-  box-shadow: 0 8px 20px rgba(64, 87, 255, 0.24);
+  background: #74ef5b !important;
+  color: #1d301d !important;
+  box-shadow: 0 8px 20px rgba(116, 239, 91, 0.24);
 }
 
 @media (max-width: 700px) {

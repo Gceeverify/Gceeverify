@@ -35,6 +35,8 @@ type ProductData = {
   totalPages: number;
   groups: string[];
   groupCounts: Record<string, number>;
+  catalogStatus?: 'fresh' | 'warming';
+  catalogMessage?: string | null;
   error?: string;
 };
 
@@ -76,17 +78,24 @@ export default function LogsPage() {
   const [quantity, setQuantity] = useState('1');
   const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState('');
+  const [catalogRefresh, setCatalogRefresh] = useState(0);
   useEffect(() => {
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
         const params = new URLSearchParams({ page: String(page), group });
         if (query) params.set('query', query);
-        const response = await fetch(`/api/logs?${params}`);
+        const response = await fetch(`/api/logs?${params}`, {
+          signal: controller.signal,
+        });
         const result = (await response.json()) as ProductData;
         if (!response.ok) throw new Error(result.error);
         setData(result);
+        setMessage('');
       } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError')
+          return;
         setMessage(
           error instanceof Error
             ? error.message
@@ -96,8 +105,20 @@ export default function LogsPage() {
         setLoading(false);
       }
     }, 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [page, query, group, catalogRefresh]);
+
+  useEffect(() => {
+    if (data?.catalogStatus !== 'warming') return;
+    const timer = setTimeout(
+      () => setCatalogRefresh((value) => value + 1),
+      5_000,
+    );
     return () => clearTimeout(timer);
-  }, [page, query, group]);
+  }, [data?.catalogStatus, catalogRefresh]);
   const order = async () => {
     if (!selected) return;
     if (!confirming) {
@@ -137,6 +158,7 @@ export default function LogsPage() {
       title="Premium logs & accounts"
       description="Browse live account inventory and buy exactly what you need."
     >
+      {message && !selected ? <Notice message={message} /> : null}
       <section className="market-surface logs-surface">
         <div className="logs-toolbar">
           <div>
@@ -213,9 +235,16 @@ export default function LogsPage() {
               ))
             ) : (
               <div className="catalog-loading">
-                No matching products on this page.
+                {data?.catalogStatus === 'warming'
+                  ? 'Updating the full inventory…'
+                  : 'No matching products on this page.'}
               </div>
             )}
+            {data?.catalogStatus === 'warming' ? (
+              <output className="catalog-refresh-note">
+                {data.catalogMessage}
+              </output>
+            ) : null}
             <div className="pagination-row">
               <Button
                 variant="outline"

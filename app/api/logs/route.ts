@@ -1,4 +1,10 @@
-import { getAllLogProducts, placeLogOrder } from '@/lib/provider-clients';
+import { after } from 'next/server';
+import {
+  getAllLogProducts,
+  getLogCatalogForBrowse,
+  placeLogOrder,
+  warmLogCatalog,
+} from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
 import { recordOrder } from '@/lib/orders';
 import {
@@ -15,6 +21,8 @@ const LOG_CATEGORIES = [
   'Games',
   'Software & Other',
 ] as const;
+
+export const maxDuration = 60;
 
 function getLogCategory(item: {
   name: string;
@@ -55,10 +63,20 @@ export async function GET(request: Request) {
     const requestedPage = Math.max(1, Number(searchParams.get('page')) || 1);
     const query = searchParams.get('query')?.toLowerCase().trim() || '';
     const group = searchParams.get('group') || 'all';
-    const [providerData, exchangeRate] = await Promise.all([
-      getAllLogProducts(),
+    const [catalog, exchangeRate] = await Promise.all([
+      getLogCatalogForBrowse(),
       getUsdToNgnRate(),
     ]);
+    const providerData = catalog.data;
+    if (catalog.catalogStatus === 'warming') {
+      after(async () => {
+        try {
+          await warmLogCatalog();
+        } catch (error) {
+          console.error('[api/logs] catalog refresh failed', error);
+        }
+      });
+    }
     const data = {
       ...providerData,
       items: providerData.items.map((item) => ({
@@ -93,23 +111,38 @@ export async function GET(request: Request) {
       (page - 1) * pageSize,
       page * pageSize,
     );
-    return Response.json({
-      ...data,
-      items: products,
-      totalCount: matchingProducts.length,
-      pageIndex: page,
-      pageSize,
-      totalPages,
-      groups,
-      groupCounts,
-      pricing: {
-        currency: 'NGN',
-        markupPercent: getLogMarkupPercent(),
-        usdToNgnRate: exchangeRate.rate,
-        updatedAt: exchangeRate.updatedAt,
-        source: exchangeRate.source,
+    return Response.json(
+      {
+        ...data,
+        items: products,
+        totalCount: matchingProducts.length,
+        pageIndex: page,
+        pageSize,
+        totalPages,
+        groups,
+        groupCounts,
+        pricing: {
+          currency: 'NGN',
+          markupPercent: getLogMarkupPercent(),
+          usdToNgnRate: exchangeRate.rate,
+          updatedAt: exchangeRate.updatedAt,
+          source: exchangeRate.source,
+        },
+        catalogStatus: catalog.catalogStatus,
+        catalogMessage:
+          catalog.catalogStatus === 'warming'
+            ? 'Showing available products while the full inventory updates.'
+            : null,
       },
-    });
+      {
+        headers: {
+          'Cache-Control':
+            catalog.catalogStatus === 'fresh'
+              ? 'public, s-maxage=60, stale-while-revalidate=600'
+              : 'no-store',
+        },
+      },
+    );
   } catch (error) {
     return Response.json(
       {

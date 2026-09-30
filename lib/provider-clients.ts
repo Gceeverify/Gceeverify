@@ -361,12 +361,13 @@ type LogProductCatalog = {
 };
 
 const LOG_CATALOG_CACHE_MS = 5 * 60 * 1000;
-const LOG_CATALOG_BATCH_SIZE = 18;
+const LOG_CATALOG_BATCH_SIZE = 6;
+const LOG_CATALOG_FAST_WAIT_MS = 250;
 let logCatalogCache: { data: LogProductCatalog; expiresAt: number } | null =
   null;
 let logCatalogRequest: Promise<LogProductCatalog> | null = null;
 
-export async function getLogProducts(page: number, pageSize: number) {
+async function fetchLogProductsPage(page: number, pageSize: number) {
   const url = new URL('https://bulkacc.com/api/products/list');
   url.searchParams.set('apiKey', requiredKey('BULKACC_API_KEY'));
   url.searchParams.set('pageIndex', String(page));
@@ -379,6 +380,19 @@ export async function getLogProducts(page: number, pageSize: number) {
   if (!response.ok || !result.data)
     throw new Error(result.message || 'Account products could not be loaded.');
   return result.data;
+}
+
+const getCachedLogProductsPage = unstable_cache(
+  fetchLogProductsPage,
+  ['bulkacc-log-products-page-v2'],
+  {
+    revalidate: 600,
+    tags: ['log-products'],
+  },
+);
+
+export async function getLogProducts(page: number, pageSize: number) {
+  return getCachedLogProductsPage(page, pageSize);
 }
 
 async function fetchLogCatalog() {
@@ -420,25 +434,76 @@ async function fetchLogCatalog() {
   return data;
 }
 
+const getPersistedLogCatalog = unstable_cache(
+  fetchLogCatalog,
+  ['bulkacc-log-catalog-v2'],
+  {
+    revalidate: 600,
+    tags: ['log-products'],
+  },
+);
+
+function startLogCatalogRefresh() {
+  if (logCatalogRequest) return logCatalogRequest;
+
+  logCatalogRequest = getPersistedLogCatalog()
+    .then((data) => {
+      logCatalogCache = {
+        data,
+        expiresAt: Date.now() + LOG_CATALOG_CACHE_MS,
+      };
+      return data;
+    })
+    .finally(() => {
+      logCatalogRequest = null;
+    });
+
+  return logCatalogRequest;
+}
+
+export async function getLogCatalogForBrowse(): Promise<{
+  data: LogProductCatalog;
+  catalogStatus: 'fresh' | 'warming';
+}> {
+  if (logCatalogCache && logCatalogCache.expiresAt > Date.now()) {
+    return { data: logCatalogCache.data, catalogStatus: 'fresh' };
+  }
+
+  if (logCatalogCache) {
+    void startLogCatalogRefresh().catch(() => undefined);
+    return { data: logCatalogCache.data, catalogStatus: 'warming' };
+  }
+
+  const refresh = startLogCatalogRefresh();
+  const fastResult = await Promise.race([
+    refresh.then((data) => data),
+    new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), LOG_CATALOG_FAST_WAIT_MS),
+    ),
+  ]);
+
+  if (fastResult) {
+    return { data: fastResult, catalogStatus: 'fresh' };
+  }
+
+  const firstPage = await getLogProducts(1, 100);
+  return { data: firstPage, catalogStatus: 'warming' };
+}
+
+export async function warmLogCatalog() {
+  await startLogCatalogRefresh();
+}
+
 export async function getAllLogProducts() {
   if (logCatalogCache && logCatalogCache.expiresAt > Date.now()) {
     return logCatalogCache.data;
   }
-  if (logCatalogRequest) return logCatalogRequest;
-
-  logCatalogRequest = (async () => {
-    const data = await fetchLogCatalog();
-    logCatalogCache = {
-      data,
-      expiresAt: Date.now() + LOG_CATALOG_CACHE_MS,
-    };
-    return data;
-  })();
 
   try {
-    return await logCatalogRequest;
-  } finally {
-    logCatalogRequest = null;
+    return await startLogCatalogRefresh();
+  } catch (error) {
+    if (logCatalogCache) return logCatalogCache.data;
+    throw error;
   }
 }
 
