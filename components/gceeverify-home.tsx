@@ -720,9 +720,10 @@ export function GceeverifyHome({
             </div>
             <div className="dashboard-mobile-services">
               {[
-                ...quickActions
-                  .slice(0, 4)
-                  .map((item) => ({ ...item, shortLabel: item.label })),
+                ...quickActions.map((item) => ({
+                  ...item,
+                  shortLabel: item.label,
+                })),
                 ...vtuServices,
               ].map(({ href, shortLabel, icon: Icon, tone }) => (
                 <Link
