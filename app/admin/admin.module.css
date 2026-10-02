@@ -1111,3 +1111,37 @@
   .businessStats { grid-template-columns: 1fr; }
   .businessStats .revenueCard { grid-column: auto; }
 }
+
+.tutorialAdminCard { width: min(980px, 100%); }
+.tutorialAdminHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.tutorialAdminHead h1 { margin-top: 8px; }
+.tutorialForm { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.tutorialForm label { display: grid; gap: 7px; color: #b6c8b9; font-size: 11px; font-weight: 700; }
+.tutorialForm input,
+.tutorialForm textarea { width: 100%; border: 1px solid rgba(232, 255, 230, 0.12); border-radius: 10px; outline: 0; background: #07120a; padding: 12px; color: #f5fff3; font: inherit; }
+.tutorialForm input:focus,
+.tutorialForm textarea:focus { border-color: #61ee65; }
+.tutorialDescription { grid-column: 1 / -1; }
+.tutorialCheckbox { display: flex !important; grid-column: 1 / -1; grid-template-columns: auto 1fr; align-items: center; }
+.tutorialCheckbox input { width: 16px; }
+.tutorialForm > button { display: inline-flex; width: fit-content; align-items: center; gap: 8px; border: 0; border-radius: 999px; background: #61ee65; padding: 12px 17px; color: #102314; font-size: 11px; font-weight: 800; }
+.tutorialForm > button svg { width: 16px; }
+.tutorialAdminList { display: grid; gap: 10px; }
+.tutorialAdminList article { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid rgba(232, 255, 230, 0.1); border-radius: 14px; padding: 14px; background: rgba(7, 18, 10, 0.68); }
+.tutorialAdminList article > div:first-child { display: flex; align-items: center; gap: 12px; }
+.tutorialAdminList article > div:first-child > svg { width: 20px; color: #61ee65; }
+.tutorialAdminList strong,
+.tutorialAdminList small { display: block; }
+.tutorialAdminList small { margin-top: 3px; color: #879a8b; }
+.tutorialAdminActions { display: flex; align-items: center; gap: 8px; }
+.tutorialAdminActions a,
+.tutorialAdminActions button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(232, 255, 230, 0.12); border-radius: 8px; background: transparent; padding: 8px 10px; color: #dce7de; font-size: 10px; text-decoration: none; }
+.tutorialAdminActions svg { width: 14px; }
+.tutorialAdminActions .tutorialDelete { color: #ff9696; }
+@media (max-width: 700px) {
+  .tutorialForm { grid-template-columns: 1fr; }
+  .tutorialDescription { grid-column: auto; }
+  .tutorialAdminHead,
+  .tutorialAdminList article,
+  .tutorialAdminActions { align-items: stretch; flex-direction: column; }
+}

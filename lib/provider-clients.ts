@@ -22,7 +22,8 @@ function requiredKey(
     | 'BULKACC_API_KEY'
     | 'SMSBOWER_API_KEY'
     | 'FIVESIM_API_KEY'
-    | 'BIGISUB_API_KEY',
+    | 'BIGISUB_API_KEY'
+    | 'BIGISUB_TRANSACTION_PIN',
 ) {
   const value = process.env[name];
   if (!value) throw new Error('This service is temporarily unavailable.');
@@ -180,7 +181,6 @@ export function purchaseBigisubAirtime(
   network: number,
   phone: string,
   amount: number,
-  pin: string,
 ) {
   return bigisubRequest<Record<string, unknown>>(
     '/api/v2/vtu/airtime/purchase/',
@@ -191,7 +191,7 @@ export function purchaseBigisubAirtime(
         phone_number: phone,
         amount: String(amount),
         airtime_type: 'vtu',
-        pin,
+        pin: requiredKey('BIGISUB_TRANSACTION_PIN'),
       }),
     },
   );
@@ -201,7 +201,6 @@ export function purchaseBigisubData(
   network: number,
   plan: number,
   phone: string,
-  pin: string,
 ) {
   return bigisubRequest<Record<string, unknown>>('/api/v2/vtu/data/purchase/', {
     method: 'POST',
@@ -209,7 +208,7 @@ export function purchaseBigisubData(
       network,
       plan,
       phone_number: phone,
-      pin,
+      pin: requiredKey('BIGISUB_TRANSACTION_PIN'),
       ported_number: true,
     }),
   });
@@ -221,7 +220,6 @@ export function purchaseBigisubCable(input: {
   phone: string;
   amount: number;
   customerName: string;
-  pin: string;
 }) {
   return bigisubRequest<Record<string, unknown>>(
     '/api/v2/vtu/cable/purchase/',
@@ -233,7 +231,7 @@ export function purchaseBigisubCable(input: {
         phone_number: input.phone,
         amount: input.amount,
         Customer: input.customerName,
-        pin: input.pin,
+        pin: requiredKey('BIGISUB_TRANSACTION_PIN'),
       }),
     },
   );
@@ -247,7 +245,6 @@ export function purchaseBigisubElectricity(input: {
   amount: number;
   customerName: string;
   customerAddress?: string;
-  pin: string;
 }) {
   return bigisubRequest<Record<string, unknown>>(
     '/api/v2/bills/electricity/pay/',
@@ -261,7 +258,7 @@ export function purchaseBigisubElectricity(input: {
         amount: input.amount,
         Customer_name: input.customerName,
         Customer_address: input.customerAddress,
-        pin: input.pin,
+        pin: requiredKey('BIGISUB_TRANSACTION_PIN'),
       }),
     },
   );
@@ -270,13 +267,16 @@ export function purchaseBigisubElectricity(input: {
 export function purchaseBigisubExam(
   exam: string,
   quantity: number,
-  pin: string,
 ) {
   return bigisubRequest<Record<string, unknown>>(
     '/api/v2/bills/result-checker/purchase/',
     {
       method: 'POST',
-      body: JSON.stringify({ exam, quantity, pin_code: pin }),
+      body: JSON.stringify({
+        exam,
+        quantity,
+        pin_code: requiredKey('BIGISUB_TRANSACTION_PIN'),
+      }),
     },
   );
 }

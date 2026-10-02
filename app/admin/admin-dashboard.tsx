@@ -6,6 +6,7 @@ import Image from 'next/image';
 import {
   Activity,
   Ban,
+  BookOpen,
   CalendarPlus,
   CheckCircle2,
   ChevronDown,
@@ -133,6 +134,9 @@ export function AdminDashboard({
           </Link>
           <Link href="/dashboard">
             <UserRound /> User dashboard
+          </Link>
+          <Link href="/admin/tutorials">
+            <BookOpen /> Tutorials
           </Link>
         </nav>
         <div className={styles.sidebarFoot}>

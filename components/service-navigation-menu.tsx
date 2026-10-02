@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  BookOpen,
   ChevronDown,
   CircleHelp,
   Flag,
@@ -18,6 +19,7 @@ import {
   PackageSearch,
   RadioTower,
   Server,
+  ShieldCheck,
   ShoppingBag,
   Smartphone,
   TicketCheck,
@@ -209,6 +211,31 @@ export function ServiceNavigationMenu() {
             >
               <Server />
               <span>Buy logs</span>
+            </Link>
+            <Link
+              href="/reseller?category=vpn"
+              className={`nav-item ${pathname === '/reseller' ? 'nav-item-active' : ''}`}
+              onClick={closeMenu}
+            >
+              <ShieldCheck />
+              <span>VPN</span>
+            </Link>
+            <Link
+              href="/reseller?category=proxy"
+              className={`nav-item ${pathname === '/reseller' ? 'nav-item-active' : ''}`}
+              onClick={closeMenu}
+            >
+              <Wifi />
+              <span>Proxies</span>
+            </Link>
+            <Link
+              href="/tutorials"
+              className={`nav-item ${pathname === '/tutorials' ? 'nav-item-active' : ''}`}
+              onClick={closeMenu}
+              aria-current={pathname === '/tutorials' ? 'page' : undefined}
+            >
+              <BookOpen />
+              <span>Tutorials</span>
             </Link>
           </div>
 

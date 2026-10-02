@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowUpRight,
+  BookOpen,
   Check,
   ChevronDown,
   ChevronRight,
@@ -75,6 +76,8 @@ const quickActions = [
   { href: '/numbers', label: 'Numbers', icon: Smartphone, tone: 'cyan' },
   { href: '/emails', label: 'Virtual Email', icon: Mail, tone: 'lime' },
   { href: '/logs', label: 'Logs', icon: Server, tone: 'orange' },
+  { href: '/reseller?category=vpn', label: 'VPN', icon: ShieldCheck, tone: 'lime' },
+  { href: '/reseller?category=proxy', label: 'Proxies', icon: Wifi, tone: 'cyan' },
   { href: '/vtu', label: 'VTU', icon: RadioTower, tone: 'violet' },
 ];
 const vtuServices = [
@@ -534,6 +537,18 @@ export function GceeverifyHome({
             <Link href="/logs" className="nav-item">
               <Server />
               <span>Buy logs</span>
+            </Link>
+            <Link href="/reseller?category=vpn" className="nav-item">
+              <ShieldCheck />
+              <span>VPN</span>
+            </Link>
+            <Link href="/reseller?category=proxy" className="nav-item">
+              <Wifi />
+              <span>Proxies</span>
+            </Link>
+            <Link href="/tutorials" className="nav-item">
+              <BookOpen />
+              <span>Tutorials</span>
             </Link>
           </div>
           <p className="nav-eyebrow mt-7">Bills & utilities</p>

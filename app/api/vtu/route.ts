@@ -15,9 +15,9 @@ import {
 import { getCurrentUser } from '@/lib/auth';
 import { providerReference, recordOrder } from '@/lib/orders';
 import { getVtuPriceNgn } from '@/lib/exchange-rates';
+import { withWalletCharge } from '@/lib/wallet';
 
 const phonePattern = /^0[789]\d{9}$/;
-const pinPattern = /^\d{4}$/;
 const cableProviders = new Set(['dstv', 'gotv', 'startimes', 'showmax']);
 const meterTypes = new Set(['prepaid', 'postpaid']);
 
@@ -148,14 +148,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const pin = text(body.pin);
-    if (!pinPattern.test(pin)) {
-      return Response.json(
-        { error: 'Enter your 4-digit Bigisub transaction PIN.' },
-        { status: 400 },
-      );
-    }
-
     if (service === 'airtime') {
       const network = Number(body.provider);
       const amount = positiveNumber(body.amount);
@@ -173,19 +165,20 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const result = await purchaseBigisubAirtime(
-        network,
-        account,
-        amount,
-        pin,
-      );
+      const charge = getVtuPriceNgn(amount);
+      const result = await withWalletCharge({
+        userId: user.id,
+        amount: charge,
+        description: `VTU airtime purchase for ${account}`,
+        purchase: () => purchaseBigisubAirtime(network, account, amount),
+      });
       await recordOrder({
         userId: user.id,
         category: 'vtu-airtime',
         serviceName: 'Airtime recharge',
         provider: 'Bigisub',
         providerOrderId: providerReference(result),
-        amount: getVtuPriceNgn(amount),
+        amount: charge,
         currency: 'NGN',
         status: 'completed',
         metadata: { network, rechargeValue: amount },
@@ -217,14 +210,22 @@ export async function POST(request: Request) {
           { error: 'That data plan is no longer available.' },
           { status: 409 },
         );
-      const result = await purchaseBigisubData(network, plan, account, pin);
+      const charge = getVtuPriceNgn(
+        matchingPlan.plan_amount || matchingPlan.amount,
+      );
+      const result = await withWalletCharge({
+        userId: user.id,
+        amount: charge,
+        description: `VTU data purchase for ${account}`,
+        purchase: () => purchaseBigisubData(network, plan, account),
+      });
       await recordOrder({
         userId: user.id,
         category: 'vtu-data',
         serviceName: `${matchingPlan.network_name} ${matchingPlan.plan_volume || matchingPlan.size}`,
         provider: 'Bigisub',
         providerOrderId: providerReference(result),
-        amount: getVtuPriceNgn(matchingPlan.plan_amount || matchingPlan.amount),
+        amount: charge,
         currency: 'NGN',
         status: 'completed',
         metadata: { network, plan },
@@ -256,13 +257,18 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       }
-      const result = await purchaseBigisubCable({
-        cableType: provider,
-        cardNumber: account,
-        phone,
-        amount: plan.amount,
-        customerName: verified.customer_name,
-        pin,
+      const charge = getVtuPriceNgn(plan.amount);
+      const result = await withWalletCharge({
+        userId: user.id,
+        amount: charge,
+        description: `VTU cable purchase for ${account}`,
+        purchase: () => purchaseBigisubCable({
+          cableType: provider,
+          cardNumber: account,
+          phone,
+          amount: plan.amount,
+          customerName: verified.customer_name,
+        }),
       });
       await recordOrder({
         userId: user.id,
@@ -270,7 +276,7 @@ export async function POST(request: Request) {
         serviceName: plan.product_name,
         provider: 'Bigisub',
         providerOrderId: providerReference(result),
-        amount: getVtuPriceNgn(plan.amount),
+        amount: charge,
         currency: 'NGN',
         status: 'completed',
         metadata: { cableProvider: provider },
@@ -305,15 +311,20 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const result = await purchaseBigisubElectricity({
-        company: provider,
-        meterNumber: account,
-        meterType,
-        phone,
-        amount,
-        customerName: verified.customer_name,
-        customerAddress: verified.customer_address,
-        pin,
+      const charge = getVtuPriceNgn(amount);
+      const result = await withWalletCharge({
+        userId: user.id,
+        amount: charge,
+        description: `VTU electricity purchase for ${account}`,
+        purchase: () => purchaseBigisubElectricity({
+          company: provider,
+          meterNumber: account,
+          meterType,
+          phone,
+          amount,
+          customerName: verified.customer_name,
+          customerAddress: verified.customer_address,
+        }),
       });
       await recordOrder({
         userId: user.id,
@@ -321,7 +332,7 @@ export async function POST(request: Request) {
         serviceName: `${selectedProvider.name} electricity`,
         provider: 'Bigisub',
         providerOrderId: providerReference(result),
-        amount: getVtuPriceNgn(amount),
+        amount: charge,
         currency: 'NGN',
         status: 'completed',
         metadata: { meterType, utilityValue: amount },
@@ -347,14 +358,20 @@ export async function POST(request: Request) {
           { error: 'That exam PIN is no longer available.' },
           { status: 409 },
         );
-      const result = await purchaseBigisubExam(price.code, quantity, pin);
+      const charge = getVtuPriceNgn(price.amount * quantity);
+      const result = await withWalletCharge({
+        userId: user.id,
+        amount: charge,
+        description: `VTU ${price.name || price.exam_type} PIN purchase`,
+        purchase: () => purchaseBigisubExam(price.code, quantity),
+      });
       await recordOrder({
         userId: user.id,
         category: 'exam-pin',
         serviceName: price.name || price.exam_type,
         provider: 'Bigisub',
         providerOrderId: providerReference(result),
-        amount: getVtuPriceNgn(price.amount * quantity),
+        amount: charge,
         currency: 'NGN',
         status: 'completed',
         metadata: { quantity },

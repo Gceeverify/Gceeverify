@@ -9,7 +9,6 @@ import {
   GraduationCap,
   Lightbulb,
   Loader2,
-  LockKeyhole,
   RadioTower,
   ReceiptText,
   ShieldCheck,
@@ -133,7 +132,6 @@ export default function VtuPage() {
   const [amount, setAmount] = useState('');
   const [plan, setPlan] = useState('');
   const [meterType, setMeterType] = useState('prepaid');
-  const [pin, setPin] = useState('');
   const [reviewing, setReviewing] = useState(false);
   const [verification, setVerification] = useState<Verification | null>(null);
   const [result, setResult] = useState<PurchaseResult | null>(null);
@@ -262,7 +260,6 @@ export default function VtuPage() {
     setVerification(null);
     setResult(null);
     setError('');
-    setPin('');
   };
 
   const chooseService = (key: ServiceKey) => {
@@ -318,10 +315,6 @@ export default function VtuPage() {
   };
 
   const handlePurchase = async () => {
-    if (!/^\d{4}$/.test(pin)) {
-      setError('Enter your 4-digit Bigisub transaction PIN.');
-      return;
-    }
     setBusy(true);
     setError('');
     try {
@@ -338,12 +331,10 @@ export default function VtuPage() {
           plan: Number(plan),
           quantity: Number(amount),
           meterType,
-          pin,
         }),
       });
       setResult((await json(response)) as PurchaseResult);
       setReviewing(false);
-      setPin('');
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -739,25 +730,6 @@ export default function VtuPage() {
                   </div>
                 )}
               </dl>
-              <label className="vtu-pin-field" htmlFor="vtu-transaction-pin">
-                <span>
-                  <LockKeyhole /> Bigisub transaction PIN
-                </span>
-                <Input
-                  id="vtu-transaction-pin"
-                  value={pin}
-                  onChange={(event) => {
-                    setPin(event.target.value.replace(/\D/g, '').slice(0, 4));
-                    setError('');
-                  }}
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={4}
-                  placeholder="4 digits"
-                  className="market-input"
-                />
-              </label>
               {error && (
                 <div className="vtu-notice vtu-notice-error" role="alert">
                   <AlertCircle />
@@ -766,7 +738,7 @@ export default function VtuPage() {
               )}
               <Button
                 className="market-primary market-confirm"
-                disabled={busy || pin.length !== 4}
+                disabled={busy}
                 onClick={handlePurchase}
               >
                 {busy ? (
@@ -784,7 +756,6 @@ export default function VtuPage() {
                 className="vtu-edit-button"
                 onClick={() => {
                   setReviewing(false);
-                  setPin('');
                   setError('');
                 }}
               >

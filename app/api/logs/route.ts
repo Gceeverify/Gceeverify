@@ -17,7 +17,7 @@ const LOG_CATEGORIES = [
   'Social Media',
   'Messaging',
   'Email Services',
-  'Streaming & VPN',
+  'Streaming',
   'Games',
   'Software & Other',
 ] as const;
@@ -40,8 +40,8 @@ function getLogCategory(item: {
   ) {
     return 'Email Services';
   }
-  if (/spotify|netflix|soundcloud|twitch|streaming|\bvpn\b/.test(value)) {
-    return 'Streaming & VPN';
+  if (/spotify|netflix|soundcloud|twitch|streaming/.test(value)) {
+    return 'Streaming';
   }
   if (/roblox|steam|epic games|playstation|xbox|minecraft/.test(value)) {
     return 'Games';
@@ -56,6 +56,16 @@ function getLogCategory(item: {
   return 'Software & Other';
 }
 
+function isPrivateNetworkProduct(item: {
+  name: string;
+  categoryName: string;
+  groupName: string;
+}) {
+  return /\bvpn\b|\bproxies?\b/.test(
+    `${item.groupName} ${item.categoryName} ${item.name}`.toLowerCase(),
+  );
+}
+
 export async function GET(request: Request) {
   try {
     const pageSize = 100;
@@ -63,6 +73,7 @@ export async function GET(request: Request) {
     const requestedPage = Math.max(1, Number(searchParams.get('page')) || 1);
     const query = searchParams.get('query')?.toLowerCase().trim() || '';
     const group = searchParams.get('group') || 'all';
+    const sort = searchParams.get('sort') || 'default';
     const [catalog, exchangeRate] = await Promise.all([
       getLogCatalogForBrowse(),
       getUsdToNgnRate(),
@@ -84,7 +95,9 @@ export async function GET(request: Request) {
         price: getLogPriceNgn(item.price, exchangeRate.rate),
       })),
     };
-    const availableProducts = data.items.filter((item) => item.inStock > 0);
+    const availableProducts = data.items.filter(
+      (item) => item.inStock > 0 && !isPrivateNetworkProduct(item),
+    );
     const groups = [...LOG_CATEGORIES];
     const groupCounts = availableProducts.reduce<Record<string, number>>(
       (counts, item) => {
@@ -94,14 +107,20 @@ export async function GET(request: Request) {
       },
       Object.fromEntries(LOG_CATEGORIES.map((category) => [category, 0])),
     );
-    const matchingProducts = availableProducts.filter(
-      (item) =>
-        (group === 'all' || getLogCategory(item) === group) &&
-        (!query ||
-          `${item.code} ${item.name} ${item.categoryName} ${item.groupName}`
-            .toLowerCase()
-            .includes(query)),
-    );
+    const matchingProducts = availableProducts
+      .filter(
+        (item) =>
+          (group === 'all' || getLogCategory(item) === group) &&
+          (!query ||
+            `${item.code} ${item.name} ${item.categoryName} ${item.groupName}`
+              .toLowerCase()
+              .includes(query)),
+      )
+      .sort((a, b) => {
+        if (sort === 'price-asc') return a.price - b.price;
+        if (sort === 'price-desc') return b.price - a.price;
+        return 0;
+      });
     const totalPages = Math.max(
       1,
       Math.ceil(matchingProducts.length / pageSize),

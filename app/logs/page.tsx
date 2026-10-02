@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpDown,
   BriefcaseBusiness,
   Camera,
   CheckCircle2,
@@ -73,6 +74,7 @@ export default function LogsPage() {
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState('Social Media');
+  const [sort, setSort] = useState('default');
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState('1');
@@ -84,7 +86,7 @@ export default function LogsPage() {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const params = new URLSearchParams({ page: String(page), group });
+        const params = new URLSearchParams({ page: String(page), group, sort });
         if (query) params.set('query', query);
         const response = await fetch(`/api/logs?${params}`, {
           signal: controller.signal,
@@ -109,7 +111,7 @@ export default function LogsPage() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [page, query, group, catalogRefresh]);
+  }, [page, query, group, sort, catalogRefresh]);
 
   useEffect(() => {
     if (data?.catalogStatus !== 'warming') return;
@@ -165,17 +167,35 @@ export default function LogsPage() {
             <p className="surface-kicker">Live inventory</p>
             <h2>Available accounts</h2>
           </div>
-          <div className="market-search compact">
-            <Search />
-            <Input
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setPage(1);
-              }}
-              placeholder="Search products..."
-              aria-label="Search account products"
-            />
+          <div className="logs-toolbar-controls">
+            <div className="market-search compact">
+              <Search />
+              <Input
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search products..."
+                aria-label="Search account products"
+              />
+            </div>
+            <label className="logs-sort">
+              <ArrowUpDown />
+              <span className="sr-only">Sort products</span>
+              <select
+                value={sort}
+                onChange={(event) => {
+                  setSort(event.target.value);
+                  setPage(1);
+                }}
+                aria-label="Sort account products"
+              >
+                <option value="default">Recommended</option>
+                <option value="price-asc">Cheapest first</option>
+                <option value="price-desc">Most expensive first</option>
+              </select>
+            </label>
           </div>
         </div>
         <div className="logs-layout">
