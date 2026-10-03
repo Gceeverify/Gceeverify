@@ -9810,16 +9810,17 @@ html[data-theme='dark'] .ref-brand-inverse {
      interactive without drawing the header twice. */
   .ref-header {
     display: grid;
-    pointer-events: none;
+    pointer-events: auto;
   }
   .ref-header > a,
   .ref-header .ref-nav,
   .ref-header-actions .theme-toggle {
     opacity: 0;
+    pointer-events: none;
   }
   .ref-header-actions {
     display: flex;
-    pointer-events: none;
+    pointer-events: auto;
   }
   .ref-header-actions .ref-signup,
   .ref-header-actions .ref-login {
