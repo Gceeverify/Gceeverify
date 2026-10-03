@@ -2,6 +2,7 @@ import { after } from 'next/server';
 import {
   getAllLogProducts,
   getLogCatalogForBrowse,
+  getLogOrderDelivery,
   placeLogOrder,
   warmLogCatalog,
 } from '@/lib/provider-clients';
@@ -215,6 +216,17 @@ export async function POST(request: Request) {
       description: `${product.name} account order`,
       purchase: () => placeLogOrder(body.productCode!, body.quantity!),
     });
+    let delivery: string[] = [];
+    let deliveryPending = false;
+    try {
+      delivery = await getLogOrderDelivery(result.orderCode);
+    } catch (error) {
+      deliveryPending = true;
+      console.error(
+        '[api/logs] order completed but delivery retrieval is pending',
+        error instanceof Error ? error.message : error,
+      );
+    }
     await recordOrder({
       userId: user.id,
       category: 'digital-accounts',
@@ -230,11 +242,16 @@ export async function POST(request: Request) {
         unitPriceNgn,
         usdToNgnRate: exchangeRate.rate,
         markupPercent: getLogMarkupPercent(),
+        deliveryCount: delivery.length,
       },
     });
     return Response.json(
       {
         ...result,
+        delivery,
+        deliveryPending,
+        productName: product.name,
+        quantity: body.quantity!,
         unitPrice: unitPriceNgn,
         totalPrice: totalPriceNgn,
         currency: 'NGN',

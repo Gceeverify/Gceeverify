@@ -523,6 +523,35 @@ export async function placeLogOrder(productCode: string, quantity: number) {
   return { orderCode: result.data };
 }
 
+export async function getLogOrderDelivery(orderCode: string) {
+  const url = new URL('https://bulkacc.com/api/orders');
+  url.searchParams.set('apiKey', requiredKey('BULKACC_API_KEY'));
+  url.searchParams.set('orderCode', orderCode);
+
+  let lastMessage = 'The purchased account details are still being prepared.';
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const response = await timedFetch(url.toString());
+    const result = (await response.json().catch(() => ({}))) as {
+      data?: Array<{ accountInformation?: string | null }> | null;
+      message?: string;
+      statusCode?: number;
+    };
+    const delivery = Array.isArray(result.data)
+      ? result.data
+          .map((item) => item.accountInformation?.trim())
+          .filter((item): item is string => Boolean(item))
+      : [];
+
+    if (response.ok && delivery.length) return delivery;
+    lastMessage = result.message || lastMessage;
+    if (attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
+  throw new Error(lastMessage);
+}
+
 const smsBowerBase = 'https://smsbower.page/stubs/handler_api.php';
 const mailBase = 'https://smsbower.page/api/mail';
 const fiveSimBase = 'https://5sim.net/v1';

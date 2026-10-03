@@ -8,6 +8,7 @@ import {
   BriefcaseBusiness,
   Camera,
   CheckCircle2,
+  Copy,
   Globe2,
   LoaderCircle,
   Play,
@@ -39,6 +40,14 @@ type ProductData = {
   catalogStatus?: 'fresh' | 'warming';
   catalogMessage?: string | null;
   error?: string;
+};
+type CompletedOrder = {
+  orderCode: string;
+  delivery: string[];
+  deliveryPending: boolean;
+  productName: string;
+  quantity: number;
+  totalPrice: number;
 };
 
 const nairaFormatter = new Intl.NumberFormat('en-NG', {
@@ -80,6 +89,8 @@ export default function LogsPage() {
   const [quantity, setQuantity] = useState('1');
   const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState('');
+  const [completedOrder, setCompletedOrder] =
+    useState<CompletedOrder | null>(null);
   const [catalogRefresh, setCatalogRefresh] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
@@ -139,11 +150,30 @@ export default function LogsPage() {
       });
       const result = (await response.json()) as {
         orderCode?: string;
+        delivery?: string[];
+        deliveryPending?: boolean;
+        productName?: string;
+        quantity?: number;
+        totalPrice?: number;
         error?: string;
       };
       if (!response.ok) throw new Error(result.error);
-      setMessage(`Order ${result.orderCode} is ready in your orders.`);
+      setCompletedOrder({
+        orderCode: result.orderCode ?? '',
+        delivery: result.delivery ?? [],
+        deliveryPending: result.deliveryPending ?? false,
+        productName: result.productName ?? selected.name,
+        quantity: result.quantity ?? Number(quantity),
+        totalPrice:
+          result.totalPrice ?? selected.price * Number(quantity || 0),
+      });
+      setMessage(
+        result.delivery?.length
+          ? 'Purchase completed. Your account details are shown below.'
+          : 'Purchase completed. Your account details are still being prepared.',
+      );
       setConfirming(false);
+      setSelected(null);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -154,13 +184,59 @@ export default function LogsPage() {
       setLoading(false);
     }
   };
+  const copyDelivery = async () => {
+    if (!completedOrder?.delivery.length) return;
+    await navigator.clipboard.writeText(completedOrder.delivery.join('\n'));
+    setMessage('Purchased account details copied.');
+  };
   return (
     <ServicePageShell
       eyebrow="Marketplace"
       title="Premium logs & accounts"
       description="Browse live account inventory and buy exactly what you need."
     >
-      {message && !selected ? <Notice message={message} /> : null}
+      {message && !selected ? (
+        <Notice message={message} tone={completedOrder ? 'success' : 'error'} />
+      ) : null}
+      {completedOrder ? (
+        <section
+          className="reseller-delivery"
+          aria-label="Purchased account details"
+        >
+          <div>
+            <span className="reseller-delivery-icon">
+              <CheckCircle2 />
+            </span>
+            <div>
+              <small>Purchase completed</small>
+              <h2>{completedOrder.productName}</h2>
+              <p>
+                Order {completedOrder.orderCode} · {completedOrder.quantity}{' '}
+                {completedOrder.quantity === 1 ? 'account' : 'accounts'} ·{' '}
+                {formatNaira(completedOrder.totalPrice)}
+              </p>
+            </div>
+          </div>
+          {completedOrder.delivery.length ? (
+            <>
+              <pre>{completedOrder.delivery.join('\n')}</pre>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void copyDelivery()}
+              >
+                <Copy /> Copy details
+              </Button>
+            </>
+          ) : (
+            <p>
+              {completedOrder.deliveryPending
+                ? 'The provider accepted your order and is preparing the account details.'
+                : 'No account details were returned for this purchase.'}
+            </p>
+          )}
+        </section>
+      ) : null}
       <section className="market-surface logs-surface">
         <div className="logs-toolbar">
           <div>
