@@ -33,6 +33,7 @@ import {
 import { Notice, ServicePageShell } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ServiceInformationDialog } from '@/components/onboarding-dialogs';
 
 type BoostService = {
   service: number;
@@ -252,6 +253,7 @@ export default function BoostPage() {
       title="Grow your audience"
       description="Choose a platform and service, then enter your link to get started."
     >
+      <ServiceInformationDialog kind="boost" />
       <section className="boost-hero-grid">
         <div className="boost-selector-card">
           <div className="boost-card-title">

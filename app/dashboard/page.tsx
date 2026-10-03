@@ -20,30 +20,29 @@ export default async function DashboardPage() {
     { data: wallet },
     { data: savedAccount },
     { data: orderRows },
-  ] =
-    await Promise.all([
-      supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .maybeSingle(),
-      supabase
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', user.id)
-        .maybeSingle(),
-      supabase
-        .from('user_virtual_accounts')
-        .select('bank, account_number, account_name, status, updated_at')
-        .eq('user_id', user.id)
-        .maybeSingle(),
-      supabase
-        .from('orders')
-        .select('id,service_name,amount,currency,status,created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10),
-    ]);
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('user_virtual_accounts')
+      .select('bank, account_number, account_name, status, updated_at')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('orders')
+      .select('id,service_name,amount,currency,status,created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ]);
 
   const userName =
     profile?.full_name ||
@@ -66,6 +65,7 @@ export default async function DashboardPage() {
   return (
     <GceeverifyHome
       initialView="dashboard"
+      userId={user.id}
       userName={userName}
       balance={Number(wallet?.balance ?? 0)}
       recentOrders={(orderRows ?? []).map((order) => ({

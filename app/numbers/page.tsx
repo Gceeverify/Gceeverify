@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Notice, ServicePageShell } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
+import { ServiceInformationDialog } from '@/components/onboarding-dialogs';
 import {
   Command,
   CommandEmpty,
@@ -349,6 +350,7 @@ export default function NumbersPage() {
       title="Buy Number"
       description="Choose server, country, and service to buy a verification number."
     >
+      <ServiceInformationDialog kind="numbers" />
       <section className="number-checkout-layout">
         <div className="market-surface number-builder">
           <div className="number-step">

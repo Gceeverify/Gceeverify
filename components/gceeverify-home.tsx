@@ -41,6 +41,7 @@ import {
   type VirtualAccountDetails,
 } from '@/components/fund-wallet-dialog';
 import { ConfirmSignOut } from '@/components/confirm-sign-out';
+import { DashboardWelcomeDialog } from '@/components/onboarding-dialogs';
 
 export type DashboardOrder = {
   id: string;
@@ -55,8 +56,18 @@ const quickActions = [
   { href: '/numbers', label: 'Numbers', icon: Smartphone, tone: 'cyan' },
   { href: '/emails', label: 'Virtual Email', icon: Mail, tone: 'lime' },
   { href: '/logs', label: 'Logs', icon: Server, tone: 'orange' },
-  { href: '/reseller?category=vpn', label: 'VPN', icon: ShieldCheck, tone: 'lime' },
-  { href: '/reseller?category=proxy', label: 'Proxies', icon: Wifi, tone: 'cyan' },
+  {
+    href: '/reseller?category=vpn',
+    label: 'VPN',
+    icon: ShieldCheck,
+    tone: 'lime',
+  },
+  {
+    href: '/reseller?category=proxy',
+    label: 'Proxies',
+    icon: Wifi,
+    tone: 'cyan',
+  },
   { href: '/vtu', label: 'VTU', icon: RadioTower, tone: 'violet' },
 ];
 const vtuServices = [
@@ -367,6 +378,7 @@ export function LegacyLanding({ onEnter }: { onEnter: () => void }) {
 
 export function GceeverifyHome({
   initialView = 'landing',
+  userId = '',
   userName = 'Ola',
   balance = 0,
   recentOrders = [],
@@ -375,6 +387,7 @@ export function GceeverifyHome({
   virtualAccountStatus = 'missing',
 }: {
   initialView?: 'landing' | 'dashboard';
+  userId?: string;
   userName?: string;
   balance?: number;
   recentOrders?: DashboardOrder[];
@@ -386,6 +399,7 @@ export function GceeverifyHome({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [numbersOpen, setNumbersOpen] = useState(true);
   const [vtuOpen, setVtuOpen] = useState(true);
+  const [greeting, setGreeting] = useState('Welcome');
   const displayName = userName.trim() || 'User';
   const initials = displayName
     .split(/\s+/)
@@ -416,6 +430,17 @@ export function GceeverifyHome({
   }, [initialView]);
 
   useEffect(() => {
+    const hour = new Date().getHours();
+    setGreeting(
+      hour < 12
+        ? 'Good morning'
+        : hour < 17
+          ? 'Good afternoon'
+          : 'Good evening',
+    );
+  }, []);
+
+  useEffect(() => {
     if (!mobileOpen) return;
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -433,6 +458,7 @@ export function GceeverifyHome({
 
   return (
     <main className="dashboard-shell min-h-screen bg-[#07100f] text-white">
+      {userId ? <DashboardWelcomeDialog userId={userId} /> : null}
       <div className="ambient" aria-hidden="true" />
       <aside
         id="dashboard-sidebar"
@@ -456,8 +482,17 @@ export function GceeverifyHome({
           <p className="nav-eyebrow">Workspace</p>
           <div className="space-y-1">
             {navItems.map(({ label, icon: Icon, active, count }) => (
-              <button
+              <Link
                 key={label}
+                href={
+                  label === 'Orders'
+                    ? '/orders'
+                    : label === 'New order'
+                      ? '/boost'
+                      : label === 'Services'
+                        ? '/dashboard#dashboard'
+                        : '/dashboard'
+                }
                 className={`nav-item ${active ? 'nav-item-active' : ''}`}
                 onClick={() => setMobileOpen(false)}
               >
@@ -468,7 +503,7 @@ export function GceeverifyHome({
                     {count}
                   </span>
                 )}
-              </button>
+              </Link>
             ))}
             {isAdmin ? (
               <Link
@@ -669,7 +704,9 @@ export function GceeverifyHome({
                 <span className="size-2 rounded-full bg-lime-300 shadow-[0_0_10px_#bef264]" />
                 All systems operational
               </p>
-              <h1>Good morning, {displayName.split(' ')[0]}.</h1>
+              <h1>
+                {greeting}, {displayName.split(' ')[0]}.
+              </h1>
             </div>
             <p>Manage your digital services from one place.</p>
           </div>
@@ -738,9 +775,12 @@ export function GceeverifyHome({
                 <p className="eyebrow">Activity</p>
                 <h2>Recent orders</h2>
               </div>
-              <button className="text-sm font-medium text-lime-300">
+              <Link
+                href="/orders"
+                className="text-sm font-medium text-lime-300"
+              >
                 View all
-              </button>
+              </Link>
             </div>
             <div className="recent-order-list">
               {recentOrders.map((order) => (
@@ -765,7 +805,8 @@ export function GceeverifyHome({
                       className={`status ${order.status === 'completed' ? 'status-complete' : 'status-progress'}`}
                     >
                       <span />
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      {order.status.charAt(0).toUpperCase() +
+                        order.status.slice(1)}
                     </span>
                     <small>
                       {new Intl.DateTimeFormat('en-NG', {

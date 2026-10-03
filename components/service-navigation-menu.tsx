@@ -42,7 +42,7 @@ import {
 const workspaceLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/boost', label: 'New order', icon: ShoppingBag },
-  { href: '/dashboard#orders', label: 'Orders', icon: ListChecks, count: '3' },
+  { href: '/orders', label: 'Orders', icon: ListChecks },
   {
     href: '/dashboard#dashboard',
     label: 'Services',
@@ -131,9 +131,8 @@ export function ServiceNavigationMenu() {
         >
           <p className="nav-eyebrow">Workspace</p>
           <div className="space-y-1">
-            {workspaceLinks.map(({ href, label, icon: Icon, ...item }) => {
-              const isActive =
-                href === '/dashboard' && pathname === '/dashboard';
+            {workspaceLinks.map(({ href, label, icon: Icon }) => {
+              const isActive = pathname === href;
 
               return (
                 <Link
@@ -145,11 +144,6 @@ export function ServiceNavigationMenu() {
                 >
                   <Icon />
                   <span>{label}</span>
-                  {'count' in item ? (
-                    <span className="ml-auto rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/70">
-                      {item.count}
-                    </span>
-                  ) : null}
                 </Link>
               );
             })}
