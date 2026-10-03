@@ -15,7 +15,12 @@ export default async function DashboardPage() {
 
   if (!user) redirect('/login?next=/dashboard');
 
-  const [{ data: profile }, { data: wallet }, { data: savedAccount }] =
+  const [
+    { data: profile },
+    { data: wallet },
+    { data: savedAccount },
+    { data: orderRows },
+  ] =
     await Promise.all([
       supabase
         .from('profiles')
@@ -32,6 +37,12 @@ export default async function DashboardPage() {
         .select('bank, account_number, account_name, status, updated_at')
         .eq('user_id', user.id)
         .maybeSingle(),
+      supabase
+        .from('orders')
+        .select('id,service_name,amount,currency,status,created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10),
     ]);
 
   const userName =
@@ -57,6 +68,14 @@ export default async function DashboardPage() {
       initialView="dashboard"
       userName={userName}
       balance={Number(wallet?.balance ?? 0)}
+      recentOrders={(orderRows ?? []).map((order) => ({
+        id: `#GC-${order.id.slice(0, 8).toUpperCase()}`,
+        service: order.service_name,
+        amount: Number(order.amount),
+        currency: order.currency || 'NGN',
+        status: order.status,
+        createdAt: order.created_at,
+      }))}
       isAdmin={isAdminUser(user)}
       virtualAccount={
         virtualAccount?.status === 'active'

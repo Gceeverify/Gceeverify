@@ -42,35 +42,14 @@ import {
 } from '@/components/fund-wallet-dialog';
 import { ConfirmSignOut } from '@/components/confirm-sign-out';
 
-const recentOrders = [
-  {
-    id: '#GC-24819',
-    service: 'Instagram Followers',
-    qty: '2,500',
-    status: 'Completed',
-    time: '12 min ago',
-  },
-  {
-    id: '#GC-24818',
-    service: 'TikTok Views',
-    qty: '25,000',
-    status: 'Processing',
-    time: '28 min ago',
-  },
-  {
-    id: '#GC-24817',
-    service: 'YouTube Views',
-    qty: '5,000',
-    status: 'Completed',
-    time: '1 hr ago',
-  },
-];
-const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, active: true },
-  { label: 'New order', icon: ShoppingBag },
-  { label: 'Orders', icon: ListChecks, count: '3' },
-  { label: 'Services', icon: PackageSearch },
-];
+export type DashboardOrder = {
+  id: string;
+  service: string;
+  amount: number;
+  currency: string;
+  status: string;
+  createdAt: string;
+};
 const quickActions = [
   { href: '/boost', label: 'Boost', icon: Zap, tone: 'lime' },
   { href: '/numbers', label: 'Numbers', icon: Smartphone, tone: 'cyan' },
@@ -390,6 +369,7 @@ export function GceeverifyHome({
   initialView = 'landing',
   userName = 'Ola',
   balance = 0,
+  recentOrders = [],
   isAdmin = false,
   virtualAccount = null,
   virtualAccountStatus = 'missing',
@@ -397,6 +377,7 @@ export function GceeverifyHome({
   initialView?: 'landing' | 'dashboard';
   userName?: string;
   balance?: number;
+  recentOrders?: DashboardOrder[];
   isAdmin?: boolean;
   virtualAccount?: VirtualAccountDetails | null;
   virtualAccountStatus?: 'active' | 'provisioning' | 'failed' | 'missing';
@@ -415,6 +396,16 @@ export function GceeverifyHome({
     style: 'currency',
     currency: 'NGN',
   }).format(balance);
+  const navItems = [
+    { label: 'Dashboard', icon: LayoutDashboard, active: true },
+    { label: 'New order', icon: ShoppingBag },
+    {
+      label: 'Orders',
+      icon: ListChecks,
+      count: String(recentOrders.length),
+    },
+    { label: 'Services', icon: PackageSearch },
+  ];
 
   useEffect(() => {
     if (initialView !== 'landing') return;
@@ -761,21 +752,35 @@ export function GceeverifyHome({
                     <div>
                       <strong>{order.service}</strong>
                       <small>
-                        {order.id} · {order.qty}
+                        {order.id} ·{' '}
+                        {new Intl.NumberFormat('en-NG', {
+                          style: 'currency',
+                          currency: order.currency,
+                        }).format(order.amount)}
                       </small>
                     </div>
                   </div>
                   <div className="recent-order-meta">
                     <span
-                      className={`status ${order.status === 'Completed' ? 'status-complete' : 'status-progress'}`}
+                      className={`status ${order.status === 'completed' ? 'status-complete' : 'status-progress'}`}
                     >
                       <span />
-                      {order.status}
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </span>
-                    <small>{order.time}</small>
+                    <small>
+                      {new Intl.DateTimeFormat('en-NG', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      }).format(new Date(order.createdAt))}
+                    </small>
                   </div>
                 </article>
               ))}
+              {!recentOrders.length ? (
+                <div className="catalog-loading">
+                  Your completed purchases will appear here.
+                </div>
+              ) : null}
             </div>
           </section>
         </div>

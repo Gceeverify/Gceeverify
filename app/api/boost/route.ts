@@ -6,6 +6,7 @@ import {
   getBoostRateNgn,
   getUsdToNgnRate,
 } from '@/lib/exchange-rates';
+import { withWalletCharge } from '@/lib/wallet';
 
 const platforms = [
   'instagram',
@@ -129,17 +130,19 @@ export async function POST(request: Request) {
         { error: 'That service is no longer available.' },
         { status: 409 },
       );
-    const result = await placeBoostOrder(
-      body.service!,
-      body.link,
-      body.quantity!,
-    );
     const customerRateNgn = getBoostRateNgn(
       Number(service.rate),
       exchangeRate.rate,
     );
     const customerAmountNgn =
       Math.round((customerRateNgn * body.quantity! * 100) / 1000) / 100;
+    const result = await withWalletCharge({
+      userId: user.id,
+      amount: customerAmountNgn,
+      description: `${service.name} boost order`,
+      purchase: () =>
+        placeBoostOrder(body.service!, body.link!, body.quantity!),
+    });
     await recordOrder({
       userId: user.id,
       category: 'social-boosting',

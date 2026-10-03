@@ -165,7 +165,10 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const charge = getVtuPriceNgn(amount);
+      // Airtime is sold at face value: the entered recharge amount is also
+      // the checkout total and wallet debit. Plan-based VTU services keep
+      // their configured retail pricing below.
+      const charge = amount;
       const result = await withWalletCharge({
         userId: user.id,
         amount: charge,

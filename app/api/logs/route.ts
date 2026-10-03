@@ -12,6 +12,7 @@ import {
   getLogPriceNgn,
   getUsdToNgnRate,
 } from '@/lib/exchange-rates';
+import { withWalletCharge } from '@/lib/wallet';
 
 const LOG_CATEGORIES = [
   'Social Media',
@@ -206,9 +207,14 @@ export async function POST(request: Request) {
         { error: 'That product is no longer available.' },
         { status: 409 },
       );
-    const result = await placeLogOrder(body.productCode, body.quantity!);
     const unitPriceNgn = getLogPriceNgn(product.price, exchangeRate.rate);
     const totalPriceNgn = Math.round(unitPriceNgn * body.quantity! * 100) / 100;
+    const result = await withWalletCharge({
+      userId: user.id,
+      amount: totalPriceNgn,
+      description: `${product.name} account order`,
+      purchase: () => placeLogOrder(body.productCode!, body.quantity!),
+    });
     await recordOrder({
       userId: user.id,
       category: 'digital-accounts',

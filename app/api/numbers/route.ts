@@ -20,6 +20,7 @@ import {
   purchaseNumber,
   setNumberStatus,
 } from '@/lib/provider-clients';
+import { withWalletCharge } from '@/lib/wallet';
 
 async function getPricedNumberQuote(service: string, country: string) {
   const [quote, exchangeRate] = await Promise.all([
@@ -167,12 +168,18 @@ export async function POST(request: Request) {
         );
       }
 
-      const result = await purchaseNumber(
-        body.service,
-        body.country,
-        offer.price,
-        offer.providerId,
-      );
+      const result = await withWalletCharge({
+        userId: user.id,
+        amount: customerPriceNgn,
+        description: `${body.service} virtual number`,
+        purchase: () =>
+          purchaseNumber(
+            body.service!,
+            body.country!,
+            offer.price,
+            offer.providerId,
+          ),
+      });
       await recordOrder({
         userId: user.id,
         category: 'virtual-number',

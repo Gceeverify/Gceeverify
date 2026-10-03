@@ -8,6 +8,7 @@ import {
 import { getCurrentUser } from '@/lib/auth';
 import { recordOrder, updateTrackedOrder } from '@/lib/orders';
 import { getUsdToNgnRate, getVirtualEmailPriceNgn } from '@/lib/exchange-rates';
+import { withWalletCharge } from '@/lib/wallet';
 
 async function retailCatalog() {
   const [catalog, exchangeRate] = await Promise.all([
@@ -90,15 +91,17 @@ export async function POST(request: Request) {
         getVirtualEmailQuote(body.service, body.domain),
         getUsdToNgnRate(),
       ]);
-      const result = await purchaseVirtualEmail(
-        body.service,
-        body.domain,
-        quote.price,
-      );
       const retailPrice = getVirtualEmailPriceNgn(
-        result.price,
+        quote.price,
         exchangeRate.rate,
       );
+      const result = await withWalletCharge({
+        userId: user.id,
+        amount: retailPrice,
+        description: `${body.service} virtual email`,
+        purchase: () =>
+          purchaseVirtualEmail(body.service!, body.domain!, quote.price),
+      });
       await recordOrder({
         userId: user.id,
         category: 'virtual-email',

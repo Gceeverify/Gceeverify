@@ -238,6 +238,8 @@ export default function VtuPage() {
       selectedExam.name +
       ' · ' +
       money(selectedExam.amount * Number(amount));
+  } else if (active === 'airtime' && amount) {
+    purchaseLabel = money(Number(amount));
   } else if (amount) {
     purchaseLabel = money(Number(amount) * 2);
   }
