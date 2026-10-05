@@ -59,7 +59,11 @@ export async function GET(request: Request) {
       markupPercent: getResellerMarkupPercent(),
     });
   } catch (error) {
-    return providerError(error, 'Marketplace services could not be loaded.', 502);
+    return providerError(
+      error,
+      'Marketplace services could not be loaded.',
+      502,
+    );
   }
 }
 
@@ -101,7 +105,9 @@ export async function POST(request: Request) {
     const liveStock = await getSujanStock(productId);
     if (liveStock < quantity) {
       return Response.json(
-        { error: `Only ${liveStock} item${liveStock === 1 ? '' : 's'} remain in stock.` },
+        {
+          error: `Only ${liveStock} item${liveStock === 1 ? '' : 's'} remain in stock.`,
+        },
         { status: 409 },
       );
     }
@@ -140,6 +146,7 @@ export async function POST(request: Request) {
         providerUnitPriceNgn: product.priceMinor / 100,
         unitPriceNgn: unitPrice,
         markupPercent: getResellerMarkupPercent(),
+        deliveryCount: normalized.delivery.length,
       },
     });
 
@@ -155,6 +162,9 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    return providerError(error, 'The marketplace order could not be completed.');
+    return providerError(
+      error,
+      'The marketplace order could not be completed.',
+    );
   }
 }

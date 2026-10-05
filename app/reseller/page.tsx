@@ -18,7 +18,14 @@ import { Notice, ServicePageShell } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-type Category = 'all' | 'vpn' | 'proxy' | 'social' | 'communication' | 'email' | 'other';
+type Category =
+  | 'all'
+  | 'vpn'
+  | 'proxy'
+  | 'social'
+  | 'communication'
+  | 'email'
+  | 'other';
 type Product = {
   id: number;
   name: string;
@@ -28,7 +35,12 @@ type Product = {
   category: Exclude<Category, 'all'>;
   sourceCategory: string;
 };
-type Catalog = { products: Product[]; currency: string; markupPercent: number; error?: string };
+type Catalog = {
+  products: Product[];
+  currency: string;
+  markupPercent: number;
+  error?: string;
+};
 type CompletedOrder = {
   orderId: string | null;
   delivery: string[];
@@ -37,7 +49,11 @@ type CompletedOrder = {
   totalPrice: number;
 };
 
-const categories: Array<{ value: Category; label: string; icon: typeof ShieldCheck }> = [
+const categories: Array<{
+  value: Category;
+  label: string;
+  icon: typeof ShieldCheck;
+}> = [
   { value: 'all', label: 'All services', icon: ShoppingBag },
   { value: 'vpn', label: 'VPN', icon: ShieldCheck },
   { value: 'proxy', label: 'Proxies', icon: Wifi },
@@ -63,12 +79,19 @@ export default function ResellerMarketplacePage() {
   const [quantity, setQuantity] = useState('1');
   const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState('');
-  const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
+  const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(
+    null,
+  );
 
   useEffect(() => {
-    const requestedCategory = new URLSearchParams(window.location.search).get('category') as Category | null;
+    const requestedCategory = new URLSearchParams(window.location.search).get(
+      'category',
+    ) as Category | null;
     void (async () => {
-      if (requestedCategory && categories.some((item) => item.value === requestedCategory)) {
+      if (
+        requestedCategory &&
+        categories.some((item) => item.value === requestedCategory)
+      ) {
         setCategory(requestedCategory);
       }
       setLoading(true);
@@ -78,7 +101,11 @@ export default function ResellerMarketplacePage() {
         if (!response.ok) throw new Error(result.error);
         setCatalog(result);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : 'Marketplace services could not be loaded.');
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : 'Marketplace services could not be loaded.',
+        );
       } finally {
         setLoading(false);
       }
@@ -103,7 +130,11 @@ export default function ResellerMarketplacePage() {
   const placeOrder = async () => {
     if (!selected) return;
     const amount = Number(quantity);
-    if (!Number.isInteger(amount) || amount < 1 || amount > selected.availableStock) {
+    if (
+      !Number.isInteger(amount) ||
+      amount < 1 ||
+      amount > selected.availableStock
+    ) {
       setMessage(`Choose a quantity between 1 and ${selected.availableStock}.`);
       return;
     }
@@ -120,15 +151,27 @@ export default function ResellerMarketplacePage() {
       const response = await fetch('/api/reseller', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: selected.id, quantity: amount, quotedPrice: total }),
+        body: JSON.stringify({
+          productId: selected.id,
+          quantity: amount,
+          quotedPrice: total,
+        }),
       });
-      const result = (await response.json()) as CompletedOrder & { error?: string };
+      const result = (await response.json()) as CompletedOrder & {
+        error?: string;
+      };
       if (!response.ok) throw new Error(result.error);
       setCompletedOrder(result);
-      setMessage('Purchase completed. Your delivered account details are shown below.');
+      setMessage(
+        'Purchase completed. Your delivered account details are shown below.',
+      );
       setConfirming(false);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'The marketplace order could not be completed.');
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'The marketplace order could not be completed.',
+      );
       setConfirming(false);
     } finally {
       setLoading(false);
@@ -145,31 +188,51 @@ export default function ResellerMarketplacePage() {
     <ServicePageShell
       eyebrow="Private network & account marketplace"
       title="VPN, proxies & accounts"
-      description="Browse live Sujan Department inventory. Your wallet is charged only when an order is placed."
+      description="Browse live account inventory. Your wallet is charged only when an order is placed."
     >
       {message && !selected ? (
         <Notice message={message} tone={completedOrder ? 'success' : 'error'} />
       ) : null}
 
       {completedOrder ? (
-        <section className="reseller-delivery" aria-label="Delivered account details">
+        <section
+          className="reseller-delivery"
+          aria-label="Delivered account details"
+        >
           <div>
-            <span className="reseller-delivery-icon"><CheckCircle2 /></span>
+            <span className="reseller-delivery-icon">
+              <CheckCircle2 />
+            </span>
             <div>
               <small>Order completed</small>
               <h2>{completedOrder.productName}</h2>
-              <p>{completedOrder.orderId ? `Order ${completedOrder.orderId}` : 'Provider order completed'}</p>
+              <p>
+                {completedOrder.orderId
+                  ? `Order ${completedOrder.orderId}`
+                  : 'Provider order completed'}
+              </p>
             </div>
           </div>
           {completedOrder.delivery.length ? (
             <>
               <pre>{completedOrder.delivery.join('\n')}</pre>
-              <Button type="button" variant="outline" onClick={() => void copyDelivery()}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void copyDelivery()}
+              >
                 <Copy /> Copy details
               </Button>
             </>
           ) : (
-            <p>Your order is complete. Check your order history for delivery details.</p>
+            <p>
+              Your order is complete, but no login details were returned.
+              Contact support
+              {completedOrder.orderId
+                ? ` with order ${completedOrder.orderId}`
+                : ''}
+              .
+            </p>
           )}
         </section>
       ) : null}
@@ -185,7 +248,11 @@ export default function ResellerMarketplacePage() {
               aria-label="Search marketplace products"
             />
           </div>
-          <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sort products">
+          <select
+            value={sort}
+            onChange={(event) => setSort(event.target.value)}
+            aria-label="Sort products"
+          >
             <option value="price-asc">Cheapest first</option>
             <option value="price-desc">Most expensive first</option>
           </select>
@@ -205,13 +272,20 @@ export default function ResellerMarketplacePage() {
         </div>
 
         {loading && !catalog ? (
-          <div className="catalog-loading"><LoaderCircle className="animate-spin" /> Loading live inventory</div>
+          <div className="catalog-loading">
+            <LoaderCircle className="animate-spin" /> Loading live inventory
+          </div>
         ) : products.length ? (
           <div className="reseller-grid">
             {products.map((product) => (
               <article key={product.id} className="reseller-card">
                 <div className="reseller-card-topline">
-                  <span>{categories.find((item) => item.value === product.category)?.label}</span>
+                  <span>
+                    {
+                      categories.find((item) => item.value === product.category)
+                        ?.label
+                    }
+                  </span>
                   <b>{product.availableStock.toLocaleString()} in stock</b>
                 </div>
                 <h2>{product.name}</h2>
@@ -234,19 +308,35 @@ export default function ResellerMarketplacePage() {
             ))}
           </div>
         ) : (
-          <div className="catalog-loading">No matching products are currently in stock.</div>
+          <div className="catalog-loading">
+            No matching products are currently in stock.
+          </div>
         )}
       </section>
 
       {selected ? (
-        <dialog open className="purchase-drawer" aria-label="Marketplace checkout">
-          <button className="drawer-backdrop" onClick={() => setSelected(null)} aria-label="Close checkout" />
+        <dialog
+          open
+          className="purchase-drawer"
+          aria-label="Marketplace checkout"
+        >
+          <button
+            className="drawer-backdrop"
+            onClick={() => setSelected(null)}
+            aria-label="Close checkout"
+          />
           <div className="drawer-panel">
-            <button className="drawer-close" onClick={() => setSelected(null)}>Close</button>
+            <button className="drawer-close" onClick={() => setSelected(null)}>
+              Close
+            </button>
             <p className="checkout-eyebrow">Secure checkout</p>
             <h2>{selected.name}</h2>
-            <div className="trust-row"><ShieldCheck /> Delivered immediately by the provider</div>
-            <label className="market-label" htmlFor="reseller-quantity">Quantity</label>
+            <div className="trust-row">
+              <ShieldCheck /> Delivered immediately by the provider
+            </div>
+            <label className="market-label" htmlFor="reseller-quantity">
+              Quantity
+            </label>
             <Input
               id="reseller-quantity"
               type="number"
@@ -261,10 +351,23 @@ export default function ResellerMarketplacePage() {
             />
             <div className="checkout-total">
               <span>Total</span>
-              <strong>{money.format(selected.price * Number(quantity || 0))}</strong>
+              <strong>
+                {money.format(selected.price * Number(quantity || 0))}
+              </strong>
             </div>
-            <Button onClick={() => void placeOrder()} disabled={loading} className={`market-primary ${confirming ? 'market-confirm' : ''}`}>
-              {loading ? <LoaderCircle className="animate-spin" /> : confirming ? 'Confirm purchase' : 'Continue'} <ArrowRight />
+            <Button
+              onClick={() => void placeOrder()}
+              disabled={loading}
+              className={`market-primary ${confirming ? 'market-confirm' : ''}`}
+            >
+              {loading ? (
+                <LoaderCircle className="animate-spin" />
+              ) : confirming ? (
+                'Confirm purchase'
+              ) : (
+                'Continue'
+              )}{' '}
+              <ArrowRight />
             </Button>
             {message ? <Notice message={message} /> : null}
           </div>

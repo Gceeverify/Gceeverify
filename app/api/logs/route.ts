@@ -11,8 +11,17 @@ import { recordOrder } from '@/lib/orders';
 import {
   getLogMarkupPercent,
   getLogPriceNgn,
+  getResellerMarkupPercent,
+  getResellerPriceNgn,
   getUsdToNgnRate,
 } from '@/lib/exchange-rates';
+import {
+  getSujanProducts,
+  getSujanStock,
+  normalizeSujanOrder,
+  placeSujanOrder,
+  type SujanProduct,
+} from '@/lib/sujan';
 import { withWalletCharge } from '@/lib/wallet';
 
 const LOG_CATEGORIES = [
@@ -68,6 +77,49 @@ function isPrivateNetworkProduct(item: {
   );
 }
 
+function isFacebookPageProduct(item: {
+  name: string;
+  description?: string;
+  categoryName: string;
+  groupName: string;
+}) {
+  const value =
+    `${item.groupName} ${item.categoryName} ${item.name} ${item.description ?? ''}`.toLowerCase();
+  return /facebook|\bfb\b/.test(value) && /\bpage\b/.test(value);
+}
+
+function isSujanFacebookPageProduct(product: SujanProduct) {
+  return isFacebookPageProduct({
+    name: product.name,
+    description: product.description,
+    categoryName: product.categoryName,
+    groupName: product.platformName,
+  });
+}
+
+function sujanProductCode(productId: number) {
+  return `sujan:${productId}`;
+}
+
+function sujanProductId(code: string) {
+  const match = /^sujan:(\d+)$/.exec(code);
+  if (!match) return null;
+  const productId = Number(match[1]);
+  return Number.isInteger(productId) && productId > 0 ? productId : null;
+}
+
+async function getSujanFacebookPageProducts() {
+  try {
+    return (await getSujanProducts()).filter(isSujanFacebookPageProduct);
+  } catch (error) {
+    console.error(
+      '[api/logs] Sujan Facebook-page catalog failed',
+      error instanceof Error ? error.message : error,
+    );
+    return [];
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const pageSize = 100;
@@ -76,9 +128,10 @@ export async function GET(request: Request) {
     const query = searchParams.get('query')?.toLowerCase().trim() || '';
     const group = searchParams.get('group') || 'all';
     const sort = searchParams.get('sort') || 'default';
-    const [catalog, exchangeRate] = await Promise.all([
+    const [catalog, exchangeRate, sujanProducts] = await Promise.all([
       getLogCatalogForBrowse(),
       getUsdToNgnRate(),
+      getSujanFacebookPageProducts(),
     ]);
     const providerData = catalog.data;
     if (catalog.catalogStatus === 'warming') {
@@ -90,12 +143,25 @@ export async function GET(request: Request) {
         }
       });
     }
-    const data = {
-      ...providerData,
-      items: providerData.items.map((item) => ({
+    const bulkaccProducts = providerData.items
+      .filter((item) => !isFacebookPageProduct(item))
+      .map((item) => ({
         ...item,
         price: getLogPriceNgn(item.price, exchangeRate.rate),
-      })),
+      }));
+    const sujanLogProducts = sujanProducts.map((product) => ({
+      code: sujanProductCode(product.id),
+      name: product.name,
+      description: product.description,
+      categoryName: product.categoryName,
+      groupName: product.platformName,
+      inStock: product.availableStock,
+      min: 1,
+      price: getResellerPriceNgn(product.priceMinor / 100),
+    }));
+    const data = {
+      ...providerData,
+      items: [...sujanLogProducts, ...bulkaccProducts],
     };
     const availableProducts = data.items.filter(
       (item) => item.inStock > 0 && !isPrivateNetworkProduct(item),
@@ -190,12 +256,75 @@ export async function POST(request: Request) {
     if (
       !body.productCode ||
       !Number.isInteger(body.quantity) ||
-      body.quantity! <= 0
+      body.quantity! <= 0 ||
+      body.quantity! > 50
     )
       return Response.json(
         { error: 'Choose a product and quantity.' },
         { status: 400 },
       );
+    const quantity = body.quantity!;
+    const sujanId = sujanProductId(body.productCode);
+    if (sujanId !== null) {
+      const product = (await getSujanProducts()).find(
+        (item) => item.id === sujanId && isSujanFacebookPageProduct(item),
+      );
+      if (!product) {
+        return Response.json(
+          { error: 'That Facebook-page product is no longer available.' },
+          { status: 409 },
+        );
+      }
+      const liveStock = await getSujanStock(sujanId);
+      if (liveStock < quantity) {
+        return Response.json(
+          {
+            error: `Only ${liveStock} item${liveStock === 1 ? '' : 's'} remain in stock.`,
+          },
+          { status: 409 },
+        );
+      }
+      const unitPriceNgn = getResellerPriceNgn(product.priceMinor / 100);
+      const totalPriceNgn = Math.round(unitPriceNgn * quantity * 100) / 100;
+      const providerResult = await withWalletCharge({
+        userId: user.id,
+        amount: totalPriceNgn,
+        description: `${product.name} account order`,
+        purchase: () => placeSujanOrder(sujanId, quantity),
+      });
+      const normalized = normalizeSujanOrder(providerResult);
+      await recordOrder({
+        userId: user.id,
+        category: 'digital-accounts',
+        serviceName: product.name,
+        provider: 'Sujan Department',
+        providerOrderId: normalized.orderId,
+        amount: totalPriceNgn,
+        currency: 'NGN',
+        status: 'completed',
+        metadata: {
+          quantity,
+          providerProductId: product.id,
+          providerUnitPriceNgn: product.priceMinor / 100,
+          unitPriceNgn,
+          markupPercent: getResellerMarkupPercent(),
+          deliveryCount: normalized.delivery.length,
+        },
+      });
+      return Response.json(
+        {
+          orderCode: normalized.orderId ?? '',
+          delivery: normalized.delivery,
+          deliveryPending: false,
+          productName: product.name,
+          quantity,
+          unitPrice: unitPriceNgn,
+          totalPrice: totalPriceNgn,
+          currency: 'NGN',
+        },
+        { status: 201 },
+      );
+    }
     const [catalog, exchangeRate] = await Promise.all([
       getAllLogProducts(),
       getUsdToNgnRate(),

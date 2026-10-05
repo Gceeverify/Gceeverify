@@ -264,10 +264,7 @@ export function purchaseBigisubElectricity(input: {
   );
 }
 
-export function purchaseBigisubExam(
-  exam: string,
-  quantity: number,
-) {
+export function purchaseBigisubExam(exam: string, quantity: number) {
   return bigisubRequest<Record<string, unknown>>(
     '/api/v2/bills/result-checker/purchase/',
     {
@@ -382,21 +379,12 @@ async function fetchLogProductsPage(page: number, pageSize: number) {
   return result.data;
 }
 
-const getCachedLogProductsPage = unstable_cache(
-  fetchLogProductsPage,
-  ['bulkacc-log-products-page-v2'],
-  {
-    revalidate: 600,
-    tags: ['log-products'],
-  },
-);
-
 export async function getLogProducts(page: number, pageSize: number) {
-  return getCachedLogProductsPage(page, pageSize);
+  return fetchLogProductsPage(page, pageSize);
 }
 
 async function fetchLogCatalog() {
-  const firstPage = await getLogProducts(1, 100);
+  const firstPage = await getLogProducts(1, 50);
   const pages = [firstPage];
   const remainingPageNumbers = Array.from(
     { length: Math.max(0, firstPage.totalPages - 1) },
@@ -434,19 +422,10 @@ async function fetchLogCatalog() {
   return data;
 }
 
-const getPersistedLogCatalog = unstable_cache(
-  fetchLogCatalog,
-  ['bulkacc-log-catalog-v2'],
-  {
-    revalidate: 600,
-    tags: ['log-products'],
-  },
-);
-
 function startLogCatalogRefresh() {
   if (logCatalogRequest) return logCatalogRequest;
 
-  logCatalogRequest = getPersistedLogCatalog()
+  logCatalogRequest = fetchLogCatalog()
     .then((data) => {
       logCatalogCache = {
         data,
@@ -486,7 +465,7 @@ export async function getLogCatalogForBrowse(): Promise<{
     return { data: fastResult, catalogStatus: 'fresh' };
   }
 
-  const firstPage = await getLogProducts(1, 100);
+  const firstPage = await getLogProducts(1, 50);
   return { data: firstPage, catalogStatus: 'warming' };
 }
 
