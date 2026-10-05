@@ -9810,6 +9810,7 @@ html[data-theme='dark'] .ref-brand-inverse {
      interactive without drawing the header twice. */
   .ref-header {
     display: grid;
+    width: 100%;
     pointer-events: auto;
   }
   .ref-header > a,
@@ -9819,13 +9820,27 @@ html[data-theme='dark'] .ref-brand-inverse {
     pointer-events: none;
   }
   .ref-header-actions {
-    display: flex;
-    pointer-events: auto;
+    position: absolute;
+    inset: 0;
+    display: block;
+    pointer-events: none;
   }
   .ref-header-actions .ref-signup,
   .ref-header-actions .ref-login {
+    position: absolute;
+    top: clamp(18px, 2.55vw, 49px);
+    height: clamp(32px, 3.2vw, 61px);
+    min-width: 0;
     opacity: 0;
     pointer-events: auto;
+  }
+  .ref-header-actions .ref-signup {
+    left: 72.35%;
+    width: 11%;
+  }
+  .ref-header-actions .ref-login {
+    left: 86.2%;
+    width: 9.3%;
   }
   .ref-header-actions .ref-signup:focus-visible,
   .ref-header-actions .ref-login:focus-visible {
