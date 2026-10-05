@@ -2,7 +2,20 @@ import 'server-only';
 
 import { createAdminClient } from '@/lib/supabase/admin';
 
-type OrderStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+type OrderStatus =
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export type OrderMetadataValue =
+  | string
+  | number
+  | boolean
+  | null
+  | OrderMetadataValue[]
+  | { [key: string]: OrderMetadataValue };
 
 export async function recordOrder(input: {
   userId: string;
@@ -13,7 +26,7 @@ export async function recordOrder(input: {
   amount: number;
   currency: string;
   status: OrderStatus;
-  metadata?: Record<string, string | number | boolean | null>;
+  metadata?: Record<string, OrderMetadataValue>;
 }) {
   try {
     const amount = Number(input.amount);
@@ -30,7 +43,9 @@ export async function recordOrder(input: {
         category: input.category,
         service_name: input.serviceName,
         provider: input.provider,
-        provider_order_id: input.providerOrderId ? String(input.providerOrderId) : null,
+        provider_order_id: input.providerOrderId
+          ? String(input.providerOrderId)
+          : null,
         amount,
         currency: input.currency,
         status: input.status,
@@ -40,7 +55,10 @@ export async function recordOrder(input: {
       .single();
 
     if (error) {
-      console.error('A provider purchase succeeded but order tracking failed:', error.message);
+      console.error(
+        'A provider purchase succeeded but order tracking failed:',
+        error.message,
+      );
       return null;
     }
 
@@ -78,8 +96,69 @@ export async function updateTrackedOrder(
 
 export function providerReference(result: Record<string, unknown>) {
   const candidate =
-    result.reference ?? result.order_id ?? result.orderId ?? result.id ?? result.transaction_id;
+    result.reference ??
+    result.order_id ??
+    result.orderId ??
+    result.id ??
+    result.transaction_id;
   return typeof candidate === 'string' || typeof candidate === 'number'
     ? String(candidate)
     : null;
+}
+
+const purchaseDetailLabels: Record<string, string> = {
+  code: 'Code',
+  codes: 'Code',
+  electricity_token: 'Electricity token',
+  key: 'Key',
+  license: 'License',
+  license_key: 'License key',
+  license_keys: 'License key',
+  pin: 'PIN',
+  pins: 'PIN',
+  serial: 'Serial number',
+  token: 'Electricity token',
+  tokens: 'Electricity token',
+  units: 'Units',
+};
+
+function normalizedKey(key: string) {
+  return key.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+}
+
+export function extractProviderPurchaseDetails(
+  result: Record<string, unknown>,
+) {
+  const details: string[] = [];
+  const seen = new Set<string>();
+
+  const add = (value: string) => {
+    const detail = value.trim();
+    if (!detail || seen.has(detail)) return;
+    seen.add(detail);
+    details.push(detail);
+  };
+
+  const visit = (value: unknown, key = '') => {
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item, key));
+      return;
+    }
+    if (value && typeof value === 'object') {
+      Object.entries(value as Record<string, unknown>).forEach(
+        ([nestedKey, nestedValue]) => visit(nestedValue, nestedKey),
+      );
+      return;
+    }
+
+    const detailKey = normalizedKey(key);
+    const label = purchaseDetailLabels[detailKey];
+    if (!label || (typeof value !== 'string' && typeof value !== 'number')) {
+      return;
+    }
+    add(`${label}: ${String(value)}`);
+  };
+
+  visit(result);
+  return details;
 }

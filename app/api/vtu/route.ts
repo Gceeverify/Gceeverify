@@ -13,8 +13,12 @@ import {
   verifyBigisubElectricity,
 } from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
-import { providerReference, recordOrder } from '@/lib/orders';
-import { getVtuPriceNgn } from '@/lib/exchange-rates';
+import {
+  extractProviderPurchaseDetails,
+  providerReference,
+  recordOrder,
+} from '@/lib/orders';
+import { getVtuQuote } from '@/lib/vtu-pricing';
 import { withWalletCharge } from '@/lib/wallet';
 
 const phonePattern = /^0[789]\d{9}$/;
@@ -57,8 +61,8 @@ export async function GET(request: Request) {
       return Response.json({
         plans: plans.map((plan) => ({
           ...plan,
-          amount: getVtuPriceNgn(plan.amount),
-          plan_amount: getVtuPriceNgn(plan.plan_amount || plan.amount),
+          amount: plan.amount,
+          plan_amount: plan.plan_amount || plan.amount,
         })),
       });
     }
@@ -72,10 +76,7 @@ export async function GET(request: Request) {
       }
       const plans = await getBigisubCablePlans(provider);
       return Response.json({
-        plans: plans.map((plan) => ({
-          ...plan,
-          amount: getVtuPriceNgn(plan.amount),
-        })),
+        plans,
       });
     }
     if (service === 'electricity') {
@@ -86,10 +87,7 @@ export async function GET(request: Request) {
     if (service === 'exam') {
       const prices = await getBigisubExamPrices();
       return Response.json({
-        prices: prices.map((price) => ({
-          ...price,
-          amount: getVtuPriceNgn(price.amount),
-        })),
+        prices,
       });
     }
     return Response.json(
@@ -165,13 +163,10 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      // Airtime is sold at face value: the entered recharge amount is also
-      // the checkout total and wallet debit. Plan-based VTU services keep
-      // their configured retail pricing below.
-      const charge = amount;
+      const quote = getVtuQuote(amount);
       const result = await withWalletCharge({
         userId: user.id,
-        amount: charge,
+        amount: quote.totalAmount,
         description: `VTU airtime purchase for ${account}`,
         purchase: () => purchaseBigisubAirtime(network, account, amount),
       });
@@ -181,12 +176,18 @@ export async function POST(request: Request) {
         serviceName: 'Airtime recharge',
         provider: 'Bigisub',
         providerOrderId: providerReference(result),
-        amount: charge,
+        amount: quote.totalAmount,
         currency: 'NGN',
         status: 'completed',
-        metadata: { network, rechargeValue: amount },
+        metadata: {
+          network,
+          phoneNumber: account,
+          rechargeValue: amount,
+          ...quote,
+          delivery: extractProviderPurchaseDetails(result),
+        },
       });
-      return Response.json(result, { status: 201 });
+      return Response.json({ ...result, ...quote }, { status: 201 });
     }
 
     if (service === 'data') {
@@ -213,12 +214,11 @@ export async function POST(request: Request) {
           { error: 'That data plan is no longer available.' },
           { status: 409 },
         );
-      const charge = getVtuPriceNgn(
-        matchingPlan.plan_amount || matchingPlan.amount,
-      );
+      const baseAmount = matchingPlan.plan_amount || matchingPlan.amount;
+      const quote = getVtuQuote(baseAmount);
       const result = await withWalletCharge({
         userId: user.id,
-        amount: charge,
+        amount: quote.totalAmount,
         description: `VTU data purchase for ${account}`,
         purchase: () => purchaseBigisubData(network, plan, account),
       });
@@ -228,12 +228,19 @@ export async function POST(request: Request) {
         serviceName: `${matchingPlan.network_name} ${matchingPlan.plan_volume || matchingPlan.size}`,
         provider: 'Bigisub',
         providerOrderId: providerReference(result),
-        amount: charge,
+        amount: quote.totalAmount,
         currency: 'NGN',
         status: 'completed',
-        metadata: { network, plan },
+        metadata: {
+          network,
+          phoneNumber: account,
+          plan,
+          planName: matchingPlan.plan_volume || matchingPlan.size,
+          ...quote,
+          delivery: extractProviderPurchaseDetails(result),
+        },
       });
-      return Response.json(result, { status: 201 });
+      return Response.json({ ...result, ...quote }, { status: 201 });
     }
 
     if (service === 'cable') {
@@ -260,18 +267,19 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       }
-      const charge = getVtuPriceNgn(plan.amount);
+      const quote = getVtuQuote(plan.amount);
       const result = await withWalletCharge({
         userId: user.id,
-        amount: charge,
+        amount: quote.totalAmount,
         description: `VTU cable purchase for ${account}`,
-        purchase: () => purchaseBigisubCable({
-          cableType: provider,
-          cardNumber: account,
-          phone,
-          amount: plan.amount,
-          customerName: verified.customer_name,
-        }),
+        purchase: () =>
+          purchaseBigisubCable({
+            cableType: provider,
+            cardNumber: account,
+            phone,
+            amount: plan.amount,
+            customerName: verified.customer_name,
+          }),
       });
       await recordOrder({
         userId: user.id,
@@ -279,12 +287,20 @@ export async function POST(request: Request) {
         serviceName: plan.product_name,
         provider: 'Bigisub',
         providerOrderId: providerReference(result),
-        amount: charge,
+        amount: quote.totalAmount,
         currency: 'NGN',
         status: 'completed',
-        metadata: { cableProvider: provider },
+        metadata: {
+          cableProvider: provider,
+          smartcardNumber: account,
+          contactPhone: phone,
+          customerName: verified.customer_name,
+          packageName: plan.product_name,
+          ...quote,
+          delivery: extractProviderPurchaseDetails(result),
+        },
       });
-      return Response.json(result, { status: 201 });
+      return Response.json({ ...result, ...quote }, { status: 201 });
     }
 
     if (service === 'electricity') {
@@ -314,20 +330,21 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const charge = getVtuPriceNgn(amount);
+      const quote = getVtuQuote(amount);
       const result = await withWalletCharge({
         userId: user.id,
-        amount: charge,
+        amount: quote.totalAmount,
         description: `VTU electricity purchase for ${account}`,
-        purchase: () => purchaseBigisubElectricity({
-          company: provider,
-          meterNumber: account,
-          meterType,
-          phone,
-          amount,
-          customerName: verified.customer_name,
-          customerAddress: verified.customer_address,
-        }),
+        purchase: () =>
+          purchaseBigisubElectricity({
+            company: provider,
+            meterNumber: account,
+            meterType,
+            phone,
+            amount,
+            customerName: verified.customer_name,
+            customerAddress: verified.customer_address,
+          }),
       });
       await recordOrder({
         userId: user.id,
@@ -335,12 +352,21 @@ export async function POST(request: Request) {
         serviceName: `${selectedProvider.name} electricity`,
         provider: 'Bigisub',
         providerOrderId: providerReference(result),
-        amount: charge,
+        amount: quote.totalAmount,
         currency: 'NGN',
         status: 'completed',
-        metadata: { meterType, utilityValue: amount },
+        metadata: {
+          meterNumber: account,
+          contactPhone: phone,
+          customerName: verified.customer_name,
+          customerAddress: verified.customer_address ?? null,
+          meterType,
+          utilityValue: amount,
+          ...quote,
+          delivery: extractProviderPurchaseDetails(result),
+        },
       });
-      return Response.json(result, { status: 201 });
+      return Response.json({ ...result, ...quote }, { status: 201 });
     }
 
     if (service === 'exam') {
@@ -361,10 +387,10 @@ export async function POST(request: Request) {
           { error: 'That exam PIN is no longer available.' },
           { status: 409 },
         );
-      const charge = getVtuPriceNgn(price.amount * quantity);
+      const quote = getVtuQuote(price.amount * quantity);
       const result = await withWalletCharge({
         userId: user.id,
-        amount: charge,
+        amount: quote.totalAmount,
         description: `VTU ${price.name || price.exam_type} PIN purchase`,
         purchase: () => purchaseBigisubExam(price.code, quantity),
       });
@@ -374,12 +400,17 @@ export async function POST(request: Request) {
         serviceName: price.name || price.exam_type,
         provider: 'Bigisub',
         providerOrderId: providerReference(result),
-        amount: charge,
+        amount: quote.totalAmount,
         currency: 'NGN',
         status: 'completed',
-        metadata: { quantity },
+        metadata: {
+          quantity,
+          examProvider: price.name || price.exam_type,
+          ...quote,
+          delivery: extractProviderPurchaseDetails(result),
+        },
       });
-      return Response.json(result, { status: 201 });
+      return Response.json({ ...result, ...quote }, { status: 201 });
     }
 
     return Response.json(

@@ -147,6 +147,7 @@ export async function POST(request: Request) {
         unitPriceNgn: unitPrice,
         markupPercent: getResellerMarkupPercent(),
         deliveryCount: normalized.delivery.length,
+        delivery: normalized.delivery,
       },
     });
 

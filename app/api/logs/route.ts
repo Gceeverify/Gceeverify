@@ -309,6 +309,7 @@ export async function POST(request: Request) {
           unitPriceNgn,
           markupPercent: getResellerMarkupPercent(),
           deliveryCount: normalized.delivery.length,
+          delivery: normalized.delivery,
         },
       });
       return Response.json(
@@ -372,6 +373,8 @@ export async function POST(request: Request) {
         usdToNgnRate: exchangeRate.rate,
         markupPercent: getLogMarkupPercent(),
         deliveryCount: delivery.length,
+        delivery,
+        deliveryPending,
       },
     });
     return Response.json(

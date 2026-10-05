@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ServicePageShell } from '@/components/service-page-shell';
+import { getVtuQuote, getVtuServiceFeeDescription } from '@/lib/vtu-pricing';
 
 type ServiceKey = 'airtime' | 'data' | 'cable' | 'electricity' | 'exam';
 type DataPlan = {
@@ -56,6 +57,9 @@ type PurchaseResult = {
   pins?: string[];
   amount?: string | number;
   total_amount?: number;
+  baseAmount?: number;
+  serviceCharge?: number;
+  totalAmount?: number;
 };
 
 const services = [
@@ -206,6 +210,19 @@ export default function VtuPage() {
   );
   const selectedExam = examPrices.find((item) => item.code === provider);
 
+  let purchaseBaseAmount = 0;
+  if (active === 'data' && selectedDataPlan) {
+    purchaseBaseAmount =
+      selectedDataPlan.plan_amount || selectedDataPlan.amount;
+  } else if (active === 'cable' && selectedCablePlan) {
+    purchaseBaseAmount = selectedCablePlan.amount;
+  } else if (active === 'exam' && selectedExam && amount) {
+    purchaseBaseAmount = selectedExam.amount * Number(amount);
+  } else if ((active === 'airtime' || active === 'electricity') && amount) {
+    purchaseBaseAmount = Number(amount);
+  }
+  const purchaseQuote = getVtuQuote(purchaseBaseAmount);
+
   const providerLabel = useMemo(() => {
     if (active === 'airtime' || active === 'data') {
       return (
@@ -223,25 +240,17 @@ export default function VtuPage() {
 
   let purchaseLabel = '';
   if (active === 'data' && selectedDataPlan) {
-    purchaseLabel = [
-      selectedDataPlan.size,
-      selectedDataPlan.validity,
-      money(selectedDataPlan.plan_amount || selectedDataPlan.amount),
-    ].join(' · ');
+    purchaseLabel = [selectedDataPlan.size, selectedDataPlan.validity].join(
+      ' · ',
+    );
   } else if (active === 'cable' && selectedCablePlan) {
-    purchaseLabel =
-      selectedCablePlan.product_name + ' · ' + money(selectedCablePlan.amount);
+    purchaseLabel = selectedCablePlan.product_name;
   } else if (active === 'exam' && selectedExam && amount) {
-    purchaseLabel =
-      amount +
-      ' × ' +
-      selectedExam.name +
-      ' · ' +
-      money(selectedExam.amount * Number(amount));
+    purchaseLabel = amount + ' × ' + selectedExam.name;
   } else if (active === 'airtime' && amount) {
-    purchaseLabel = money(Number(amount));
+    purchaseLabel = `${money(Number(amount))} airtime`;
   } else if (amount) {
-    purchaseLabel = money(Number(amount) * 2);
+    purchaseLabel = `${money(Number(amount))} electricity value`;
   }
 
   const formReady = (() => {
@@ -352,7 +361,7 @@ export default function VtuPage() {
     <ServicePageShell
       eyebrow="VTU services"
       title={selected.title}
-      description="Buy airtime, data and everyday utilities securely through Bigisub."
+      description={`Buy airtime, data and everyday utilities securely. Service fee: ${getVtuServiceFeeDescription()}.`}
     >
       <div className="vtu-service-tabs" aria-label="VTU services">
         {services.map(({ key, label, icon: Icon }) => (
@@ -667,6 +676,24 @@ export default function VtuPage() {
                     <dd>{result.units}</dd>
                   </div>
                 )}
+                {typeof result.baseAmount === 'number' && (
+                  <div>
+                    <dt>Service value</dt>
+                    <dd>{money(result.baseAmount)}</dd>
+                  </div>
+                )}
+                {typeof result.serviceCharge === 'number' && (
+                  <div>
+                    <dt>Service charge</dt>
+                    <dd>{money(result.serviceCharge)}</dd>
+                  </div>
+                )}
+                {typeof result.totalAmount === 'number' && (
+                  <div>
+                    <dt>Total paid</dt>
+                    <dd>{money(result.totalAmount)}</dd>
+                  </div>
+                )}
                 {result.pins?.map((item, index) => (
                   <div key={item}>
                     <dt>PIN {index + 1}</dt>
@@ -730,6 +757,22 @@ export default function VtuPage() {
                     </dt>
                     <dd>{purchaseLabel}</dd>
                   </div>
+                )}
+                {purchaseQuote.baseAmount > 0 && (
+                  <>
+                    <div>
+                      <dt>Service value</dt>
+                      <dd>{money(purchaseQuote.baseAmount)}</dd>
+                    </div>
+                    <div>
+                      <dt>Service charge</dt>
+                      <dd>{money(purchaseQuote.serviceCharge)}</dd>
+                    </div>
+                    <div>
+                      <dt>Total to pay</dt>
+                      <dd>{money(purchaseQuote.totalAmount)}</dd>
+                    </div>
+                  </>
                 )}
               </dl>
               {error && (
