@@ -184,7 +184,7 @@ export async function POST(request: Request) {
         userId: user.id,
         category: 'virtual-number',
         serviceName: body.service,
-        provider: '5sim',
+        provider: 'SMSBower',
         providerOrderId: result.activationId,
         amount: customerPriceNgn,
         currency: 'NGN',
@@ -239,7 +239,7 @@ export async function POST(request: Request) {
         body.action === 'complete' ? '6' : '8',
       );
       await updateTrackedOrder(
-        '5sim',
+        'SMSBower',
         body.id,
         body.action === 'complete' ? 'completed' : 'cancelled',
       );

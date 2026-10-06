@@ -21,7 +21,6 @@ function requiredKey(
     | 'JAP_API_KEY'
     | 'BULKACC_API_KEY'
     | 'SMSBOWER_API_KEY'
-    | 'FIVESIM_API_KEY'
     | 'BIGISUB_API_KEY'
     | 'BIGISUB_TRANSACTION_PIN',
 ) {
@@ -533,7 +532,6 @@ export async function getLogOrderDelivery(orderCode: string) {
 
 const smsBowerBase = 'https://smsbower.page/stubs/handler_api.php';
 const mailBase = 'https://smsbower.page/api/mail';
-const fiveSimBase = 'https://5sim.net/v1';
 
 async function smsBowerRequest(params: Record<string, string>) {
   const url = new URL(smsBowerBase);
@@ -548,105 +546,75 @@ async function smsBowerRequest(params: Record<string, string>) {
   return text;
 }
 
-async function fiveSimRequest<T>(path: string, authenticated = false) {
-  const headers = new Headers({ Accept: 'application/json' });
-  if (authenticated) {
-    headers.set('Authorization', `Bearer ${requiredKey('FIVESIM_API_KEY')}`);
-  }
-  const response = await timedFetch(`${fiveSimBase}${path}`, { headers });
-  const contentType = response.headers.get('content-type') ?? '';
-  const result = contentType.includes('application/json')
-    ? ((await response.json()) as T)
-    : await response.text();
-  if (!response.ok || typeof result === 'string') {
-    const message =
-      typeof result === 'string' && result.trim()
-        ? result.trim()
-        : 'The number provider could not complete this request.';
-    throw new Error(message.toLowerCase());
-  }
-  return result;
-}
-
-type FiveSimProduct = { Category: string; Qty: number; Price: number };
-type FiveSimCountry = { text_en: string };
-type FiveSimOffer = { cost: number; count: number; rate?: number };
 type NumberProviderOffer = {
   providerId: string;
   price: number;
   count: number;
   rate: number | null;
 };
-type FiveSimOrder = {
-  id: number;
-  phone: string;
-  price: number;
-  status: string;
-  country: string;
-  sms: Array<{ code?: string; text?: string }> | null;
-};
-
-function productLabel(code: string) {
-  const known: Record<string, string> = {
-    aliexpress: 'AliExpress',
-    amazon: 'Amazon',
-    apple: 'Apple',
-    chatgpt: 'OpenAI / ChatGPT',
-    discord: 'Discord',
-    facebook: 'Facebook',
-    google: 'Google / YouTube',
-    instagram: 'Instagram / Threads',
-    microsoft: 'Microsoft',
-    telegram: 'Telegram',
-    tiktok: 'TikTok',
-    twitter: 'X / Twitter',
-    whatsapp: 'WhatsApp',
-  };
-  return (
-    known[code] ??
-    code
-      .replace(/(^|[-_])(\w)/g, (_, __, letter) => ` ${letter.toUpperCase()}`)
-      .trim()
-  );
-}
 
 export async function getNumberCatalog() {
-  const [products, countries] = await Promise.all([
-    fiveSimRequest<Record<string, FiveSimProduct>>('/guest/products/any/any'),
-    fiveSimRequest<Record<string, FiveSimCountry>>('/guest/countries'),
+  const [servicesText, countriesText] = await Promise.all([
+    smsBowerRequest({ action: 'getServicesList' }),
+    smsBowerRequest({ action: 'getCountries' }),
   ]);
+  const servicesResult = JSON.parse(servicesText) as {
+    services: Array<{ code: string; name: string }>;
+  };
+  const countriesResult = JSON.parse(countriesText) as Record<
+    string,
+    { id: string | null; eng: string }
+  >;
   return {
-    services: Object.entries(products)
+    services: servicesResult.services
       .filter(
-        ([, product]) => product.Category === 'activation' && product.Qty > 0,
+        (service) =>
+          Boolean(service.code?.trim()) && Boolean(service.name?.trim()),
       )
-      .map(([code]) => ({ code, name: productLabel(code) }))
       .sort((a, b) => a.name.localeCompare(b.name)),
-    countries: Object.entries(countries)
-      .map(([id, country]) => ({
-        id,
-        name: id === 'england' ? 'UK' : country.text_en,
-      }))
+    countries: Object.values(countriesResult)
+      .filter(
+        (country): country is { id: string; eng: string } =>
+          country.id !== null && Boolean(country.eng?.trim()),
+      )
+      .map((country) => ({ id: country.id, name: country.eng.trim() }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   };
 }
 
 export async function getNumberQuote(service: string, country: string) {
-  const query = new URLSearchParams({ country, product: service });
-  const prices = await fiveSimRequest<
-    Record<string, Record<string, Record<string, FiveSimOffer>>>
-  >(`/guest/prices?${query}`);
+  const [pricesText, topCountriesText, countriesText] = await Promise.all([
+    smsBowerRequest({ action: 'getPricesV3', service, country }),
+    smsBowerRequest({ action: 'getTopCountriesByService', service }),
+    smsBowerRequest({ action: 'getCountries' }),
+  ]);
+  const prices = JSON.parse(pricesText) as Record<
+    string,
+    Record<
+      string,
+      Record<string, { count: number; price: number; provider_id: number }>
+    >
+  >;
+  const countries = JSON.parse(countriesText) as Record<
+    string,
+    { id: string | null; eng: string }
+  >;
+  const countryName = countries[country]?.eng ?? '';
+  const countrySlug = countryName
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[()]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
   const providerMap = prices[country]?.[service] ?? {};
-  const available: NumberProviderOffer[] = Object.entries(providerMap)
-    .map(([operator, offer]) => {
-      const rate = Number(offer.rate);
-      return {
-        providerId: operator,
-        price: Number(offer.cost),
-        count: Number(offer.count),
-        rate: offer.rate === undefined || !Number.isFinite(rate) ? null : rate,
-      };
-    })
+  const available: NumberProviderOffer[] = Object.values(providerMap)
+    .map((provider) => ({
+      providerId: String(provider.provider_id),
+      price: Number(provider.price),
+      count: Number(provider.count),
+      rate: null,
+    }))
     .filter(
       (provider) => Number.isFinite(provider.price) && provider.count > 0,
     );
@@ -654,55 +622,70 @@ export async function getNumberQuote(service: string, country: string) {
   if (!available.length)
     throw new Error('No numbers are currently available for this selection.');
 
-  const deliveryRate = (offer: NumberProviderOffer) => offer.rate ?? -1;
-  const ranked = [...available].sort(
-    (a, b) =>
-      deliveryRate(b) - deliveryRate(a) ||
-      b.count - a.count ||
-      a.price - b.price,
+  const countryMarker = `"${countrySlug}":{`;
+  const countryStart = topCountriesText.indexOf(countryMarker);
+  let countryBlock = '';
+  if (countryStart >= 0) {
+    const objectStart = countryStart + countryMarker.length - 1;
+    let depth = 0;
+    for (let index = objectStart; index < topCountriesText.length; index += 1) {
+      if (topCountriesText[index] === '{') depth += 1;
+      if (topCountriesText[index] === '}') depth -= 1;
+      if (depth === 0) {
+        countryBlock = topCountriesText.slice(objectStart, index + 1);
+        break;
+      }
+    }
+  }
+  const goldProviderIds = Array.from(
+    countryBlock.matchAll(/"(\d+)":\{/g),
+    (match) => match[1],
   );
-  const premium = ranked[0];
-  const balanced = ranked[1] ?? null;
-  const usedProviderIds = new Set(
-    [premium, balanced]
-      .filter((offer): offer is NumberProviderOffer => Boolean(offer))
-      .map((offer) => offer.providerId),
-  );
-  const economy = [...available]
-    .filter((offer) => !usedProviderIds.has(offer.providerId))
-    .sort(
-      (a, b) =>
-        a.price - b.price ||
-        deliveryRate(b) - deliveryRate(a) ||
-        b.count - a.count,
-    )[0];
-
-  const describeRate = (provider: NumberProviderOffer) => {
-    if (provider.rate === null) return 'Not enough recent delivery data';
-    if (provider.rate === 0) return 'No recent successful delivery reported';
-    return `${provider.rate.toFixed(1)}% recent SMS delivery rate`;
+  const gold = goldProviderIds
+    .map((providerId) =>
+      available.find((provider) => provider.providerId === providerId),
+    )
+    .filter((provider): provider is NumberProviderOffer => Boolean(provider));
+  const selectedIds = new Set<string>();
+  const options: Array<
+    NumberProviderOffer & {
+      tier: 'gold' | 'silver' | 'bronze';
+      reliability: string;
+    }
+  > = [];
+  const addOption = (
+    provider: NumberProviderOffer | undefined,
+    tier: 'gold' | 'silver' | 'bronze',
+    reliability: string,
+  ) => {
+    if (!provider || selectedIds.has(provider.providerId)) return;
+    selectedIds.add(provider.providerId);
+    options.push({ ...provider, tier, reliability });
   };
-  const options = [
-    {
-      ...premium,
-      tier: 'gold' as const,
-      reliability: `${describeRate(premium)} · best available route`,
-    },
-    balanced
-      ? {
-          ...balanced,
-          tier: 'silver' as const,
-          reliability: `${describeRate(balanced)} · next-best delivery route`,
-        }
-      : null,
-    economy
-      ? {
-          ...economy,
-          tier: 'bronze' as const,
-          reliability: `${describeRate(economy)} · lowest-cost remaining route`,
-        }
-      : null,
-  ].filter((option): option is NonNullable<typeof option> => Boolean(option));
+
+  addOption(gold[0], 'gold', 'Highest-ranked Gold supplier');
+  addOption(gold[1], 'silver', 'Proven high-delivery fallback');
+
+  const remainingByStock = available
+    .filter((provider) => !selectedIds.has(provider.providerId))
+    .sort((a, b) => b.count - a.count || a.price - b.price);
+  if (options.length < 1)
+    addOption(
+      remainingByStock.shift(),
+      'gold',
+      'Best available high-stock supplier',
+    );
+  if (options.length < 2)
+    addOption(
+      remainingByStock.shift(),
+      'silver',
+      'Reliable high-stock fallback',
+    );
+
+  const economy = available
+    .filter((provider) => !selectedIds.has(provider.providerId))
+    .sort((a, b) => a.price - b.price || b.count - a.count)[0];
+  addOption(economy, 'bronze', 'Lowest-cost available supplier');
 
   return {
     lowestPrice: Math.min(...options.map((option) => option.price)),
@@ -717,46 +700,53 @@ export async function purchaseNumber(
   expectedProviderPrice: number,
   providerId: string,
 ) {
-  const path = `/user/buy/activation/${encodeURIComponent(country)}/${encodeURIComponent(providerId)}/${encodeURIComponent(service)}`;
-  const order = await fiveSimRequest<FiveSimOrder>(path, true);
-  if (!order.id || !order.phone) {
-    throw new Error('No numbers are currently available for this selection.');
+  const text = await smsBowerRequest({
+    action: 'getNumberV2',
+    service,
+    country,
+    maxPrice: String(expectedProviderPrice),
+    providerIds: providerId,
+  });
+  if (text.startsWith('{')) {
+    const result = JSON.parse(text) as {
+      activationId: string | number;
+      phoneNumber: string | number;
+      activationCost: number;
+      countryCode: string | number;
+    };
+    if (!result.activationId || !result.phoneNumber)
+      throw new Error('No numbers are currently available for this selection.');
+    return {
+      activationId: String(result.activationId),
+      phoneNumber: String(result.phoneNumber),
+      providerCostUsd: Number.isFinite(Number(result.activationCost))
+        ? Number(result.activationCost)
+        : expectedProviderPrice,
+      countryCode: String(result.countryCode || country),
+    };
   }
+  const match = text.match(/^ACCESS_NUMBER:([^:]+):(.+)$/);
+  if (!match) throw new Error(text.replaceAll('_', ' ').toLowerCase());
   return {
-    activationId: String(order.id),
-    phoneNumber: order.phone,
-    providerCostUsd: Number.isFinite(order.price)
-      ? order.price
-      : expectedProviderPrice,
-    countryCode: order.country || country,
+    activationId: match[1],
+    phoneNumber: match[2],
+    providerCostUsd: expectedProviderPrice,
+    countryCode: country,
   };
 }
 
 export async function getNumberStatus(id: string) {
-  const order = await fiveSimRequest<FiveSimOrder>(
-    `/user/check/${encodeURIComponent(id)}`,
-    true,
-  );
-  const latestSms = order.sms?.at(-1);
-  if (latestSms) {
-    return {
-      status: 'received',
-      code: latestSms.code || latestSms.text || null,
-    };
-  }
-  if (order.status === 'CANCELED' || order.status === 'TIMEOUT') {
-    return { status: 'cancelled', code: null };
-  }
-  return { status: 'waiting', code: null };
+  const text = await smsBowerRequest({ action: 'getStatus', id });
+  if (text.startsWith('STATUS_OK:'))
+    return { status: 'received', code: text.slice('STATUS_OK:'.length).trim() };
+  if (text.startsWith('STATUS_WAIT')) return { status: 'waiting', code: null };
+  if (text === 'STATUS_CANCEL') return { status: 'cancelled', code: null };
+  return { status: text.toLowerCase().replaceAll('_', ' '), code: null };
 }
 
 export async function setNumberStatus(id: string, status: '6' | '8') {
-  const action = status === '6' ? 'finish' : 'cancel';
-  const order = await fiveSimRequest<FiveSimOrder>(
-    `/user/${action}/${encodeURIComponent(id)}`,
-    true,
-  );
-  return { status: order.status.toLowerCase() };
+  const text = await smsBowerRequest({ action: 'setStatus', id, status });
+  return { status: text.toLowerCase().replaceAll('_', ' ') };
 }
 
 function virtualEmailProviderError(message?: string) {
