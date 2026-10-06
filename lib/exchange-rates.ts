@@ -42,6 +42,10 @@ const UK_DISCORD_FIXED_PRICE_NGN = {
   silver: 1500,
   bronze: 1000,
 } as const;
+const UK_WHATSAPP_FIXED_PRICE_NGN = {
+  gold: 3750,
+  silver: 3000,
+} as const;
 const NUMBER_LOW_PRICE_THRESHOLD_NGN = 1000;
 const NUMBER_LOW_PRICE_INCREASE_PERCENT = 50;
 const REGIONAL_LOW_PRICE_INCREASE_PERCENT = 30;
@@ -316,6 +320,12 @@ export function getNumberFixedPriceNgn(
     return USA_FACEBOOK_FIXED_PRICE_NGN[tier];
   }
   if (normalizedCountry === 'england') {
+    if (
+      normalizedService === 'whatsapp' &&
+      (tier === 'gold' || tier === 'silver')
+    ) {
+      return UK_WHATSAPP_FIXED_PRICE_NGN[tier];
+    }
     if (normalizedService === 'facebook') {
       return UK_FACEBOOK_FIXED_PRICE_NGN[tier];
     }
