@@ -66,6 +66,7 @@ export default async function DashboardPage() {
     <GceeverifyHome
       initialView="dashboard"
       userId={user.id}
+      signedInAt={user.last_sign_in_at ?? user.created_at}
       userName={userName}
       balance={Number(wallet?.balance ?? 0)}
       recentOrders={(orderRows ?? []).map((order) => ({

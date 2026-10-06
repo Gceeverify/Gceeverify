@@ -379,6 +379,7 @@ export function LegacyLanding({ onEnter }: { onEnter: () => void }) {
 export function GceeverifyHome({
   initialView = 'landing',
   userId = '',
+  signedInAt = '',
   userName = 'Ola',
   balance = 0,
   recentOrders = [],
@@ -388,6 +389,7 @@ export function GceeverifyHome({
 }: {
   initialView?: 'landing' | 'dashboard';
   userId?: string;
+  signedInAt?: string;
   userName?: string;
   balance?: number;
   recentOrders?: DashboardOrder[];
@@ -458,7 +460,9 @@ export function GceeverifyHome({
 
   return (
     <main className="dashboard-shell min-h-screen bg-[#07100f] text-white">
-      {userId ? <DashboardWelcomeDialog userId={userId} /> : null}
+      {userId && signedInAt ? (
+        <DashboardWelcomeDialog userId={userId} signedInAt={signedInAt} />
+      ) : null}
       <div className="ambient" aria-hidden="true" />
       <aside
         id="dashboard-sidebar"

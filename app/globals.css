@@ -6216,7 +6216,7 @@ html[data-theme='light'] .mobile-service-card {
   color: #233d23;
 }
 
-/* First-visit guidance */
+/* Authentication announcement and service guidance */
 .welcome-dialog,
 .service-information-dialog {
   width: min(94vw, 610px) !important;

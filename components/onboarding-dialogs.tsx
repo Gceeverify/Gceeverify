@@ -12,20 +12,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-function useRememberedDialog(storageKey: string) {
+function useRememberedDialog(storageKey: string, occurrence = 'seen') {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     try {
-      setOpen(localStorage.getItem(storageKey) !== 'seen');
+      setOpen(localStorage.getItem(storageKey) !== occurrence);
     } catch {
       setOpen(true);
     }
-  }, [storageKey]);
+  }, [occurrence, storageKey]);
 
   const dismiss = () => {
     try {
-      localStorage.setItem(storageKey, 'seen');
+      localStorage.setItem(storageKey, occurrence);
     } catch {
       // The dialog can still close when storage is unavailable.
     }
@@ -35,51 +35,139 @@ function useRememberedDialog(storageKey: string) {
   return { open, dismiss };
 }
 
-export function DashboardWelcomeDialog({ userId }: { userId: string }) {
-  const { open, dismiss } = useRememberedDialog(
-    `gceeverify:welcome:${userId}:v1`,
-  );
+export function DashboardWelcomeDialog({
+  userId,
+  signedInAt,
+}: {
+  userId: string;
+  signedInAt: string;
+}) {
+  const storageKey = `gceeverify:dashboard-dialogs:${userId}:v1`;
+  const [phase, setPhase] = useState<'tutorial' | 'numbers' | null>(null);
+
+  useEffect(() => {
+    try {
+      const savedPhase = localStorage.getItem(storageKey);
+      setPhase(
+        savedPhase === `${signedInAt}:complete`
+          ? null
+          : savedPhase === `${signedInAt}:tutorial`
+            ? 'numbers'
+            : 'tutorial',
+      );
+    } catch {
+      setPhase('tutorial');
+    }
+  }, [signedInAt, storageKey]);
+
+  const showNumbers = () => {
+    try {
+      localStorage.setItem(storageKey, `${signedInAt}:tutorial`);
+    } catch {
+      // The sequence can still continue when storage is unavailable.
+    }
+    setPhase('numbers');
+  };
+
+  const finish = () => {
+    try {
+      localStorage.setItem(storageKey, `${signedInAt}:complete`);
+    } catch {
+      // The dialog can still close when storage is unavailable.
+    }
+    setPhase(null);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && dismiss()}>
-      <DialogContent
-        className="welcome-dialog"
-        showCloseButton={false}
-        aria-describedby="welcome-dialog-description"
+    <>
+      <Dialog
+        open={phase === 'tutorial'}
+        onOpenChange={(nextOpen) => !nextOpen && showNumbers()}
       >
-        <div className="welcome-dialog-icon" aria-hidden="true">
-          <Sparkles />
-        </div>
-        <p className="information-dialog-eyebrow">Welcome to Gceeverify</p>
-        <DialogTitle className="information-dialog-title">
-          New to Gceeverify?
-        </DialogTitle>
-        <DialogDescription
-          id="welcome-dialog-description"
-          className="information-dialog-description"
+        <DialogContent
+          className="welcome-dialog"
+          showCloseButton={false}
+          aria-describedby="tutorial-dialog-description"
         >
-          Watch our quick tutorials to learn how to get numbers, buy logs, and
-          boost an account.
-        </DialogDescription>
-        <div className="welcome-dialog-actions">
-          <Button
-            render={<Link href="/tutorials" />}
-            onClick={dismiss}
-            className="information-primary-button"
+          <div className="welcome-dialog-icon" aria-hidden="true">
+            <Sparkles />
+          </div>
+          <p className="information-dialog-eyebrow">Welcome to Gceeverify</p>
+          <DialogTitle className="information-dialog-title">
+            New to Gceeverify?
+          </DialogTitle>
+          <DialogDescription
+            id="tutorial-dialog-description"
+            className="information-dialog-description"
           >
-            <CirclePlay /> Watch tutorials
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="information-secondary-button"
-            onClick={dismiss}
+            Watch our quick tutorials to learn how to get numbers, buy logs, and
+            boost an account.
+          </DialogDescription>
+          <div className="welcome-dialog-actions">
+            <Button
+              render={<Link href="/tutorials" />}
+              nativeButton={false}
+              onClick={showNumbers}
+              className="information-primary-button"
+            >
+              <CirclePlay /> Watch tutorials
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="information-secondary-button"
+              onClick={showNumbers}
+            >
+              Maybe later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={phase === 'numbers'}
+        onOpenChange={(nextOpen) => !nextOpen && finish()}
+      >
+        <DialogContent
+          className="welcome-dialog"
+          showCloseButton={false}
+          aria-describedby="numbers-dialog-description"
+        >
+          <div className="welcome-dialog-icon" aria-hidden="true">
+            <Phone />
+          </div>
+          <p className="information-dialog-eyebrow">Now available</p>
+          <DialogTitle className="information-dialog-title">
+            Active foreign numbers are here
+          </DialogTitle>
+          <DialogDescription
+            id="numbers-dialog-description"
+            className="information-dialog-description"
           >
-            Maybe later
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+            Get affordable foreign numbers that deliver verification codes
+            quickly. Choose an available country and service to get started.
+          </DialogDescription>
+          <div className="welcome-dialog-actions">
+            <Button
+              render={<Link href="/numbers" />}
+              nativeButton={false}
+              onClick={finish}
+              className="information-primary-button"
+            >
+              <Phone /> Buy a number
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="information-secondary-button"
+              onClick={finish}
+            >
+              Maybe later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
