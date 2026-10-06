@@ -6,6 +6,7 @@ import {
   getNumberLowPriceThresholdNgn,
   getNumberMarkupPercent,
   getNumberMinimumPriceNgn,
+  getOrderedNumberPricesNgn,
   getNumberPriceNgn,
   getNumberRegionalLowPriceIncreaseApplications,
   getNumberRegionalLowPriceIncreasePercent,
@@ -27,9 +28,10 @@ async function getPricedNumberQuote(service: string, country: string) {
     getNumberQuote(service, country),
     getUsdToNgnRate(),
   ]);
-  const options = quote.options.map(
+  const calculatedOptions = quote.options.map(
     ({ price: providerPriceUsd, ...option }) => ({
       ...option,
+      providerPriceUsd,
       price: getNumberPriceNgn(
         providerPriceUsd,
         exchangeRate.rate,
@@ -39,6 +41,15 @@ async function getPricedNumberQuote(service: string, country: string) {
       ),
     }),
   );
+  const orderedPrices = getOrderedNumberPricesNgn(
+    Object.fromEntries(
+      calculatedOptions.map((option) => [option.tier, option.price]),
+    ),
+  );
+  const options = calculatedOptions.map((option) => ({
+    ...option,
+    price: orderedPrices[option.tier] ?? option.price,
+  }));
 
   return {
     ...quote,
@@ -92,7 +103,13 @@ export async function GET(request: Request) {
           { status: 400 },
         );
       }
-      return Response.json(await getPricedNumberQuote(service, country));
+      const quote = await getPricedNumberQuote(service, country);
+      return Response.json({
+        ...quote,
+        options: quote.options.map(
+          ({ providerPriceUsd: _providerPriceUsd, ...option }) => option,
+        ),
+      });
     }
     if (action === 'status') {
       const id = searchParams.get('id');
@@ -140,10 +157,7 @@ export async function POST(request: Request) {
       body.providerId &&
       Number.isFinite(body.quotedPriceNgn)
     ) {
-      const [quote, exchangeRate] = await Promise.all([
-        getNumberQuote(body.service, body.country),
-        getUsdToNgnRate(),
-      ]);
+      const quote = await getPricedNumberQuote(body.service, body.country);
       const offer = quote.options.find(
         (option) => option.providerId === body.providerId,
       );
@@ -154,13 +168,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const customerPriceNgn = getNumberPriceNgn(
-        offer.price,
-        exchangeRate.rate,
-        offer.tier,
-        body.service,
-        body.country,
-      );
+      const customerPriceNgn = offer.price;
       if (Math.abs(customerPriceNgn - body.quotedPriceNgn!) > 0.01) {
         return Response.json(
           { error: 'The live price changed. Review the refreshed price.' },
@@ -176,7 +184,7 @@ export async function POST(request: Request) {
           purchaseNumber(
             body.service!,
             body.country!,
-            offer.price,
+            offer.providerPriceUsd,
             offer.providerId,
           ),
       });
@@ -193,8 +201,8 @@ export async function POST(request: Request) {
           country: body.country,
           serverTier: offer.tier,
           providerCostUsd: result.providerCostUsd,
-          quotedProviderCostUsd: offer.price,
-          usdToNgnRate: exchangeRate.rate,
+          quotedProviderCostUsd: offer.providerPriceUsd,
+          usdToNgnRate: quote.pricing.usdToNgnRate,
           markupPercent: getNumberMarkupPercent(),
           tierIncreasePercent: getNumberTierIncreasePercent(offer.tier),
           minimumPriceNgn: getNumberMinimumPriceNgn(

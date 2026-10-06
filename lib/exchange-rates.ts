@@ -8,10 +8,15 @@ const DEFAULT_VIRTUAL_EMAIL_LOW_PRICE_THRESHOLD_NGN = 90;
 const DEFAULT_VIRTUAL_EMAIL_LOW_PRICE_MARKUP_PERCENT = 1500;
 const DEFAULT_RESELLER_MARKUP_PERCENT = 40;
 const NUMBER_TIER_INCREASE_PERCENT = {
-  gold: 10,
-  silver: 0,
-  bronze: 20,
+  gold: 30,
+  silver: 20,
+  bronze: 10,
 } as const;
+const NUMBER_TIER_MINIMUM_GAP_PERCENT = {
+  goldOverSilver: 20,
+  silverOverBronze: 15,
+} as const;
+const NUMBER_BRONZE_MINIMUM_PRICE_NGN = 1000;
 const SNAPCHAT_MINIMUM_PRICE_NGN = {
   gold: 3700,
   silver: 2800,
@@ -52,7 +57,34 @@ const SOCIAL_NUMBER_SERVICES = new Set([
   'discord',
 ]);
 
+const SMSBOWER_SERVICE_NAMES: Record<string, string> = {
+  ds: 'discord',
+  fb: 'facebook',
+  fu: 'snapchat',
+  ig: 'instagram',
+  lf: 'tiktok',
+  tg: 'telegram',
+  tw: 'twitter',
+  wa: 'whatsapp',
+};
+
+const SMSBOWER_COUNTRY_NAMES: Record<string, string> = {
+  '12': 'usa',
+  '16': 'england',
+  '187': 'usa',
+};
+
 export type NumberPriceTier = keyof typeof NUMBER_TIER_INCREASE_PERCENT;
+
+function normalizeNumberService(service: string) {
+  const normalized = service.trim().toLowerCase();
+  return SMSBOWER_SERVICE_NAMES[normalized] ?? normalized;
+}
+
+function normalizeNumberCountry(country: string) {
+  const normalized = country.trim().toLowerCase();
+  return SMSBOWER_COUNTRY_NAMES[normalized] ?? normalized;
+}
 
 type ExchangeRateResponse = {
   result?: string;
@@ -231,12 +263,42 @@ export function getNumberTierIncreasePercent(tier: NumberPriceTier) {
   return NUMBER_TIER_INCREASE_PERCENT[tier];
 }
 
+export function getOrderedNumberPricesNgn(
+  prices: Partial<Record<NumberPriceTier, number>>,
+) {
+  const ordered = { ...prices };
+  if (ordered.bronze !== undefined) {
+    ordered.bronze = Math.max(ordered.bronze, NUMBER_BRONZE_MINIMUM_PRICE_NGN);
+  }
+  if (ordered.bronze !== undefined && ordered.silver !== undefined) {
+    ordered.silver = Math.max(
+      ordered.silver,
+      Math.round(
+        ordered.bronze *
+          (1 + NUMBER_TIER_MINIMUM_GAP_PERCENT.silverOverBronze / 100) *
+          100,
+      ) / 100,
+    );
+  }
+  if (ordered.silver !== undefined && ordered.gold !== undefined) {
+    ordered.gold = Math.max(
+      ordered.gold,
+      Math.round(
+        ordered.silver *
+          (1 + NUMBER_TIER_MINIMUM_GAP_PERCENT.goldOverSilver / 100) *
+          100,
+      ) / 100,
+    );
+  }
+  return ordered;
+}
+
 export function getNumberMinimumPriceNgn(
   service: string,
   tier: NumberPriceTier,
   _country: string,
 ) {
-  const normalizedService = service.toLowerCase();
+  const normalizedService = normalizeNumberService(service);
   if (normalizedService === 'snapchat') {
     return SNAPCHAT_MINIMUM_PRICE_NGN[tier];
   }
@@ -248,8 +310,8 @@ export function getNumberFixedPriceNgn(
   tier: NumberPriceTier,
   country: string,
 ) {
-  const normalizedService = service.toLowerCase();
-  const normalizedCountry = country.toLowerCase();
+  const normalizedService = normalizeNumberService(service);
+  const normalizedCountry = normalizeNumberCountry(country);
   if (normalizedService === 'facebook' && normalizedCountry === 'usa') {
     return USA_FACEBOOK_FIXED_PRICE_NGN[tier];
   }
@@ -276,7 +338,7 @@ export function getNumberLowPriceThresholdNgn() {
 }
 
 export function getNumberCountryIncreasePercent(country: string) {
-  const normalizedCountry = country.toLowerCase();
+  const normalizedCountry = normalizeNumberCountry(country);
   return normalizedCountry === 'usa' || normalizedCountry === 'england'
     ? 0
     : OTHER_COUNTRIES_INCREASE_PERCENT;
@@ -288,8 +350,8 @@ export function getNumberRegionalLowPriceIncreasePercent(
 ) {
   const hasFixedPrice =
     getNumberFixedPriceNgn(service, 'gold', country) !== null;
-  const normalizedCountry = country.toLowerCase();
-  const normalizedService = service.toLowerCase();
+  const normalizedCountry = normalizeNumberCountry(country);
+  const normalizedService = normalizeNumberService(service);
   const eligibleCountryAndService =
     normalizedCountry === 'england' ||
     (normalizedCountry === 'usa' &&
@@ -306,9 +368,9 @@ export function getNumberRegionalLowPriceIncreaseApplications(
   if (getNumberRegionalLowPriceIncreasePercent(service, country) === 0) {
     return 0;
   }
-  const normalizedService = service.toLowerCase();
+  const normalizedService = normalizeNumberService(service);
   const receivesSecondUkIncrease =
-    country.toLowerCase() === 'england' &&
+    normalizeNumberCountry(country) === 'england' &&
     (normalizedService === 'instagram' || normalizedService === 'twitter');
   return receivesSecondUkIncrease ? 2 : 1;
 }
