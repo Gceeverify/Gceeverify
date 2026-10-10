@@ -11,6 +11,7 @@ import {
 import { ServicePageShell } from '@/components/service-page-shell';
 import { getLogOrderDelivery } from '@/lib/provider-clients';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { syncTrackedNumberOrder } from '@/lib/number-orders';
 import { createClient } from '@/lib/supabase/server';
 
 type OrderMetadataValue =
@@ -175,6 +176,31 @@ async function restoreMissingLogDeliveries(orders: OrderRow[], userId: string) {
   );
 }
 
+async function refreshNumberOrders(orders: OrderRow[], userId: string) {
+  const activeNumbers = orders
+    .filter(
+      (order) =>
+        order.category === 'virtual-number' &&
+        order.provider === 'SMSBower' &&
+        order.provider_order_id &&
+        ['pending', 'processing'].includes(order.status),
+    )
+    .slice(0, 20);
+
+  await Promise.allSettled(
+    activeNumbers.map(async (order) => {
+      const result = await syncTrackedNumberOrder({
+        userId,
+        providerOrderId: order.provider_order_id!,
+      });
+      order.status =
+        result.orderStatus === 'refunded'
+          ? 'cancelled'
+          : result.orderStatus;
+    }),
+  );
+}
+
 export default async function OrdersPage() {
   const supabase = await createClient();
   const {
@@ -191,7 +217,10 @@ export default async function OrdersPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
   const orders = (data ?? []) as OrderRow[];
-  await restoreMissingLogDeliveries(orders, user.id);
+  await Promise.all([
+    restoreMissingLogDeliveries(orders, user.id),
+    refreshNumberOrders(orders, user.id),
+  ]);
 
   return (
     <ServicePageShell
@@ -250,6 +279,7 @@ export default async function OrdersPage() {
                 currency: order.currency || 'NGN',
               }).format(Number(order.amount));
               const status = order.status.toLowerCase();
+              const statusLabel = status === 'cancelled' ? 'Refunded' : status;
               const details = purchaseDetails(order);
               const delivery = deliveryDetails(order.metadata);
               const deliveryPending =
@@ -280,7 +310,7 @@ export default async function OrdersPage() {
                       <strong>{formattedAmount}</strong>
                       <span className={`order-history-status status-${status}`}>
                         <StatusIcon status={status} />
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                        {statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1)}
                       </span>
                       <small>
                         <CalendarDays />

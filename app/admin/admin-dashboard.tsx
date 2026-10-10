@@ -238,9 +238,9 @@ export function AdminDashboard({
                 <X />
               </span>
               <div>
-                <p>Unsuccessful</p>
+                <p>Failed / refunded</p>
                 <strong>{business.unsuccessfulOrders.toLocaleString()}</strong>
-                <small>Failed or cancelled</small>
+                <small>Failed or refunded</small>
               </div>
             </article>
           </div>
@@ -370,7 +370,9 @@ export function AdminDashboard({
                       </td>
                       <td>
                         <span className={orderStatusClass(order.status)}>
-                          {order.status}
+                          {order.status === 'cancelled'
+                            ? 'refunded'
+                            : order.status}
                         </span>
                       </td>
                       <td>{formatDate(order.createdAt)}</td>
@@ -542,7 +544,9 @@ export function AdminDashboard({
                                           purchase.status,
                                         )}
                                       >
-                                        {purchase.status}
+                                        {purchase.status === 'cancelled'
+                                          ? 'refunded'
+                                          : purchase.status}
                                       </span>
                                     </div>
                                     <dl>
@@ -621,6 +625,7 @@ function formatMoney(amount: number, currency: string) {
 
 function orderStatusClass(status: string) {
   if (status === 'completed') return styles.completedOrder;
-  if (status === 'failed' || status === 'cancelled') return styles.failedOrder;
+  if (status === 'cancelled') return styles.refundedOrder;
+  if (status === 'failed') return styles.failedOrder;
   return styles.openOrder;
 }

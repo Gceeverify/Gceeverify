@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { isAdminUser } from '@/lib/admin';
+import { syncTrackedNumberOrder } from '@/lib/number-orders';
 import { createAdminClient, hasAdminConfiguration } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -15,7 +16,9 @@ import styles from './admin.module.css';
 export const dynamic = 'force-dynamic';
 
 function isBanned(user: User) {
-  return Boolean(user.banned_until && new Date(user.banned_until).getTime() > Date.now());
+  return Boolean(
+    user.banned_until && new Date(user.banned_until).getTime() > Date.now(),
+  );
 }
 
 function displayName(user: User) {
@@ -26,7 +29,13 @@ function displayName(user: User) {
 }
 
 function initials(name: string) {
-  return name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'GU';
+  return (
+    name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || 'GU'
+  );
 }
 
 async function getAllUsers() {
@@ -34,7 +43,10 @@ async function getAllUsers() {
   const users: User[] = [];
 
   for (let page = 1; ; page += 1) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    const { data, error } = await admin.auth.admin.listUsers({
+      page,
+      perPage: 1000,
+    });
     if (error) throw error;
     users.push(...data.users);
     if (data.users.length < 1000) break;
@@ -64,7 +76,9 @@ async function getAllOrders() {
     const from = page * 1000;
     const { data, error } = await admin
       .from('orders')
-      .select('id,user_id,category,service_name,provider,provider_order_id,amount,currency,status,created_at')
+      .select(
+        'id,user_id,category,service_name,provider,provider_order_id,amount,currency,status,created_at',
+      )
       .order('created_at', { ascending: false })
       .range(from, from + 999);
     if (error) throw error;
@@ -75,13 +89,43 @@ async function getAllOrders() {
   return orders;
 }
 
+async function refreshNumberOrderStatuses(orders: OrderRecord[]) {
+  const candidates = orders
+    .filter(
+      (order) =>
+        order.category === 'virtual-number' &&
+        order.provider === 'SMSBower' &&
+        order.provider_order_id &&
+        ['pending', 'processing'].includes(order.status),
+    )
+    .slice(0, 50);
+
+  for (let index = 0; index < candidates.length; index += 5) {
+    const batch = candidates.slice(index, index + 5);
+    await Promise.allSettled(
+      batch.map(async (order) => {
+        const result = await syncTrackedNumberOrder({
+          userId: order.user_id,
+          providerOrderId: order.provider_order_id!,
+        });
+        order.status =
+          result.orderStatus === 'refunded'
+            ? 'cancelled'
+            : result.orderStatus;
+      }),
+    );
+  }
+}
+
 export default async function AdminPage({
   searchParams,
 }: {
   searchParams: Promise<{ notice?: string; error?: string }>;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect('/login?next=/admin');
   if (!isAdminUser(user)) redirect('/dashboard');
 
@@ -91,10 +135,16 @@ export default async function AdminPage({
         <section className={styles.setupCard}>
           <span>Admin setup required</span>
           <h1>Connect the secure admin service</h1>
-          <p>Add the following server-only variables, restart the app, and this account will be able to manage users.</p>
+          <p>
+            Add the following server-only variables, restart the app, and this
+            account will be able to manage users.
+          </p>
           <code>SUPABASE_SECRET_KEY=your-supabase-secret-key</code>
           <code>ADMIN_EMAILS={user.email}</code>
-          <small>Never prefix the service role key with NEXT_PUBLIC_ or expose it in browser code.</small>
+          <small>
+            Never prefix the service role key with NEXT_PUBLIC_ or expose it in
+            browser code.
+          </small>
           <Link href="/dashboard">Back to dashboard</Link>
         </section>
       </main>
@@ -106,13 +156,15 @@ export default async function AdminPage({
     getAllOrders(),
     searchParams,
   ]);
+  await refreshNumberOrderStatuses(orderRecords);
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const purchasesByUser = new Map<string, AdminPurchaseRow[]>();
   for (const order of orderRecords) {
     const purchase: AdminPurchaseRow = {
       id: order.id,
-      orderNumber: order.provider_order_id || `GC-${order.id.slice(0, 8).toUpperCase()}`,
+      orderNumber:
+        order.provider_order_id || `GC-${order.id.slice(0, 8).toUpperCase()}`,
       service: order.service_name,
       category: order.category,
       provider: order.provider,
@@ -135,13 +187,18 @@ export default async function AdminPage({
         initials: initials(name),
         isAdmin: isAdminUser(account),
         isBanned: isBanned(account),
-        isConfirmed: Boolean(account.email_confirmed_at || account.confirmed_at),
+        isConfirmed: Boolean(
+          account.email_confirmed_at || account.confirmed_at,
+        ),
         createdAt: account.created_at,
         lastSeenAt: account.last_sign_in_at ?? null,
         purchases: purchasesByUser.get(account.id) ?? [],
       };
     })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
   const chart = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(now);
@@ -159,30 +216,40 @@ export default async function AdminPage({
   });
 
   const bannedCount = rows.filter((account) => account.isBanned).length;
-  const userEmails = new Map(users.map((account) => [account.id, account.email ?? 'Unknown customer']));
-  const completedOrders = orderRecords.filter((order) => order.status === 'completed');
+  const userEmails = new Map(
+    users.map((account) => [account.id, account.email ?? 'Unknown customer']),
+  );
+  const completedOrders = orderRecords.filter(
+    (order) => order.status === 'completed',
+  );
   const revenueOrders = orderRecords.filter(
     (order) => order.status !== 'failed' && order.status !== 'cancelled',
   );
   const revenueTotals = new Map<string, number>();
   for (const order of revenueOrders) {
     const currency = order.currency || 'NGN';
-    revenueTotals.set(currency, (revenueTotals.get(currency) ?? 0) + Number(order.amount));
+    revenueTotals.set(
+      currency,
+      (revenueTotals.get(currency) ?? 0) + Number(order.amount),
+    );
   }
   if (!revenueTotals.size) revenueTotals.set('NGN', 0);
 
-  const recentOrders: AdminOrderRow[] = orderRecords.slice(0, 8).map((order) => ({
-    id: order.id,
-    orderNumber: order.provider_order_id || `GC-${order.id.slice(0, 8).toUpperCase()}`,
-    customer: userEmails.get(order.user_id) ?? 'Deleted user',
-    service: order.service_name,
-    category: order.category,
-    provider: order.provider,
-    amount: Number(order.amount),
-    currency: order.currency || 'NGN',
-    status: order.status,
-    createdAt: order.created_at,
-  }));
+  const recentOrders: AdminOrderRow[] = orderRecords
+    .slice(0, 8)
+    .map((order) => ({
+      id: order.id,
+      orderNumber:
+        order.provider_order_id || `GC-${order.id.slice(0, 8).toUpperCase()}`,
+      customer: userEmails.get(order.user_id) ?? 'Deleted user',
+      service: order.service_name,
+      category: order.category,
+      provider: order.provider,
+      amount: Number(order.amount),
+      currency: order.currency || 'NGN',
+      status: order.status,
+      createdAt: order.created_at,
+    }));
 
   return (
     <AdminDashboard
@@ -193,15 +260,27 @@ export default async function AdminPage({
         active: rows.length - bannedCount,
         admins: rows.filter((account) => account.isAdmin).length,
         banned: bannedCount,
-        newThisMonth: rows.filter((account) => new Date(account.createdAt).getTime() >= monthStart).length,
+        newThisMonth: rows.filter(
+          (account) => new Date(account.createdAt).getTime() >= monthStart,
+        ).length,
       }}
       business={{
-        revenue: [...revenueTotals].map(([currency, amount]) => ({ currency, amount })),
+        revenue: [...revenueTotals].map(([currency, amount]) => ({
+          currency,
+          amount,
+        })),
         totalOrders: orderRecords.length,
         completedOrders: completedOrders.length,
-        openOrders: orderRecords.filter((order) => order.status === 'pending' || order.status === 'processing').length,
-        unsuccessfulOrders: orderRecords.filter((order) => order.status === 'failed' || order.status === 'cancelled').length,
-        completionRate: orderRecords.length ? Math.round((completedOrders.length / orderRecords.length) * 100) : 0,
+        openOrders: orderRecords.filter(
+          (order) =>
+            order.status === 'pending' || order.status === 'processing',
+        ).length,
+        unsuccessfulOrders: orderRecords.filter(
+          (order) => order.status === 'failed' || order.status === 'cancelled',
+        ).length,
+        completionRate: orderRecords.length
+          ? Math.round((completedOrders.length / orderRecords.length) * 100)
+          : 0,
       }}
       orders={recentOrders}
       chart={chart}

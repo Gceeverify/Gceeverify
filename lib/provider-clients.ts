@@ -533,6 +533,13 @@ export async function getLogOrderDelivery(orderCode: string) {
 const smsBowerBase = 'https://smsbower.page/stubs/handler_api.php';
 const mailBase = 'https://smsbower.page/api/mail';
 
+export class SmsBowerApiError extends Error {
+  constructor(public readonly code: string) {
+    super(code.replaceAll('_', ' ').toLowerCase());
+    this.name = 'SmsBowerApiError';
+  }
+}
+
 async function smsBowerRequest(params: Record<string, string>) {
   const url = new URL(smsBowerBase);
   url.searchParams.set('api_key', requiredKey('SMSBOWER_API_KEY'));
@@ -542,7 +549,7 @@ async function smsBowerRequest(params: Record<string, string>) {
   const response = await timedFetch(url.toString());
   const text = await response.text();
   if (!response.ok || text.startsWith('BAD_') || text.startsWith('NO_'))
-    throw new Error(text.replaceAll('_', ' ').toLowerCase());
+    throw new SmsBowerApiError(text);
   return text;
 }
 
@@ -741,12 +748,21 @@ export async function getNumberStatus(id: string) {
     return { status: 'received', code: text.slice('STATUS_OK:'.length).trim() };
   if (text.startsWith('STATUS_WAIT')) return { status: 'waiting', code: null };
   if (text === 'STATUS_CANCEL') return { status: 'cancelled', code: null };
-  return { status: text.toLowerCase().replaceAll('_', ' '), code: null };
+  throw new SmsBowerApiError(text);
 }
 
 export async function setNumberStatus(id: string, status: '6' | '8') {
   const text = await smsBowerRequest({ action: 'setStatus', id, status });
-  return { status: text.toLowerCase().replaceAll('_', ' ') };
+  if (status === '6' && text === 'ACCESS_ACTIVATION') {
+    return { status: 'completed' as const };
+  }
+  if (status === '8' && text === 'ACCESS_CANCEL') {
+    return { status: 'cancelled' as const };
+  }
+  if (text === 'EARLY_CANCEL_DENIED') {
+    throw new Error('SMSBower allows cancellation two minutes after purchase.');
+  }
+  throw new SmsBowerApiError(text);
 }
 
 function virtualEmailProviderError(message?: string) {

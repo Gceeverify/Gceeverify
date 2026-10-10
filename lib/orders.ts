@@ -94,6 +94,97 @@ export async function updateTrackedOrder(
   }
 }
 
+export async function getTrackedNumberOrder(input: {
+  userId: string;
+  providerOrderId: string;
+}) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('orders')
+    .select('id,status,created_at,amount')
+    .eq('user_id', input.userId)
+    .eq('provider', 'SMSBower')
+    .eq('provider_order_id', input.providerOrderId)
+    .eq('category', 'virtual-number')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(`Number order lookup failed: ${error.message}`);
+  if (!data) throw new Error('Number order not found.');
+  return data as {
+    id: string;
+    status: OrderStatus;
+    created_at: string;
+    amount: number | string;
+  };
+}
+
+export async function reconcileTrackedNumberOrder(input: {
+  userId: string;
+  providerOrderId: string;
+  providerStatus: string;
+}) {
+  const providerStatus = input.providerStatus.trim().toLowerCase();
+  const admin = createAdminClient();
+  const order = await getTrackedNumberOrder(input);
+
+  if (providerStatus === 'received') {
+    const { error } = await admin
+      .from('orders')
+      .update({ status: 'completed' })
+      .eq('id', order.id)
+      .in('status', ['pending', 'processing']);
+
+    if (error)
+      throw new Error(`Number order completion failed: ${error.message}`);
+    return 'completed' as const;
+  }
+
+  if (providerStatus === 'cancelled') {
+    const { error } = await admin.rpc('refund_number_order', {
+      p_user_id: input.userId,
+      p_provider_order_id: input.providerOrderId,
+    });
+
+    if (error?.code === 'PGRST202') {
+      const reference = `number-refund:${order.id}`;
+      const { error: creditError } = await admin.rpc('credit_wallet', {
+        p_user_id: input.userId,
+        p_amount: Number(order.amount),
+        p_reference: reference,
+        p_description: 'Automatic refund: cancelled virtual number',
+      });
+      if (creditError) {
+        throw new Error(`Number order refund failed: ${creditError.message}`);
+      }
+
+      const { error: transactionError } = await admin
+        .from('wallet_transactions')
+        .update({ kind: 'refund', order_id: order.id })
+        .eq('reference', reference);
+      if (transactionError) {
+        throw new Error(
+          `Number refund tracking failed: ${transactionError.message}`,
+        );
+      }
+
+      const { error: statusError } = await admin
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', order.id);
+      if (statusError) {
+        throw new Error(`Number order update failed: ${statusError.message}`);
+      }
+    } else if (error) {
+      throw new Error(`Number order refund failed: ${error.message}`);
+    }
+    return 'refunded' as const;
+  }
+
+  return 'processing' as const;
+}
+
 export function providerReference(result: Record<string, unknown>) {
   const candidate =
     result.reference ??

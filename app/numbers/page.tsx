@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ArrowRight,
   Check,
@@ -66,7 +66,11 @@ type Activation = {
   phoneNumber: string;
   activationCost: number;
   countryCode: string;
+  expiresAt: string;
+  expiresInSeconds: number;
 };
+
+type ActivationStatus = 'processing' | 'completed' | 'refunded';
 
 const serverDetails = [
   {
@@ -183,8 +187,14 @@ export default function NumbersPage() {
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [activation, setActivation] = useState<Activation | null>(null);
+  const [activationStatus, setActivationStatus] =
+    useState<ActivationStatus>('processing');
+  const [checkingSms, setCheckingSms] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [smsCode, setSmsCode] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const activationId = activation?.activationId;
+  const activationExpiresAt = activation?.expiresAt;
 
   useEffect(() => {
     void (async () => {
@@ -301,8 +311,13 @@ export default function NumbersPage() {
       const result = (await response.json()) as Activation & { error?: string };
       if (!response.ok) throw new Error(result.error);
       setActivation(result);
+      setActivationStatus('processing');
+      setRemainingSeconds(result.expiresInSeconds);
+      setSmsCode(null);
       setConfirming(false);
-      setMessage('Number reserved. Send your verification code now.');
+      setMessage(
+        'Number reserved. We will check automatically and refund you if no code arrives before the timer ends.',
+      );
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -314,25 +329,35 @@ export default function NumbersPage() {
     }
   };
 
-  const checkSms = async () => {
-    if (!activation) return;
-    setLoading(true);
+  const checkSms = useCallback(async () => {
+    if (!activationId) return;
+    setCheckingSms(true);
     try {
       const response = await fetch(
-        `/api/numbers?action=status&id=${encodeURIComponent(activation.activationId)}`,
+        `/api/numbers?action=status&id=${encodeURIComponent(activationId)}`,
       );
       const result = (await response.json()) as {
         status: string;
+        orderStatus: ActivationStatus;
         code: string | null;
+        expiresAt: string;
         error?: string;
       };
       if (!response.ok) throw new Error(result.error);
-      setSmsCode(result.code);
-      setMessage(
-        result.code
-          ? 'Your verification code has arrived.'
-          : 'Still waiting for the SMS. Try again shortly.',
+      setActivation((current) =>
+        current ? { ...current, expiresAt: result.expiresAt } : current,
       );
+      setActivationStatus(result.orderStatus);
+      setSmsCode(result.code);
+      if (result.orderStatus === 'refunded') {
+        setMessage(
+          'No SMS code arrived in time. The activation was cancelled and your wallet was refunded.',
+        );
+      } else if (result.orderStatus === 'completed') {
+        setMessage('Your verification code has arrived.');
+      } else {
+        setMessage('Still waiting for the SMS. We are checking automatically.');
+      }
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -340,9 +365,37 @@ export default function NumbersPage() {
           : 'SMS status could not be checked.',
       );
     } finally {
-      setLoading(false);
+      setCheckingSms(false);
     }
-  };
+  }, [activationId]);
+
+  useEffect(() => {
+    if (!activationId || activationStatus !== 'processing') return;
+    const initialPoll = window.setTimeout(() => void checkSms(), 1_000);
+    const poll = window.setInterval(() => void checkSms(), 5_000);
+    return () => {
+      window.clearTimeout(initialPoll);
+      window.clearInterval(poll);
+    };
+  }, [activationId, activationStatus, checkSms]);
+
+  useEffect(() => {
+    if (!activationExpiresAt || activationStatus !== 'processing') return;
+    const updateRemaining = () => {
+      setRemainingSeconds(
+        Math.max(
+          0,
+          Math.ceil(
+            (new Date(activationExpiresAt).getTime() - Date.now()) / 1000,
+          ),
+        ),
+      );
+    };
+    const timer = window.setInterval(updateRemaining, 1_000);
+    return () => window.clearInterval(timer);
+  }, [activationExpiresAt, activationStatus]);
+
+  const remainingTime = `${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`;
 
   return (
     <ServicePageShell
@@ -504,26 +557,38 @@ export default function NumbersPage() {
               </span>
               <div className="sms-code">
                 <span>SMS code</span>
-                <strong>{smsCode || 'Waiting...'}</strong>
+                <strong>
+                  {smsCode ||
+                    (activationStatus === 'refunded'
+                      ? 'Refunded'
+                      : `Waiting ${remainingTime}`)}
+                </strong>
               </div>
               <Button
                 onClick={() => void checkSms()}
-                disabled={loading}
+                disabled={checkingSms || activationStatus !== 'processing'}
                 className="market-primary"
               >
-                <RefreshCw className={loading ? 'animate-spin' : ''} /> Check
-                for SMS
+                <RefreshCw className={checkingSms ? 'animate-spin' : ''} />
+                {activationStatus === 'processing'
+                  ? 'Check for SMS'
+                  : activationStatus === 'completed'
+                    ? 'Completed'
+                    : 'Refunded'}
               </Button>
-              <button
-                className="text-button"
-                onClick={() => {
-                  setActivation(null);
-                  setSmsCode(null);
-                  setMessage('');
-                }}
-              >
-                Get another number
-              </button>
+              {activationStatus !== 'processing' && (
+                <button
+                  className="text-button"
+                  onClick={() => {
+                    setActivation(null);
+                    setActivationStatus('processing');
+                    setSmsCode(null);
+                    setMessage('');
+                  }}
+                >
+                  Get another number
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -600,7 +665,7 @@ export default function NumbersPage() {
                     <ShieldCheck />
                     Refund policy
                   </span>
-                  <strong>Refund if no number is issued</strong>
+                  <strong>Automatic refund if no SMS arrives</strong>
                 </div>
               </div>
               <Button
@@ -627,7 +692,10 @@ export default function NumbersPage() {
             <Notice
               message={message}
               tone={
-                message.includes('arrived') || message.includes('reserved')
+                message.includes('arrived') ||
+                message.includes('reserved') ||
+                message.includes('refunded') ||
+                message.includes('checking automatically')
                   ? 'success'
                   : 'error'
               }

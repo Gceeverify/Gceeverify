@@ -13,11 +13,15 @@ import {
   getNumberTierIncreasePercent,
   getUsdToNgnRate,
 } from '@/lib/exchange-rates';
-import { recordOrder, updateTrackedOrder } from '@/lib/orders';
+import {
+  getNumberActivationTimeoutMs,
+  numberActivationExpiresAt,
+  syncTrackedNumberOrder,
+} from '@/lib/number-orders';
+import { reconcileTrackedNumberOrder, recordOrder } from '@/lib/orders';
 import {
   getNumberCatalog,
   getNumberQuote,
-  getNumberStatus,
   purchaseNumber,
   setNumberStatus,
 } from '@/lib/provider-clients';
@@ -112,6 +116,13 @@ export async function GET(request: Request) {
       });
     }
     if (action === 'status') {
+      const user = await getCurrentUser();
+      if (!user) {
+        return Response.json(
+          { error: 'Sign in to continue.' },
+          { status: 401 },
+        );
+      }
       const id = searchParams.get('id');
       if (!id) {
         return Response.json(
@@ -119,7 +130,11 @@ export async function GET(request: Request) {
           { status: 400 },
         );
       }
-      return Response.json(await getNumberStatus(id));
+      const result = await syncTrackedNumberOrder({
+        userId: user.id,
+        providerOrderId: id,
+      });
+      return Response.json(result);
     }
     return Response.json(await getNumberCatalog());
   } catch (error) {
@@ -236,6 +251,8 @@ export async function POST(request: Request) {
           phoneNumber: result.phoneNumber,
           activationCost: customerPriceNgn,
           countryCode: result.countryCode,
+          expiresAt: numberActivationExpiresAt(),
+          expiresInSeconds: getNumberActivationTimeoutMs() / 1_000,
         },
         { status: 201 },
       );
@@ -246,12 +263,12 @@ export async function POST(request: Request) {
         body.id,
         body.action === 'complete' ? '6' : '8',
       );
-      await updateTrackedOrder(
-        'SMSBower',
-        body.id,
-        body.action === 'complete' ? 'completed' : 'cancelled',
-      );
-      return Response.json(result);
+      const orderStatus = await reconcileTrackedNumberOrder({
+        userId: user.id,
+        providerOrderId: body.id,
+        providerStatus: body.action === 'complete' ? 'received' : 'cancelled',
+      });
+      return Response.json({ ...result, orderStatus });
     }
     return Response.json(
       { error: 'Complete the number request.' },
