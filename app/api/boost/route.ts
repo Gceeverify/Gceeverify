@@ -22,6 +22,8 @@ const platforms = [
   'pinterest',
 ];
 
+const BOOST_MINIMUM_QUANTITY = 100;
+
 function platformFor(name: string, category: string) {
   const text = `${category} ${name}`.toLowerCase();
   return platforms.find((platform) => text.includes(platform)) ?? 'more';
@@ -112,10 +114,12 @@ export async function POST(request: Request) {
       !Number.isInteger(body.service) ||
       !body.link ||
       !Number.isInteger(body.quantity) ||
-      body.quantity! <= 0
+      body.quantity! < BOOST_MINIMUM_QUANTITY
     ) {
       return Response.json(
-        { error: 'Complete all order details.' },
+        {
+          error: `Complete all order details. The minimum quantity is ${BOOST_MINIMUM_QUANTITY}.`,
+        },
         { status: 400 },
       );
     }
@@ -130,6 +134,22 @@ export async function POST(request: Request) {
         { error: 'That service is no longer available.' },
         { status: 409 },
       );
+    const serviceMinimum = Math.max(
+      BOOST_MINIMUM_QUANTITY,
+      Number(service.min) || 0,
+    );
+    const serviceMaximum = Number(service.max);
+    if (
+      body.quantity! < serviceMinimum ||
+      (Number.isFinite(serviceMaximum) && body.quantity! > serviceMaximum)
+    ) {
+      return Response.json(
+        {
+          error: `Choose a quantity between ${serviceMinimum.toLocaleString()} and ${serviceMaximum.toLocaleString()}.`,
+        },
+        { status: 400 },
+      );
+    }
     const customerRateNgn = getBoostRateNgn(
       Number(service.rate),
       exchangeRate.rate,

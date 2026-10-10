@@ -68,6 +68,12 @@ const nairaFormatter = new Intl.NumberFormat('en-NG', {
   maximumFractionDigits: 2,
 });
 
+const BOOST_MINIMUM_QUANTITY = 100;
+
+function minimumQuantity(service: BoostService) {
+  return Math.max(BOOST_MINIMUM_QUANTITY, Number(service.min) || 0);
+}
+
 function formatNaira(value: number) {
   return nairaFormatter.format(value);
 }
@@ -203,7 +209,7 @@ export default function BoostPage() {
     const id = Number(value);
     const service = data?.services.find((item) => item.service === id);
     setSelectedId(service?.service ?? null);
-    setQuantity(service?.min ?? '');
+    setQuantity(service ? String(minimumQuantity(service)) : '');
     setConfirming(false);
     setMessage('');
   }
@@ -211,6 +217,15 @@ export default function BoostPage() {
   async function order() {
     if (!selected || !link || !quantity) {
       setMessage('Choose a service and complete the order details.');
+      return;
+    }
+    const orderQuantity = Number(quantity);
+    const serviceMinimum = minimumQuantity(selected);
+    if (!Number.isInteger(orderQuantity) || orderQuantity < serviceMinimum) {
+      setMessage(
+        `The minimum quantity for this service is ${serviceMinimum.toLocaleString()}.`,
+      );
+      setConfirming(false);
       return;
     }
     if (!confirming) {
@@ -407,7 +422,7 @@ export default function BoostPage() {
                 <dl className="boost-service-facts">
                   <div>
                     <dt>Minimum</dt>
-                    <dd>{Number(selected.min).toLocaleString()}</dd>
+                    <dd>{minimumQuantity(selected).toLocaleString()}</dd>
                   </div>
                   <div>
                     <dt>Maximum</dt>
@@ -466,7 +481,7 @@ export default function BoostPage() {
                       <Input
                         id="boost-quantity"
                         type="number"
-                        min={selected.min}
+                        min={minimumQuantity(selected)}
                         max={selected.max}
                         value={quantity}
                         onChange={(event) => {
