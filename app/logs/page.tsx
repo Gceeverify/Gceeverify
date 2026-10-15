@@ -70,7 +70,7 @@ function CategoryIcon({ name }: { name: string }) {
         ? Send
         : category === 'email services'
           ? BriefcaseBusiness
-          : category === 'streaming & vpn'
+          : category === 'streaming'
             ? Wifi
             : category === 'games'
               ? Play
@@ -82,7 +82,7 @@ export default function LogsPage() {
   const [data, setData] = useState<ProductData | null>(null);
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
-  const [group, setGroup] = useState('Social Media');
+  const [group, setGroup] = useState('all');
   const [sort, setSort] = useState('default');
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Product | null>(null);
@@ -287,7 +287,9 @@ export default function LogsPage() {
                 }}
               >
                 <CategoryIcon name={item} />
-                <span className="category-name">{item}</span>
+                <span className="category-name">
+                  {item === 'all' ? 'All accounts' : item}
+                </span>
                 <span className="category-count">
                   {(data.groupCounts[item] ?? 0).toLocaleString()}
                 </span>

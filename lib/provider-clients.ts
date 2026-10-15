@@ -364,7 +364,6 @@ type LogProductCatalog = {
 const LOG_CATALOG_CACHE_MS = 5 * 60 * 1000;
 const LOG_CATALOG_PARTIAL_CACHE_MS = 2 * 60 * 1000;
 const LOG_CATALOG_PAGE_SIZE = 100;
-const LOG_CATALOG_MAX_PAGES = 12;
 const LOG_CATALOG_BATCH_SIZE = 1;
 const LOG_CATALOG_FAST_WAIT_MS = 250;
 type LogCatalogResult = {
@@ -389,7 +388,19 @@ async function fetchLogProductsPage(page: number, pageSize: number) {
   };
   if (!response.ok || !result.data)
     throw new Error(result.message || 'Account products could not be loaded.');
-  return result.data;
+  return {
+    ...result.data,
+    items: result.data.items.map((item) => ({
+      code: item.code,
+      name: item.name,
+      description: item.description?.slice(0, 160),
+      categoryName: item.categoryName,
+      groupName: item.groupName,
+      inStock: item.inStock,
+      min: item.min,
+      price: item.price,
+    })),
+  };
 }
 
 export async function getLogProducts(page: number, pageSize: number) {
@@ -405,22 +416,36 @@ function getLogCatalogFirstPage() {
   return logFirstPageRequest;
 }
 
+function combineLogCatalogPages(
+  firstPage: LogProductCatalog,
+  pages: LogProductCatalog[],
+) {
+  const items = Array.from(
+    new Map(
+      pages.flatMap((page) => page.items).map((item) => [item.code, item]),
+    ).values(),
+  );
+  return {
+    ...firstPage,
+    items,
+    pageIndex: 1,
+    pageSize: items.length,
+    totalPages: 1,
+  };
+}
+
 async function fetchLogCatalog() {
   const firstPage = await getLogCatalogFirstPage();
   const pages = [firstPage];
   let failedPageCount = 0;
+  const failedPageNumbers: number[] = [];
   logCatalogCache = {
     data: firstPage,
     complete: false,
     expiresAt: Date.now() + LOG_CATALOG_PARTIAL_CACHE_MS,
   };
   const remainingPageNumbers = Array.from(
-    {
-      length: Math.max(
-        0,
-        Math.min(firstPage.totalPages, LOG_CATALOG_MAX_PAGES) - 1,
-      ),
-    },
+    { length: Math.max(0, firstPage.totalPages - 1) },
     (_, index) => index + 2,
   );
 
@@ -442,36 +467,69 @@ async function fetchLogCatalog() {
         return;
       }
       failedPageCount += 1;
+      failedPageNumbers.push(batch[index]);
       console.warn(
         `[logs] Catalog page ${batch[index]} could not be loaded:`,
         result.reason instanceof Error ? result.reason.message : result.reason,
       );
     });
+    logCatalogCache = {
+      data: combineLogCatalogPages(firstPage, pages),
+      complete: false,
+      expiresAt: Date.now() + LOG_CATALOG_PARTIAL_CACHE_MS,
+    };
   }
 
-  const items = Array.from(
-    new Map(
-      pages.flatMap((page) => page.items).map((item) => [item.code, item]),
-    ).values(),
-  );
-  const data: LogProductCatalog = {
-    ...firstPage,
-    items,
-    pageIndex: 1,
-    pageSize: items.length,
-    totalPages: 1,
-  };
+  for (const page of failedPageNumbers) {
+    try {
+      pages.push(await getLogProducts(page, firstPage.pageSize));
+      failedPageCount -= 1;
+      logCatalogCache = {
+        data: combineLogCatalogPages(firstPage, pages),
+        complete: false,
+        expiresAt: Date.now() + LOG_CATALOG_PARTIAL_CACHE_MS,
+      };
+    } catch (error) {
+      console.warn(
+        `[logs] Catalog page ${page} retry failed:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
   return {
-    data,
-    complete:
-      failedPageCount === 0 && firstPage.totalPages <= LOG_CATALOG_MAX_PAGES,
+    data: combineLogCatalogPages(firstPage, pages),
+    complete: failedPageCount === 0,
   };
 }
+
+const getCachedCompleteLogCatalog = unstable_cache(
+  async () => {
+    const result = await fetchLogCatalog();
+    if (!result.complete) {
+      logCatalogCache = {
+        ...result,
+        expiresAt: Date.now() + LOG_CATALOG_PARTIAL_CACHE_MS,
+      };
+      throw new Error('The complete account catalog could not be loaded.');
+    }
+    logCatalogCache = {
+      ...result,
+      expiresAt: Date.now() + LOG_CATALOG_CACHE_MS,
+    };
+    return result;
+  },
+  ['bulkacc-log-catalog-v3'],
+  {
+    revalidate: 300,
+    tags: ['log-catalog'],
+  },
+);
 
 function startLogCatalogRefresh() {
   if (logCatalogRequest) return logCatalogRequest;
 
-  logCatalogRequest = fetchLogCatalog()
+  logCatalogRequest = getCachedCompleteLogCatalog()
     .then((result) => {
       logCatalogCache = {
         ...result,
@@ -526,7 +584,15 @@ export async function getLogCatalogForBrowse(): Promise<{
 }
 
 export async function warmLogCatalog() {
-  if (logCatalogCache && logCatalogCache.expiresAt > Date.now()) return;
+  if (logCatalogRequest) {
+    await logCatalogRequest;
+    return;
+  }
+  if (
+    logCatalogCache?.complete &&
+    logCatalogCache.expiresAt > Date.now()
+  )
+    return;
   await startLogCatalogRefresh();
 }
 

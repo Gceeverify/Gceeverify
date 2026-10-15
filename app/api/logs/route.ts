@@ -33,7 +33,7 @@ const LOG_CATEGORIES = [
   'Software & Other',
 ] as const;
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function getLogCategory(item: {
   name: string;
@@ -166,14 +166,19 @@ export async function GET(request: Request) {
     const availableProducts = data.items.filter(
       (item) => item.inStock > 0 && !isPrivateNetworkProduct(item),
     );
-    const groups = [...LOG_CATEGORIES];
+    const groups = ['all', ...LOG_CATEGORIES];
     const groupCounts = availableProducts.reduce<Record<string, number>>(
       (counts, item) => {
         const category = getLogCategory(item);
         counts[category] = (counts[category] ?? 0) + 1;
         return counts;
       },
-      Object.fromEntries(LOG_CATEGORIES.map((category) => [category, 0])),
+      {
+        all: availableProducts.length,
+        ...Object.fromEntries(
+          LOG_CATEGORIES.map((category) => [category, 0]),
+        ),
+      },
     );
     const matchingProducts = availableProducts
       .filter(
