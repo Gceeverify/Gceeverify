@@ -128,7 +128,7 @@ export default function LogsPage() {
     if (data?.catalogStatus !== 'warming') return;
     const timer = setTimeout(
       () => setCatalogRefresh((value) => value + 1),
-      5_000,
+      60_000,
     );
     return () => clearTimeout(timer);
   }, [data?.catalogStatus, catalogRefresh]);

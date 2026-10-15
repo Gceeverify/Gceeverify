@@ -11,6 +11,11 @@ async function timedFetch(input: string, init?: RequestInit) {
       cache: 'no-store',
       signal: controller.signal,
     });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('The provider took too long to respond. Please try again.');
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -357,11 +362,20 @@ type LogProductCatalog = {
 };
 
 const LOG_CATALOG_CACHE_MS = 5 * 60 * 1000;
-const LOG_CATALOG_BATCH_SIZE = 6;
+const LOG_CATALOG_PARTIAL_CACHE_MS = 2 * 60 * 1000;
+const LOG_CATALOG_PAGE_SIZE = 100;
+const LOG_CATALOG_MAX_PAGES = 12;
+const LOG_CATALOG_BATCH_SIZE = 1;
 const LOG_CATALOG_FAST_WAIT_MS = 250;
-let logCatalogCache: { data: LogProductCatalog; expiresAt: number } | null =
-  null;
-let logCatalogRequest: Promise<LogProductCatalog> | null = null;
+type LogCatalogResult = {
+  data: LogProductCatalog;
+  complete: boolean;
+};
+let logCatalogCache:
+  | (LogCatalogResult & { expiresAt: number })
+  | null = null;
+let logCatalogRequest: Promise<LogCatalogResult> | null = null;
+let logFirstPageRequest: Promise<LogProductCatalog> | null = null;
 
 async function fetchLogProductsPage(page: number, pageSize: number) {
   const url = new URL('https://bulkacc.com/api/products/list');
@@ -382,11 +396,31 @@ export async function getLogProducts(page: number, pageSize: number) {
   return fetchLogProductsPage(page, pageSize);
 }
 
+function getLogCatalogFirstPage() {
+  if (logFirstPageRequest) return logFirstPageRequest;
+
+  logFirstPageRequest = getLogProducts(1, LOG_CATALOG_PAGE_SIZE).finally(() => {
+    logFirstPageRequest = null;
+  });
+  return logFirstPageRequest;
+}
+
 async function fetchLogCatalog() {
-  const firstPage = await getLogProducts(1, 50);
+  const firstPage = await getLogCatalogFirstPage();
   const pages = [firstPage];
+  let failedPageCount = 0;
+  logCatalogCache = {
+    data: firstPage,
+    complete: false,
+    expiresAt: Date.now() + LOG_CATALOG_PARTIAL_CACHE_MS,
+  };
   const remainingPageNumbers = Array.from(
-    { length: Math.max(0, firstPage.totalPages - 1) },
+    {
+      length: Math.max(
+        0,
+        Math.min(firstPage.totalPages, LOG_CATALOG_MAX_PAGES) - 1,
+      ),
+    },
     (_, index) => index + 2,
   );
 
@@ -399,11 +433,20 @@ async function fetchLogCatalog() {
       start,
       start + LOG_CATALOG_BATCH_SIZE,
     );
-    pages.push(
-      ...(await Promise.all(
-        batch.map((page) => getLogProducts(page, firstPage.pageSize)),
-      )),
+    const results = await Promise.allSettled(
+      batch.map((page) => getLogProducts(page, firstPage.pageSize)),
     );
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        pages.push(result.value);
+        return;
+      }
+      failedPageCount += 1;
+      console.warn(
+        `[logs] Catalog page ${batch[index]} could not be loaded:`,
+        result.reason instanceof Error ? result.reason.message : result.reason,
+      );
+    });
   }
 
   const items = Array.from(
@@ -418,19 +461,27 @@ async function fetchLogCatalog() {
     pageSize: items.length,
     totalPages: 1,
   };
-  return data;
+  return {
+    data,
+    complete:
+      failedPageCount === 0 && firstPage.totalPages <= LOG_CATALOG_MAX_PAGES,
+  };
 }
 
 function startLogCatalogRefresh() {
   if (logCatalogRequest) return logCatalogRequest;
 
   logCatalogRequest = fetchLogCatalog()
-    .then((data) => {
+    .then((result) => {
       logCatalogCache = {
-        data,
-        expiresAt: Date.now() + LOG_CATALOG_CACHE_MS,
+        ...result,
+        expiresAt:
+          Date.now() +
+          (result.complete
+            ? LOG_CATALOG_CACHE_MS
+            : LOG_CATALOG_PARTIAL_CACHE_MS),
       };
-      return data;
+      return result;
     })
     .finally(() => {
       logCatalogRequest = null;
@@ -444,7 +495,10 @@ export async function getLogCatalogForBrowse(): Promise<{
   catalogStatus: 'fresh' | 'warming';
 }> {
   if (logCatalogCache && logCatalogCache.expiresAt > Date.now()) {
-    return { data: logCatalogCache.data, catalogStatus: 'fresh' };
+    return {
+      data: logCatalogCache.data,
+      catalogStatus: logCatalogCache.complete ? 'fresh' : 'warming',
+    };
   }
 
   if (logCatalogCache) {
@@ -454,21 +508,25 @@ export async function getLogCatalogForBrowse(): Promise<{
 
   const refresh = startLogCatalogRefresh();
   const fastResult = await Promise.race([
-    refresh.then((data) => data),
+    refresh.catch(() => null),
     new Promise<null>((resolve) =>
       setTimeout(() => resolve(null), LOG_CATALOG_FAST_WAIT_MS),
     ),
   ]);
 
   if (fastResult) {
-    return { data: fastResult, catalogStatus: 'fresh' };
+    return {
+      data: fastResult.data,
+      catalogStatus: fastResult.complete ? 'fresh' : 'warming',
+    };
   }
 
-  const firstPage = await getLogProducts(1, 50);
+  const firstPage = await getLogCatalogFirstPage();
   return { data: firstPage, catalogStatus: 'warming' };
 }
 
 export async function warmLogCatalog() {
+  if (logCatalogCache && logCatalogCache.expiresAt > Date.now()) return;
   await startLogCatalogRefresh();
 }
 
@@ -478,7 +536,7 @@ export async function getAllLogProducts() {
   }
 
   try {
-    return await startLogCatalogRefresh();
+    return (await startLogCatalogRefresh()).data;
   } catch (error) {
     if (logCatalogCache) return logCatalogCache.data;
     throw error;
