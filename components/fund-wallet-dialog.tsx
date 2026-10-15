@@ -25,23 +25,39 @@ export type VirtualAccountDetails = {
   accountName: string;
 };
 
-type VirtualAccountStatus = 'active' | 'provisioning' | 'failed' | 'missing';
+export type VirtualAccountStatus =
+  | 'active'
+  | 'provisioning'
+  | 'failed'
+  | 'missing';
 
 export function FundWalletDialog({
   className,
   virtualAccount = null,
   virtualAccountStatus = 'missing',
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: {
   className?: string;
   virtualAccount?: VirtualAccountDetails | null;
   virtualAccountStatus?: VirtualAccountStatus;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [account, setAccount] = useState(virtualAccount);
   const [status, setStatus] = useState(virtualAccountStatus);
   const [pending, setPending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const open = controlledOpen ?? internalOpen;
+
+  const setOpen = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   const createAccount = useCallback(async () => {
     setPending(true);
@@ -106,10 +122,12 @@ export function FundWalletDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className={className} />}>
-        <Plus />
-        <span>Add funds</span>
-      </DialogTrigger>
+      {hideTrigger ? null : (
+        <DialogTrigger render={<Button className={className} />}>
+          <Plus />
+          <span>Add funds</span>
+        </DialogTrigger>
+      )}
       <DialogContent className="fund-wallet-dialog border-white/10 bg-[#0d1918] text-white sm:max-w-xl">
         <DialogHeader className="text-left">
           <div className="mb-2 flex items-center gap-3">

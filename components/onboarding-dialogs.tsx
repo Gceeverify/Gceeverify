@@ -2,8 +2,23 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { AlertCircle, CirclePlay, Phone, Sparkles, X } from 'lucide-react';
+import {
+  AlertCircle,
+  BadgePercent,
+  CirclePlay,
+  Gift,
+  Hourglass,
+  Phone,
+  Sparkles,
+  WalletCards,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  FundWalletDialog,
+  type VirtualAccountDetails,
+  type VirtualAccountStatus,
+} from '@/components/fund-wallet-dialog';
 import {
   Dialog,
   DialogClose,
@@ -38,27 +53,104 @@ function useRememberedDialog(storageKey: string, occurrence = 'seen') {
 export function DashboardWelcomeDialog({
   userId,
   signedInAt,
+  isNewAccount,
+  userName,
+  balance,
+  virtualAccount,
+  virtualAccountStatus,
 }: {
   userId: string;
   signedInAt: string;
+  isNewAccount: boolean;
+  userName: string;
+  balance: number;
+  virtualAccount: VirtualAccountDetails | null;
+  virtualAccountStatus: VirtualAccountStatus;
 }) {
-  const storageKey = `gceeverify:dashboard-dialogs:${userId}:v1`;
-  const [phase, setPhase] = useState<'tutorial' | 'numbers' | null>(null);
+  const storageKey = `gceeverify:dashboard-dialogs:${userId}:v2`;
+  const expiryKey = `gceeverify:funding-offer:${userId}:${signedInAt}:v1`;
+  const [phase, setPhase] = useState<'offer' | 'tutorial' | 'numbers' | null>(
+    null,
+  );
+  const [remainingSeconds, setRemainingSeconds] = useState(5 * 60);
+  const [fundingOpen, setFundingOpen] = useState(false);
+  const firstName = userName.trim().split(/\s+/)[0] || 'there';
+  const hasLowBalance = balance <= 1000;
+  const offerTitle = isNewAccount
+    ? `Welcome, ${firstName}`
+    : hasLowBalance
+      ? 'Give your wallet a boost'
+      : `Welcome back, ${firstName}`;
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+  const countdown = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   useEffect(() => {
-    try {
-      const savedPhase = localStorage.getItem(storageKey);
-      setPhase(
-        savedPhase === `${signedInAt}:complete`
-          ? null
-          : savedPhase === `${signedInAt}:tutorial`
-            ? 'numbers'
-            : 'tutorial',
-      );
-    } catch {
-      setPhase('tutorial');
-    }
+    const frame = window.requestAnimationFrame(() => {
+      try {
+        const savedPhase = localStorage.getItem(storageKey);
+        setPhase(
+          savedPhase === `${signedInAt}:complete`
+            ? null
+            : savedPhase === `${signedInAt}:tutorial`
+              ? 'numbers'
+              : savedPhase === `${signedInAt}:offer`
+                ? 'tutorial'
+                : 'offer',
+        );
+      } catch {
+        setPhase('offer');
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [signedInAt, storageKey]);
+
+  useEffect(() => {
+    if (phase !== 'offer') return;
+
+    let expiresAt = Date.now() + 5 * 60 * 1000;
+    try {
+      const storedExpiry = localStorage.getItem(expiryKey);
+      const savedExpiry = Number(storedExpiry);
+      if (storedExpiry !== null && Number.isFinite(savedExpiry)) {
+        expiresAt = savedExpiry;
+      } else {
+        localStorage.setItem(expiryKey, String(expiresAt));
+      }
+    } catch {
+      // The countdown can still run when storage is unavailable.
+    }
+
+    const updateCountdown = () => {
+      const nextRemaining = Math.max(
+        0,
+        Math.ceil((expiresAt - Date.now()) / 1000),
+      );
+      setRemainingSeconds(nextRemaining);
+      if (nextRemaining === 0) {
+        try {
+          localStorage.setItem(storageKey, `${signedInAt}:offer`);
+        } catch {
+          // The welcome sequence can still continue without storage.
+        }
+        setPhase('tutorial');
+      }
+    };
+
+    updateCountdown();
+    const timer = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(timer);
+  }, [expiryKey, phase, signedInAt, storageKey]);
+
+  const finishOffer = (openFunding = false) => {
+    try {
+      localStorage.setItem(storageKey, `${signedInAt}:offer`);
+    } catch {
+      // The welcome sequence can still continue when storage is unavailable.
+    }
+    setPhase(openFunding ? null : 'tutorial');
+    if (openFunding) setFundingOpen(true);
+  };
 
   const showNumbers = () => {
     try {
@@ -80,6 +172,89 @@ export function DashboardWelcomeDialog({
 
   return (
     <>
+      <Dialog
+        open={phase === 'offer'}
+        onOpenChange={(nextOpen) => !nextOpen && finishOffer()}
+      >
+        <DialogContent
+          className="funding-offer-dialog"
+          showCloseButton={false}
+          aria-describedby="funding-offer-description"
+        >
+          <button
+            type="button"
+            className="funding-offer-close"
+            onClick={() => finishOffer()}
+            aria-label="Close funding offer"
+          >
+            <X />
+          </button>
+
+          <div className="funding-offer-badge" aria-hidden="true">
+            <Gift />
+          </div>
+          <p className="funding-offer-eyebrow">
+            <BadgePercent /> Limited funding offer
+          </p>
+          <DialogTitle className="funding-offer-title">
+            {offerTitle}
+          </DialogTitle>
+          <DialogDescription
+            id="funding-offer-description"
+            className="funding-offer-description"
+          >
+            {hasLowBalance
+              ? 'Your balance is running low. Add any amount now and get '
+              : 'Add any amount to your wallet now and get '}
+            <strong>15% extra</strong> to spend on your next order.
+          </DialogDescription>
+
+          <div
+            className="funding-offer-timer"
+            role="timer"
+            aria-label={`${countdown} remaining`}
+          >
+            <span>
+              <Hourglass /> Offer expires in
+            </span>
+            <strong>{countdown}</strong>
+            <div aria-hidden="true">
+              <i
+                style={{
+                  transform: `scaleX(${remainingSeconds / (5 * 60)})`,
+                }}
+              />
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            className="funding-offer-action"
+            onClick={() => finishOffer(true)}
+          >
+            <WalletCards /> Add funds &amp; claim bonus
+          </Button>
+          <button
+            type="button"
+            className="funding-offer-later"
+            onClick={() => finishOffer()}
+          >
+            Maybe later
+          </button>
+        </DialogContent>
+      </Dialog>
+
+      <FundWalletDialog
+        open={fundingOpen}
+        onOpenChange={(nextOpen) => {
+          setFundingOpen(nextOpen);
+          if (!nextOpen) setPhase('tutorial');
+        }}
+        hideTrigger
+        virtualAccount={virtualAccount}
+        virtualAccountStatus={virtualAccountStatus}
+      />
+
       <Dialog
         open={phase === 'tutorial'}
         onOpenChange={(nextOpen) => !nextOpen && showNumbers()}

@@ -380,6 +380,7 @@ export function GceeverifyHome({
   initialView = 'landing',
   userId = '',
   signedInAt = '',
+  isNewAccount = false,
   userName = 'Ola',
   balance = 0,
   recentOrders = [],
@@ -390,6 +391,7 @@ export function GceeverifyHome({
   initialView?: 'landing' | 'dashboard';
   userId?: string;
   signedInAt?: string;
+  isNewAccount?: boolean;
   userName?: string;
   balance?: number;
   recentOrders?: DashboardOrder[];
@@ -461,7 +463,15 @@ export function GceeverifyHome({
   return (
     <main className="dashboard-shell min-h-screen bg-[#07100f] text-white">
       {userId && signedInAt ? (
-        <DashboardWelcomeDialog userId={userId} signedInAt={signedInAt} />
+        <DashboardWelcomeDialog
+          userId={userId}
+          signedInAt={signedInAt}
+          isNewAccount={isNewAccount}
+          userName={userName}
+          balance={balance}
+          virtualAccount={virtualAccount}
+          virtualAccountStatus={virtualAccountStatus}
+        />
       ) : null}
       <div className="ambient" aria-hidden="true" />
       <aside

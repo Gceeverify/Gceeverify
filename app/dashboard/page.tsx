@@ -67,6 +67,11 @@ export default async function DashboardPage() {
       initialView="dashboard"
       userId={user.id}
       signedInAt={user.last_sign_in_at ?? user.created_at}
+      isNewAccount={
+        new Date(user.last_sign_in_at ?? user.created_at).getTime() -
+          new Date(user.created_at).getTime() <=
+        7 * 24 * 60 * 60 * 1000
+      }
       userName={userName}
       balance={Number(wallet?.balance ?? 0)}
       recentOrders={(orderRows ?? []).map((order) => ({
