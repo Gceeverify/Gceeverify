@@ -33,6 +33,12 @@ const LOG_CATEGORIES = [
   'Software & Other',
 ] as const;
 
+const FACEBOOK_PAGE_FIXED_PRICES_NGN = new Map([
+  [46, 2050], // RANDOM FB PAGE CREATED YOURSELF
+  [35, 2150], // USA FACEBOOK PAGE CREATE ALREADY
+]);
+const FACEBOOK_PAGE_FIXED_PRICE_THRESHOLD_NGN = 1900;
+
 export const maxDuration = 300;
 
 function getLogCategory(item: {
@@ -97,6 +103,16 @@ function isSujanFacebookPageProduct(product: SujanProduct) {
   });
 }
 
+function getSujanFacebookPagePriceNgn(product: SujanProduct) {
+  const retailPrice = getResellerPriceNgn(product.priceMinor / 100);
+  const fixedPrice = FACEBOOK_PAGE_FIXED_PRICES_NGN.get(product.id);
+
+  return fixedPrice !== undefined &&
+    retailPrice < FACEBOOK_PAGE_FIXED_PRICE_THRESHOLD_NGN
+    ? fixedPrice
+    : retailPrice;
+}
+
 function sujanProductCode(productId: number) {
   return `sujan:${productId}`;
 }
@@ -157,7 +173,7 @@ export async function GET(request: Request) {
       groupName: product.platformName,
       inStock: product.availableStock,
       min: 1,
-      price: getResellerPriceNgn(product.priceMinor / 100),
+      price: getSujanFacebookPagePriceNgn(product),
     }));
     const data = {
       ...providerData,
@@ -175,9 +191,7 @@ export async function GET(request: Request) {
       },
       {
         all: availableProducts.length,
-        ...Object.fromEntries(
-          LOG_CATEGORIES.map((category) => [category, 0]),
-        ),
+        ...Object.fromEntries(LOG_CATEGORIES.map((category) => [category, 0])),
       },
     );
     const matchingProducts = availableProducts
@@ -289,7 +303,7 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       }
-      const unitPriceNgn = getResellerPriceNgn(product.priceMinor / 100);
+      const unitPriceNgn = getSujanFacebookPagePriceNgn(product);
       const totalPriceNgn = Math.round(unitPriceNgn * quantity * 100) / 100;
       const providerResult = await withWalletCharge({
         userId: user.id,
