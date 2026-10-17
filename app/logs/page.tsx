@@ -19,6 +19,11 @@ import {
 import { ServicePageShell, Notice } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  commercePayload,
+  tikTokContent,
+  trackTikTokEvent,
+} from '@/lib/tiktok-events';
 
 type Product = {
   code: string;
@@ -132,9 +137,24 @@ export default function LogsPage() {
     );
     return () => clearTimeout(timer);
   }, [data?.catalogStatus, catalogRefresh]);
+  useEffect(() => {
+    const search = query.trim();
+    if (!search) return;
+    const timer = window.setTimeout(() => {
+      trackTikTokEvent('Search', { search_string: search, currency: 'NGN' });
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [query]);
   const order = async () => {
     if (!selected) return;
     if (!confirming) {
+      trackTikTokEvent(
+        'InitiateCheckout',
+        commercePayload(
+          tikTokContent(selected.code, selected.name),
+          selected.price * Number(quantity),
+        ),
+      );
       setConfirming(true);
       return;
     }
@@ -158,6 +178,13 @@ export default function LogsPage() {
         error?: string;
       };
       if (!response.ok) throw new Error(result.error);
+      trackTikTokEvent(
+        'PlaceAnOrder',
+        commercePayload(
+          tikTokContent(selected.code, result.productName ?? selected.name),
+          result.totalPrice ?? selected.price * Number(quantity || 0),
+        ),
+      );
       setCompletedOrder({
         orderCode: result.orderCode ?? '',
         delivery: result.delivery ?? [],
@@ -321,6 +348,13 @@ export default function LogsPage() {
                   </span>
                   <button
                     onClick={() => {
+                      trackTikTokEvent(
+                        'AddToCart',
+                        commercePayload(
+                          tikTokContent(product.code, product.name),
+                          product.price * Number(product.min || 1),
+                        ),
+                      );
                       setSelected(product);
                       setQuantity(String(product.min || 1));
                       setConfirming(false);

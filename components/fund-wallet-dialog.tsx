@@ -18,6 +18,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  tikTokContent,
+  trackTikTokEvent,
+} from '@/lib/tiktok-events';
 
 export type VirtualAccountDetails = {
   bank: string;
@@ -115,6 +119,15 @@ export function FundWalletDialog({
 
   async function copyAccountNumber() {
     if (!account) return;
+    trackTikTokEvent('AddPaymentInfo', {
+      contents: [
+        tikTokContent(
+          'wallet-bank-transfer',
+          `Wallet funding via ${account.bank}`,
+        ),
+      ],
+      currency: 'NGN',
+    });
     await navigator.clipboard.writeText(account.accountNumber);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);

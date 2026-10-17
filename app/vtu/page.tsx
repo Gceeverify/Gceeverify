@@ -20,6 +20,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ServicePageShell } from '@/components/service-page-shell';
 import { getVtuQuote, getVtuServiceFeeDescription } from '@/lib/vtu-pricing';
+import {
+  commercePayload,
+  tikTokContent,
+  trackTikTokEvent,
+} from '@/lib/tiktok-events';
 
 type ServiceKey = 'airtime' | 'data' | 'cable' | 'electricity' | 'exam';
 type DataPlan = {
@@ -295,6 +300,12 @@ export default function VtuPage() {
     setError('');
     setResult(null);
     if (!formReady) return;
+    const payload = commercePayload(
+      tikTokContent(active, `${selected.title}${providerLabel ? ` - ${providerLabel}` : ''}`),
+      purchaseQuote.totalAmount,
+    );
+    trackTikTokEvent('AddToCart', payload);
+    trackTikTokEvent('InitiateCheckout', payload);
     if (active !== 'cable' && active !== 'electricity') {
       setReviewing(true);
       return;
@@ -344,7 +355,15 @@ export default function VtuPage() {
           meterType,
         }),
       });
-      setResult((await json(response)) as PurchaseResult);
+      const purchase = (await json(response)) as PurchaseResult;
+      setResult(purchase);
+      trackTikTokEvent(
+        'PlaceAnOrder',
+        commercePayload(
+          tikTokContent(active, `${selected.title}${providerLabel ? ` - ${providerLabel}` : ''}`),
+          purchase.totalAmount ?? purchaseQuote.totalAmount,
+        ),
+      );
       setReviewing(false);
     } catch (caught) {
       setError(

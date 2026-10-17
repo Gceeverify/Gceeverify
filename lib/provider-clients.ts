@@ -342,6 +342,33 @@ export async function placeBoostOrder(
   return data;
 }
 
+export type BoostOrderStatus = {
+  charge?: string;
+  start_count?: string;
+  status?: string;
+  remains?: string;
+  currency?: string;
+  error?: string;
+};
+
+export async function getBoostOrderStatus(order: string) {
+  const body = new URLSearchParams({
+    key: requiredKey('JAP_API_KEY'),
+    action: 'status',
+    order,
+  });
+  const response = await timedFetch('https://justanotherpanel.com/api/v2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+  const data = (await response.json()) as BoostOrderStatus;
+  if (!response.ok || data.error || !data.status) {
+    throw new Error(data.error || 'The boost order status is unavailable.');
+  }
+  return data;
+}
+
 export type LogProduct = {
   code: string;
   name: string;

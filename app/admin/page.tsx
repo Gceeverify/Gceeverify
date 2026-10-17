@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { isAdminUser } from '@/lib/admin';
+import { refreshTrackedBoostOrders } from '@/lib/boost-orders';
 import { syncTrackedNumberOrder } from '@/lib/number-orders';
 import { createAdminClient, hasAdminConfiguration } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
@@ -156,7 +157,10 @@ export default async function AdminPage({
     getAllOrders(),
     searchParams,
   ]);
-  await refreshNumberOrderStatuses(orderRecords);
+  await Promise.all([
+    refreshNumberOrderStatuses(orderRecords),
+    refreshTrackedBoostOrders(orderRecords, 50),
+  ]);
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const purchasesByUser = new Map<string, AdminPurchaseRow[]>();

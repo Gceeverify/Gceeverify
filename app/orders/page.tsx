@@ -9,6 +9,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { ServicePageShell } from '@/components/service-page-shell';
+import { refreshTrackedBoostOrders } from '@/lib/boost-orders';
 import { getLogOrderDelivery } from '@/lib/provider-clients';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { syncTrackedNumberOrder } from '@/lib/number-orders';
@@ -220,6 +221,7 @@ export default async function OrdersPage() {
   await Promise.all([
     restoreMissingLogDeliveries(orders, user.id),
     refreshNumberOrders(orders, user.id),
+    refreshTrackedBoostOrders(orders),
   ]);
 
   return (

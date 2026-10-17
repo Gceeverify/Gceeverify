@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { GceeverifyHome } from '@/components/gceeverify-home';
 import { createClient } from '@/lib/supabase/server';
 import { isAdminUser } from '@/lib/admin';
+import { refreshTrackedBoostOrders } from '@/lib/boost-orders';
 import {
   pocketFiCustomerPhone,
   provisionUserVirtualAccount,
@@ -38,11 +39,15 @@ export default async function DashboardPage() {
       .maybeSingle(),
     supabase
       .from('orders')
-      .select('id,service_name,amount,currency,status,created_at')
+      .select(
+        'id,category,service_name,provider,provider_order_id,amount,currency,status,created_at',
+      )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(10),
   ]);
+
+  await refreshTrackedBoostOrders(orderRows ?? [], 10);
 
   const userName =
     profile?.full_name ||

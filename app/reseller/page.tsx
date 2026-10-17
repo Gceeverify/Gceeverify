@@ -17,6 +17,11 @@ import {
 import { Notice, ServicePageShell } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  commercePayload,
+  tikTokContent,
+  trackTikTokEvent,
+} from '@/lib/tiktok-events';
 
 type Category =
   | 'all'
@@ -127,6 +132,15 @@ export default function ResellerMarketplacePage() {
     );
   }, [catalog, category, query, sort]);
 
+  useEffect(() => {
+    const search = query.trim();
+    if (!search) return;
+    const timer = window.setTimeout(() => {
+      trackTikTokEvent('Search', { search_string: search, currency: 'NGN' });
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
   const placeOrder = async () => {
     if (!selected) return;
     const amount = Number(quantity);
@@ -139,6 +153,13 @@ export default function ResellerMarketplacePage() {
       return;
     }
     if (!confirming) {
+      trackTikTokEvent(
+        'InitiateCheckout',
+        commercePayload(
+          tikTokContent(selected.id, selected.name),
+          selected.price * amount,
+        ),
+      );
       setConfirming(true);
       setMessage('Review the total, then confirm your purchase.');
       return;
@@ -161,6 +182,13 @@ export default function ResellerMarketplacePage() {
         error?: string;
       };
       if (!response.ok) throw new Error(result.error);
+      trackTikTokEvent(
+        'PlaceAnOrder',
+        commercePayload(
+          tikTokContent(selected.id, result.productName ?? selected.name),
+          result.totalPrice ?? total,
+        ),
+      );
       setCompletedOrder(result);
       setMessage(
         'Purchase completed. Your delivered account details are shown below.',
@@ -295,6 +323,13 @@ export default function ResellerMarketplacePage() {
                   <button
                     type="button"
                     onClick={() => {
+                      trackTikTokEvent(
+                        'AddToCart',
+                        commercePayload(
+                          tikTokContent(product.id, product.name),
+                          product.price,
+                        ),
+                      );
                       setSelected(product);
                       setQuantity('1');
                       setConfirming(false);

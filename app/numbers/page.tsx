@@ -32,6 +32,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  commercePayload,
+  tikTokContent,
+  trackTikTokEvent,
+} from '@/lib/tiktok-events';
 
 type Catalog = {
   services: Array<{ code: string; name: string }>;
@@ -292,6 +297,13 @@ export default function NumbersPage() {
   const purchase = async () => {
     if (!selectedOption || !service) return;
     if (!confirming) {
+      trackTikTokEvent(
+        'InitiateCheckout',
+        commercePayload(
+          tikTokContent(service, selectedServiceName ?? service),
+          selectedOption.price,
+        ),
+      );
       setConfirming(true);
       return;
     }
@@ -310,6 +322,13 @@ export default function NumbersPage() {
       });
       const result = (await response.json()) as Activation & { error?: string };
       if (!response.ok) throw new Error(result.error);
+      trackTikTokEvent(
+        'PlaceAnOrder',
+        commercePayload(
+          tikTokContent(service, selectedServiceName ?? service),
+          result.activationCost,
+        ),
+      );
       setActivation(result);
       setActivationStatus('processing');
       setRemainingSeconds(result.expiresInSeconds);

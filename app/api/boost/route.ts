@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/lib/auth';
 import { recordOrder } from '@/lib/orders';
 import {
   getBoostMarkupPercent,
+  getBoostMinimumOrderNgn,
+  getBoostMinimumRateNgn,
   getBoostRateNgn,
   getUsdToNgnRate,
 } from '@/lib/exchange-rates';
@@ -23,6 +25,13 @@ const platforms = [
 ];
 
 const BOOST_MINIMUM_QUANTITY = 100;
+
+function minimumQuantityFor(rateNgn: number, providerMinimum: number) {
+  const orderMinimum = Math.ceil(
+    (getBoostMinimumOrderNgn() * 1000) / rateNgn,
+  );
+  return Math.max(BOOST_MINIMUM_QUANTITY, providerMinimum, orderMinimum);
+}
 
 function platformFor(name: string, category: string) {
   const text = `${category} ${name}`.toLowerCase();
@@ -61,23 +70,38 @@ export async function GET(request: Request) {
         !query || `${item.name} ${item.category}`.toLowerCase().includes(query);
       return matchesCategory && matchesQuery;
     });
-    return Response.json({
-      services:
-        category === 'all'
-          ? []
-          : filtered.map((item) => ({
+    const pricedServices =
+      category === 'all'
+        ? []
+        : filtered
+            .map((item) => ({
               ...item,
               rate: String(
                 getBoostRateNgn(Number(item.rate), exchangeRate.rate),
               ),
-            })),
-      total: filtered.length,
+            }))
+            .filter((item) => {
+              const maximum = Number(item.max);
+              return (
+                !Number.isFinite(maximum) ||
+                maximum >=
+                  minimumQuantityFor(
+                    Number(item.rate),
+                    Number(item.min) || 0,
+                  )
+              );
+            });
+    return Response.json({
+      services: pricedServices,
+      total: category === 'all' ? filtered.length : pricedServices.length,
       totalServices: all.length,
       categories,
       platformCounts,
       pricing: {
         currency: 'NGN',
         usdToNgnRate: exchangeRate.rate,
+        minimumRateNgn: getBoostMinimumRateNgn(),
+        minimumOrderNgn: getBoostMinimumOrderNgn(),
         updatedAt: exchangeRate.updatedAt,
         source: exchangeRate.source,
         sourceUrl: exchangeRate.sourceUrl,
@@ -134,8 +158,12 @@ export async function POST(request: Request) {
         { error: 'That service is no longer available.' },
         { status: 409 },
       );
-    const serviceMinimum = Math.max(
-      BOOST_MINIMUM_QUANTITY,
+    const customerRateNgn = getBoostRateNgn(
+      Number(service.rate),
+      exchangeRate.rate,
+    );
+    const serviceMinimum = minimumQuantityFor(
+      customerRateNgn,
       Number(service.min) || 0,
     );
     const serviceMaximum = Number(service.max);
@@ -145,17 +173,16 @@ export async function POST(request: Request) {
     ) {
       return Response.json(
         {
-          error: `Choose a quantity between ${serviceMinimum.toLocaleString()} and ${serviceMaximum.toLocaleString()}.`,
+          error: `Choose a quantity between ${serviceMinimum.toLocaleString()} and ${serviceMaximum.toLocaleString()}. The minimum boost order is ${new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(getBoostMinimumOrderNgn())}.`,
         },
         { status: 400 },
       );
     }
-    const customerRateNgn = getBoostRateNgn(
-      Number(service.rate),
-      exchangeRate.rate,
-    );
     const customerAmountNgn =
-      Math.round((customerRateNgn * body.quantity! * 100) / 1000) / 100;
+      Math.max(
+        Math.round((customerRateNgn * body.quantity! * 100) / 1000) / 100,
+        getBoostMinimumOrderNgn(),
+      );
     const result = await withWalletCharge({
       userId: user.id,
       amount: customerAmountNgn,
@@ -176,6 +203,8 @@ export async function POST(request: Request) {
         quantity: body.quantity!,
         usdToNgnRate: exchangeRate.rate,
         markupPercent: getBoostMarkupPercent(),
+        minimumRateNgn: getBoostMinimumRateNgn(),
+        minimumOrderNgn: getBoostMinimumOrderNgn(),
       },
     });
     return Response.json(result, { status: 201 });

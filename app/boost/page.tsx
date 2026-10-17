@@ -34,6 +34,11 @@ import { Notice, ServicePageShell } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ServiceInformationDialog } from '@/components/onboarding-dialogs';
+import {
+  commercePayload,
+  tikTokContent,
+  trackTikTokEvent,
+} from '@/lib/tiktok-events';
 
 type BoostService = {
   service: number;
@@ -54,6 +59,8 @@ type BoostData = {
   pricing: {
     currency: 'NGN';
     usdToNgnRate: number;
+    minimumRateNgn: number;
+    minimumOrderNgn: number;
     updatedAt: string | null;
     source: string;
     sourceUrl: string;
@@ -70,8 +77,15 @@ const nairaFormatter = new Intl.NumberFormat('en-NG', {
 
 const BOOST_MINIMUM_QUANTITY = 100;
 
-function minimumQuantity(service: BoostService) {
-  return Math.max(BOOST_MINIMUM_QUANTITY, Number(service.min) || 0);
+function minimumQuantity(service: BoostService, minimumOrderNgn = 0) {
+  const rate = Number(service.rate);
+  const orderMinimum =
+    rate > 0 ? Math.ceil((minimumOrderNgn * 1000) / rate) : 0;
+  return Math.max(
+    BOOST_MINIMUM_QUANTITY,
+    Number(service.min) || 0,
+    orderMinimum,
+  );
 }
 
 function formatNaira(value: number) {
@@ -209,7 +223,11 @@ export default function BoostPage() {
     const id = Number(value);
     const service = data?.services.find((item) => item.service === id);
     setSelectedId(service?.service ?? null);
-    setQuantity(service ? String(minimumQuantity(service)) : '');
+    setQuantity(
+      service
+        ? String(minimumQuantity(service, data?.pricing.minimumOrderNgn))
+        : '',
+    );
     setConfirming(false);
     setMessage('');
   }
@@ -220,7 +238,10 @@ export default function BoostPage() {
       return;
     }
     const orderQuantity = Number(quantity);
-    const serviceMinimum = minimumQuantity(selected);
+    const serviceMinimum = minimumQuantity(
+      selected,
+      data?.pricing.minimumOrderNgn,
+    );
     if (!Number.isInteger(orderQuantity) || orderQuantity < serviceMinimum) {
       setMessage(
         `The minimum quantity for this service is ${serviceMinimum.toLocaleString()}.`,
@@ -229,6 +250,13 @@ export default function BoostPage() {
       return;
     }
     if (!confirming) {
+      trackTikTokEvent(
+        'InitiateCheckout',
+        commercePayload(
+          tikTokContent(selected.service, selected.name),
+          charge,
+        ),
+      );
       setConfirming(true);
       return;
     }
@@ -249,6 +277,13 @@ export default function BoostPage() {
         error?: string;
       };
       if (!response.ok) throw new Error(result.error);
+      trackTikTokEvent(
+        'PlaceAnOrder',
+        commercePayload(
+          tikTokContent(selected.service, selected.name),
+          charge,
+        ),
+      );
       setMessage(`Order #${result.order} was placed successfully.`);
       setConfirming(false);
     } catch (error) {
@@ -422,7 +457,12 @@ export default function BoostPage() {
                 <dl className="boost-service-facts">
                   <div>
                     <dt>Minimum</dt>
-                    <dd>{minimumQuantity(selected).toLocaleString()}</dd>
+                    <dd>
+                      {minimumQuantity(
+                        selected,
+                        data?.pricing.minimumOrderNgn,
+                      ).toLocaleString()}
+                    </dd>
                   </div>
                   <div>
                     <dt>Maximum</dt>
@@ -431,6 +471,12 @@ export default function BoostPage() {
                   <div>
                     <dt>Rate</dt>
                     <dd>{formatNaira(Number(selected.rate))} per 1,000</dd>
+                  </div>
+                  <div>
+                    <dt>Minimum spend</dt>
+                    <dd>
+                      {formatNaira(data?.pricing.minimumOrderNgn ?? 0)}
+                    </dd>
                   </div>
                 </dl>
 

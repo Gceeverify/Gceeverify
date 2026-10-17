@@ -19,6 +19,11 @@ import {
 } from 'lucide-react';
 import { Notice, ServicePageShell } from '@/components/service-page-shell';
 import { Button } from '@/components/ui/button';
+import {
+  commercePayload,
+  tikTokContent,
+  trackTikTokEvent,
+} from '@/lib/tiktok-events';
 
 type DomainOffer = { domain: string; price: number; count: number };
 type ServiceOffer = { code: string; name: string; domains: DomainOffer[] };
@@ -89,9 +94,24 @@ export default function VirtualEmailPage() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [catalog, domain, search]);
 
+  useEffect(() => {
+    const term = search.trim();
+    if (!term) return;
+    const timer = window.setTimeout(() => {
+      trackTikTokEvent('Search', { search_string: term, currency: 'NGN' });
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
   const purchase = async (service: ServiceOffer, offer: DomainOffer) => {
     const key = `${service.code}:${offer.domain}`;
     if (pendingKey !== key) {
+      const payload = commercePayload(
+        tikTokContent(key, service.name),
+        offer.price,
+      );
+      trackTikTokEvent('AddToCart', payload);
+      trackTikTokEvent('InitiateCheckout', payload);
       setPendingKey(key);
       setMessage('Click Confirm to reserve this virtual email.');
       return;
@@ -110,6 +130,13 @@ export default function VirtualEmailPage() {
       });
       const result = (await response.json()) as Activation & { error?: string };
       if (!response.ok) throw new Error(result.error);
+      trackTikTokEvent(
+        'PlaceAnOrder',
+        commercePayload(
+          tikTokContent(key, service.name),
+          result.price,
+        ),
+      );
       setActivation(result);
       setEmailCode(null);
       setPendingKey('');

@@ -1,6 +1,8 @@
 const USD_NGN_RATE_URL = 'https://open.er-api.com/v6/latest/USD';
 const FALLBACK_USD_NGN_RATE = 1327.93;
-const DEFAULT_BOOST_MARKUP_PERCENT = 30;
+const DEFAULT_BOOST_MARKUP_PERCENT = 69;
+const DEFAULT_BOOST_MINIMUM_RATE_NGN = 100;
+const DEFAULT_BOOST_MINIMUM_ORDER_NGN = 100;
 const DEFAULT_NUMBER_MARKUP_PERCENT = 30;
 const DEFAULT_LOG_MARKUP_PERCENT = 30;
 const DEFAULT_VIRTUAL_EMAIL_MARKUP_PERCENT = 300;
@@ -150,9 +152,26 @@ export function getBoostMarkupPercent() {
     : DEFAULT_BOOST_MARKUP_PERCENT;
 }
 
+export function getBoostMinimumRateNgn() {
+  const configuredMinimum = Number(process.env.BOOST_MINIMUM_RATE_NGN);
+  return Number.isFinite(configuredMinimum) && configuredMinimum > 0
+    ? configuredMinimum
+    : DEFAULT_BOOST_MINIMUM_RATE_NGN;
+}
+
+export function getBoostMinimumOrderNgn() {
+  const configuredMinimum = Number(process.env.BOOST_MINIMUM_ORDER_NGN);
+  return Number.isFinite(configuredMinimum) && configuredMinimum > 0
+    ? configuredMinimum
+    : DEFAULT_BOOST_MINIMUM_ORDER_NGN;
+}
+
 export function getBoostRateNgn(providerRateUsd: number, usdToNgnRate: number) {
   const multiplier = 1 + getBoostMarkupPercent() / 100;
-  return convertUsdToNgn(providerRateUsd * multiplier, usdToNgnRate);
+  return Math.max(
+    convertUsdToNgn(providerRateUsd * multiplier, usdToNgnRate),
+    getBoostMinimumRateNgn(),
+  );
 }
 
 export function getLogMarkupPercent() {
