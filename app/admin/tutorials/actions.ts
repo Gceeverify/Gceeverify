@@ -3,7 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/admin';
-import { getTutorials, saveTutorials } from '@/lib/tutorials';
+import {
+  createTutorial as createTutorialRecord,
+  deleteTutorial,
+  setTutorialPublished,
+} from '@/lib/tutorials';
 
 function field(formData: FormData, key: string) {
   const entry = formData.get(key);
@@ -46,8 +50,7 @@ export async function createTutorial(formData: FormData) {
       throw new Error('Sort order must be a whole number from 0 to 9999.');
     }
 
-    const tutorials = await getTutorials();
-    tutorials.push({
+    await createTutorialRecord({
       id: crypto.randomUUID(),
       title,
       description,
@@ -57,7 +60,6 @@ export async function createTutorial(formData: FormData) {
       sort_order: sortOrder,
       created_at: new Date().toISOString(),
     });
-    await saveTutorials(tutorials);
 
     revalidatePath('/tutorials');
     revalidatePath('/admin/tutorials');
@@ -65,7 +67,9 @@ export async function createTutorial(formData: FormData) {
   } catch (error) {
     destination = adminUrl(
       'error',
-      error instanceof Error ? error.message : 'The tutorial could not be created.',
+      error instanceof Error
+        ? error.message
+        : 'The tutorial could not be created.',
     );
   }
   redirect(destination);
@@ -81,18 +85,11 @@ export async function manageTutorial(formData: FormData) {
       throw new Error('That tutorial action is invalid.');
     }
 
-    const tutorials = await getTutorials();
-    const tutorial = tutorials.find((item) => item.id === id);
-    if (!tutorial) throw new Error('That tutorial no longer exists.');
-    const nextTutorials =
-      intent === 'delete'
-        ? tutorials.filter((item) => item.id !== id)
-        : tutorials.map((item) =>
-            item.id === id
-              ? { ...item, is_published: intent === 'publish' }
-              : item,
-          );
-    await saveTutorials(nextTutorials);
+    if (intent === 'delete') {
+      await deleteTutorial(id);
+    } else {
+      await setTutorialPublished(id, intent === 'publish');
+    }
 
     revalidatePath('/tutorials');
     revalidatePath('/admin/tutorials');
@@ -107,7 +104,9 @@ export async function manageTutorial(formData: FormData) {
   } catch (error) {
     destination = adminUrl(
       'error',
-      error instanceof Error ? error.message : 'The tutorial could not be updated.',
+      error instanceof Error
+        ? error.message
+        : 'The tutorial could not be updated.',
     );
   }
   redirect(destination);

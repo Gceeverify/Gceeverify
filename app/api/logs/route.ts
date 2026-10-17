@@ -39,8 +39,6 @@ const FACEBOOK_PAGE_FIXED_PRICES_NGN = new Map([
 ]);
 const FACEBOOK_PAGE_FIXED_PRICE_THRESHOLD_NGN = 1900;
 
-export const maxDuration = 300;
-
 function getLogCategory(item: {
   name: string;
   categoryName: string;

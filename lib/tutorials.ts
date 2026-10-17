@@ -1,7 +1,5 @@
 import 'server-only';
-import { list, put } from '@vercel/blob';
-
-const TUTORIALS_PATH = 'data/tutorials.json';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export type Tutorial = {
   id: string;
@@ -14,33 +12,44 @@ export type Tutorial = {
   created_at: string;
 };
 
-function sortTutorials(tutorials: Tutorial[]) {
-  return [...tutorials].sort(
-    (left, right) =>
-      left.sort_order - right.sort_order ||
-      new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
-  );
-}
-
 export async function getTutorials() {
-  const { blobs } = await list({ prefix: TUTORIALS_PATH, limit: 1 });
-  const blob = blobs.find((item) => item.pathname === TUTORIALS_PATH);
-  if (!blob) return [];
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('tutorials')
+    .select(
+      'id,title,description,video_url,thumbnail_url,is_published,sort_order,created_at',
+    )
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false });
 
-  const response = await fetch(`${blob.url}?version=${blob.uploadedAt.getTime()}`, {
-    cache: 'no-store',
-  });
-  if (!response.ok) throw new Error('The tutorial library could not be loaded.');
-  const value = (await response.json()) as unknown;
-  return Array.isArray(value) ? sortTutorials(value as Tutorial[]) : [];
+  if (error) throw new Error('The tutorial library could not be loaded.');
+  return (data ?? []) as Tutorial[];
 }
 
-export async function saveTutorials(tutorials: Tutorial[]) {
-  await put(TUTORIALS_PATH, JSON.stringify(sortTutorials(tutorials)), {
-    access: 'public',
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: 'application/json',
-    cacheControlMaxAge: 60,
-  });
+export async function createTutorial(tutorial: Tutorial) {
+  const admin = createAdminClient();
+  const { error } = await admin.from('tutorials').insert(tutorial);
+  if (error) throw new Error('The tutorial could not be created.');
+}
+
+export async function setTutorialPublished(id: string, isPublished: boolean) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('tutorials')
+    .update({ is_published: isPublished })
+    .eq('id', id)
+    .select('id')
+    .maybeSingle();
+  if (error || !data) throw new Error('That tutorial no longer exists.');
+}
+
+export async function deleteTutorial(id: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('tutorials')
+    .delete()
+    .eq('id', id)
+    .select('id')
+    .maybeSingle();
+  if (error || !data) throw new Error('That tutorial no longer exists.');
 }

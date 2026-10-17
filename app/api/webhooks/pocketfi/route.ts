@@ -4,6 +4,8 @@ import {
   verifyPocketFiSignature,
 } from '@/lib/pocketfi';
 
+export const runtime = 'nodejs';
+
 type PocketFiWebhook = {
   order?: { amount?: number | string };
   amount?: number | string;
@@ -58,6 +60,12 @@ export async function POST(request: Request) {
     }
 
     const confirmation = await confirmPocketFiPayment(paymentId);
+    if (confirmation.payment_id?.trim() !== paymentId) {
+      return Response.json(
+        { message: 'Payment reference mismatch' },
+        { status: 400 },
+      );
+    }
     const status = confirmation.status?.trim().toLowerCase() || '';
     if (pendingStatuses.has(status)) {
       return Response.json(
@@ -78,7 +86,9 @@ export async function POST(request: Request) {
     }
 
     const confirmedAccountNumber = (
-      accountNumber || confirmation.account || ''
+      accountNumber ||
+      confirmation.account ||
+      ''
     ).replace(/\s/g, '');
 
     const admin = createAdminClient();
