@@ -106,6 +106,7 @@ export default function VirtualEmailPage() {
   const purchase = async (service: ServiceOffer, offer: DomainOffer) => {
     const key = `${service.code}:${offer.domain}`;
     if (pendingKey !== key) {
+      trackTikTokEvent('ClickButton');
       const payload = commercePayload(
         tikTokContent(key, service.name),
         offer.price,
@@ -131,7 +132,7 @@ export default function VirtualEmailPage() {
       const result = (await response.json()) as Activation & { error?: string };
       if (!response.ok) throw new Error(result.error);
       trackTikTokEvent(
-        'PlaceAnOrder',
+        'Purchase',
         commercePayload(
           tikTokContent(key, service.name),
           result.price,

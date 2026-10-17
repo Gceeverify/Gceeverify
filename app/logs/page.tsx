@@ -148,6 +148,7 @@ export default function LogsPage() {
   const order = async () => {
     if (!selected) return;
     if (!confirming) {
+      trackTikTokEvent('ClickButton');
       trackTikTokEvent(
         'InitiateCheckout',
         commercePayload(
@@ -179,7 +180,7 @@ export default function LogsPage() {
       };
       if (!response.ok) throw new Error(result.error);
       trackTikTokEvent(
-        'PlaceAnOrder',
+        'Purchase',
         commercePayload(
           tikTokContent(selected.code, result.productName ?? selected.name),
           result.totalPrice ?? selected.price * Number(quantity || 0),

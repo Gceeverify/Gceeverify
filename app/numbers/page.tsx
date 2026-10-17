@@ -297,6 +297,7 @@ export default function NumbersPage() {
   const purchase = async () => {
     if (!selectedOption || !service) return;
     if (!confirming) {
+      trackTikTokEvent('ClickButton');
       trackTikTokEvent(
         'InitiateCheckout',
         commercePayload(
@@ -323,7 +324,7 @@ export default function NumbersPage() {
       const result = (await response.json()) as Activation & { error?: string };
       if (!response.ok) throw new Error(result.error);
       trackTikTokEvent(
-        'PlaceAnOrder',
+        'Purchase',
         commercePayload(
           tikTokContent(service, selectedServiceName ?? service),
           result.activationCost,

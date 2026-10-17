@@ -250,6 +250,7 @@ export default function BoostPage() {
       return;
     }
     if (!confirming) {
+      trackTikTokEvent('ClickButton');
       trackTikTokEvent(
         'InitiateCheckout',
         commercePayload(
@@ -278,7 +279,7 @@ export default function BoostPage() {
       };
       if (!response.ok) throw new Error(result.error);
       trackTikTokEvent(
-        'PlaceAnOrder',
+        'Purchase',
         commercePayload(
           tikTokContent(selected.service, selected.name),
           charge,

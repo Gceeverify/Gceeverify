@@ -300,6 +300,7 @@ export default function VtuPage() {
     setError('');
     setResult(null);
     if (!formReady) return;
+    trackTikTokEvent('ClickButton');
     const payload = commercePayload(
       tikTokContent(active, `${selected.title}${providerLabel ? ` - ${providerLabel}` : ''}`),
       purchaseQuote.totalAmount,
@@ -358,7 +359,7 @@ export default function VtuPage() {
       const purchase = (await json(response)) as PurchaseResult;
       setResult(purchase);
       trackTikTokEvent(
-        'PlaceAnOrder',
+        'Purchase',
         commercePayload(
           tikTokContent(active, `${selected.title}${providerLabel ? ` - ${providerLabel}` : ''}`),
           purchase.totalAmount ?? purchaseQuote.totalAmount,
