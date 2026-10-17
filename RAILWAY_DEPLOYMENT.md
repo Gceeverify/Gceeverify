@@ -19,31 +19,27 @@ Before the first Railway deploy:
    health, authentication, and read-only application tests. Never point
    PocketFi at both URLs unless duplicate delivery is intentional.
 
-## Create and link a separate Railway project
+## Link the existing Railway project
 
-Run these commands in the repository root from PowerShell. `railway.cmd` is
+The project and service have already been created. Run these commands in the
+repository root if a new local checkout needs to be linked. `railway.cmd` is
 used because Windows PowerShell script execution may block `railway.ps1`.
 
 ```powershell
 railway.cmd login
 railway.cmd whoami --json
-railway.cmd init --name "GCEE Verify" --workspace ca67959f-edb4-43a7-93a8-43e9b535d1f6 --json
-railway.cmd add --service gceeverify --json
-railway.cmd environment link production
+railway.cmd link --project fa8a56dc-ff76-473c-9223-62f88f7477a0 --environment 2604a36a-d266-4913-b4dd-51e27213191f
 railway.cmd service link gceeverify
 railway.cmd status --json
 ```
 
-Configure the empty service before uploading code:
+Build, start, and health-check settings are managed by
+`.railway/railway.ts`. Review drift before applying future configuration
+changes:
 
 ```powershell
-railway.cmd environment edit --service-config gceeverify build.builder RAILPACK
-railway.cmd environment edit --service-config gceeverify build.buildCommand "npm run build"
-railway.cmd environment edit --service-config gceeverify deploy.startCommand "npm run start"
-railway.cmd environment edit --service-config gceeverify deploy.healthcheckPath "/api/health"
-railway.cmd environment edit --service-config gceeverify deploy.healthcheckTimeout 300
-railway.cmd environment edit --service-config gceeverify deploy.restartPolicyType ON_FAILURE
-railway.cmd environment edit --service-config gceeverify deploy.restartPolicyMaxRetries 10
+railway.cmd config plan
+railway.cmd config apply
 railway.cmd domain --service gceeverify --environment production --json
 ```
 
@@ -77,13 +73,13 @@ Review variable names without revealing values:
 railway.cmd variable list --service gceeverify --environment production --json
 ```
 
-## Deploy only after approval
+## Redeploy
 
 The command below uploads the current directory directly, so the GitHub account
 connected to Railway does not need access to `Gceeverify/Gceeverify`.
 
 ```powershell
-railway.cmd up --service gceeverify --environment production --ci --message "Initial GCEE Verify Railway deployment"
+railway.cmd up --project fa8a56dc-ff76-473c-9223-62f88f7477a0 --service e2ae2af4-9c0e-47ea-b968-985ba3747348 --environment 2604a36a-d266-4913-b4dd-51e27213191f --ci --message "Deploy GCEE Verify"
 ```
 
 After Railway reports `SUCCESS`, inspect and test the temporary Railway domain
