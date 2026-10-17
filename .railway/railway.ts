@@ -15,8 +15,6 @@ export default defineRailway(() => {
       startCommand: "npm run start",
       healthcheckPath: "/api/health",
       healthcheckTimeout: 300,
-      restartPolicyType: "ON_FAILURE",
-      restartPolicyMaxRetries: 10,
     },
     env: {
       ADMIN_EMAILS: preserve(),
