@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertCircle,
@@ -153,6 +153,7 @@ export default function VtuPage() {
     ElectricityProvider[]
   >([]);
   const [examPrices, setExamPrices] = useState<ExamPrice[]>([]);
+  const idempotencyKeyRef = useRef('');
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get(
@@ -272,6 +273,7 @@ export default function VtuPage() {
   })();
 
   const clearProgress = () => {
+    idempotencyKeyRef.current = '';
     setReviewing(false);
     setVerification(null);
     setResult(null);
@@ -300,9 +302,13 @@ export default function VtuPage() {
     setError('');
     setResult(null);
     if (!formReady) return;
+    idempotencyKeyRef.current = crypto.randomUUID();
     trackTikTokEvent('ClickButton');
     const payload = commercePayload(
-      tikTokContent(active, `${selected.title}${providerLabel ? ` - ${providerLabel}` : ''}`),
+      tikTokContent(
+        active,
+        `${selected.title}${providerLabel ? ` - ${providerLabel}` : ''}`,
+      ),
       purchaseQuote.totalAmount,
     );
     trackTikTokEvent('AddToCart', payload);
@@ -341,6 +347,9 @@ export default function VtuPage() {
     setBusy(true);
     setError('');
     try {
+      if (!idempotencyKeyRef.current) {
+        idempotencyKeyRef.current = crypto.randomUUID();
+      }
       const response = await fetch('/api/vtu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -351,20 +360,26 @@ export default function VtuPage() {
           account,
           phone,
           amount,
-          plan: Number(plan),
+          plan,
           quantity: Number(amount),
           meterType,
+          idempotencyKey: idempotencyKeyRef.current,
         }),
       });
       const purchase = (await json(response)) as PurchaseResult;
       setResult(purchase);
-      trackTikTokEvent(
-        'Purchase',
-        commercePayload(
-          tikTokContent(active, `${selected.title}${providerLabel ? ` - ${providerLabel}` : ''}`),
-          purchase.totalAmount ?? purchaseQuote.totalAmount,
-        ),
-      );
+      if (active === 'exam' || purchase.status === 'completed') {
+        trackTikTokEvent(
+          'Purchase',
+          commercePayload(
+            tikTokContent(
+              active,
+              `${selected.title}${providerLabel ? ` - ${providerLabel}` : ''}`,
+            ),
+            purchase.totalAmount ?? purchaseQuote.totalAmount,
+          ),
+        );
+      }
       setReviewing(false);
     } catch (caught) {
       setError(
@@ -724,6 +739,7 @@ export default function VtuPage() {
               <Button
                 className="market-primary"
                 onClick={() => {
+                  idempotencyKeyRef.current = '';
                   setResult(null);
                   setAccount('');
                   setPhone('');
@@ -820,6 +836,7 @@ export default function VtuPage() {
                 type="button"
                 className="vtu-edit-button"
                 onClick={() => {
+                  idempotencyKeyRef.current = '';
                   setReviewing(false);
                   setError('');
                 }}

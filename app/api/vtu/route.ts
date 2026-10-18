@@ -1,16 +1,6 @@
 import {
-  getBigisubCablePlans,
-  getBigisubDataPlans,
-  getBigisubElectricityProviders,
   getBigisubExamPrices,
-  getBigisubWallet,
-  purchaseBigisubAirtime,
-  purchaseBigisubCable,
-  purchaseBigisubData,
-  purchaseBigisubElectricity,
   purchaseBigisubExam,
-  verifyBigisubCable,
-  verifyBigisubElectricity,
 } from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
 import {
@@ -18,12 +8,116 @@ import {
   providerReference,
   recordOrder,
 } from '@/lib/orders';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getVtuQuote } from '@/lib/vtu-pricing';
 import { withWalletCharge } from '@/lib/wallet';
+import {
+  getVtuDataVariations,
+  getVtuTvVariations,
+  getVtuWallet,
+  purchaseVtuAirtime,
+  purchaseVtuData,
+  purchaseVtuElectricity,
+  purchaseVtuTv,
+  requeryVtuOrder,
+  verifyVtuCustomer,
+  VtuApiError,
+  type VtuOrderData,
+} from '@/lib/vtu-ng';
+import {
+  beginVtuOrder,
+  reconcileVtuOrderData,
+  refundVtuOrder,
+  updateVtuOrder,
+  type VtuTrackedOrder,
+} from '@/lib/vtu-orders';
 
-const phonePattern = /^0[789]\d{9}$/;
+const phonePattern = /^(?:0[789]\d{9}|\+234[789]\d{9})$/;
 const cableProviders = new Set(['dstv', 'gotv', 'startimes', 'showmax']);
 const meterTypes = new Set(['prepaid', 'postpaid']);
+const networkIds = new Map([
+  ['1', 'mtn'],
+  ['2', 'airtel'],
+  ['3', 'glo'],
+  ['4', '9mobile'],
+]);
+const idempotencyPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const electricityProviders = [
+  {
+    name: 'Ikeja Electric (IKEDC)',
+    code: 'ikeja-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Eko Electric (EKEDC)',
+    code: 'eko-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Kano Electric (KEDCO)',
+    code: 'kano-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Port Harcourt Electric (PHED)',
+    code: 'portharcourt-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Jos Electric (JED)',
+    code: 'jos-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Ibadan Electric (IBEDC)',
+    code: 'ibadan-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Kaduna Electric (KAEDCO)',
+    code: 'kaduna-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Abuja Electric (AEDC)',
+    code: 'abuja-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Enugu Electric (EEDC)',
+    code: 'enugu-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Benin Electric (BEDC)',
+    code: 'benin-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Aba Electric (ABEDC)',
+    code: 'aba-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+  {
+    name: 'Yola Electric (YEDC)',
+    code: 'yola-electric',
+    min_amount: 1000,
+    service_charge: 0,
+  },
+] as const;
 
 function text(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
@@ -35,10 +129,136 @@ function positiveNumber(value: unknown) {
 }
 
 function providerError(error: unknown, fallback: string, status = 400) {
+  const responseStatus =
+    error instanceof VtuApiError && error.status >= 400 && error.status < 500
+      ? error.status
+      : status;
   return Response.json(
     { error: error instanceof Error ? error.message : fallback },
-    { status },
+    { status: responseStatus },
   );
+}
+
+function requestIdFor(idempotencyKey: string) {
+  return `gcv_${idempotencyKey.replaceAll('-', '')}`;
+}
+
+function responseFromStoredOrder(
+  order: VtuTrackedOrder,
+  quote: ReturnType<typeof getVtuQuote>,
+) {
+  const providerResponse = order.metadata.providerResponse;
+  return Response.json(
+    {
+      ...(providerResponse &&
+      typeof providerResponse === 'object' &&
+      !Array.isArray(providerResponse)
+        ? providerResponse
+        : {}),
+      transaction_id: order.providerOrderId ?? undefined,
+      reference: order.providerRequestId,
+      status: order.status,
+      ...quote,
+    },
+    {
+      status:
+        order.status === 'processing' || order.status === 'pending' ? 202 : 200,
+    },
+  );
+}
+
+async function executePurchase(input: {
+  userId: string;
+  idempotencyKey: string;
+  category: string;
+  serviceName: string;
+  quote: ReturnType<typeof getVtuQuote>;
+  metadata: Record<string, string | number | boolean | null>;
+  purchase: (requestId: string) => Promise<{ data: VtuOrderData }>;
+}) {
+  const order = await beginVtuOrder({
+    userId: input.userId,
+    idempotencyKey: input.idempotencyKey,
+    providerRequestId: requestIdFor(input.idempotencyKey),
+    category: input.category,
+    serviceName: input.serviceName,
+    amount: input.quote.totalAmount,
+    metadata: { ...input.metadata, ...input.quote },
+  });
+
+  if (!['pending', 'processing'].includes(order.status)) {
+    return responseFromStoredOrder(order, input.quote);
+  }
+
+  try {
+    let response: { data: VtuOrderData };
+    try {
+      response = await input.purchase(order.providerRequestId);
+    } catch (error) {
+      if (
+        error instanceof VtuApiError &&
+        [
+          'duplicate_request',
+          'duplicate_request_id',
+          'duplicate_order',
+        ].includes(error.code)
+      ) {
+        response = await requeryVtuOrder(order.providerRequestId);
+      } else {
+        throw error;
+      }
+    }
+    const reconciliation = await reconcileVtuOrderData({
+      data: response.data,
+      requestId: order.providerRequestId,
+    });
+    return Response.json(
+      {
+        ...response.data,
+        transaction_id:
+          response.data.order_id === undefined
+            ? undefined
+            : String(response.data.order_id),
+        reference: order.providerRequestId,
+        status: reconciliation.status,
+        ...input.quote,
+      },
+      { status: reconciliation.status === 'processing' ? 202 : 201 },
+    );
+  } catch (error) {
+    if (error instanceof VtuApiError && error.definitiveFailure) {
+      await refundVtuOrder({
+        providerRequestId: order.providerRequestId,
+        reason: `Automatic refund: VTU.ng rejected ${input.serviceName}`,
+        metadata: {
+          providerErrorCode: error.code,
+          providerError: error.message,
+        },
+      });
+      throw error;
+    }
+
+    await updateVtuOrder({
+      orderId: order.id,
+      userId: input.userId,
+      providerOrderId: order.providerOrderId,
+      status: 'processing',
+      metadata: {
+        providerStatus: 'awaiting-requery',
+        lastCheckedAt: new Date().toISOString(),
+      },
+    });
+    return Response.json(
+      {
+        reference: order.providerRequestId,
+        status: 'processing',
+        message:
+          'VTU.ng has not confirmed the final status yet. This order will be checked automatically.',
+        ...input.quote,
+      },
+      { status: 202 },
+    );
+  }
 }
 
 export async function GET(request: Request) {
@@ -46,25 +266,32 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const service = searchParams.get('service');
 
-    if (service === 'wallet') return Response.json(await getBigisubWallet());
+    if (service === 'wallet') {
+      const result = await getVtuWallet();
+      return Response.json(result.data);
+    }
     if (service === 'data') {
-      const network = Number(searchParams.get('network'));
-      if (![1, 2, 3, 4].includes(network)) {
+      const network = networkIds.get(searchParams.get('network') ?? '');
+      if (!network) {
         return Response.json(
           { error: 'Choose a valid mobile network.' },
           { status: 400 },
         );
       }
-      const plans = (await getBigisubDataPlans(network)).filter(
-        (plan) => !plan.plan_disabled,
-      );
-      return Response.json({
-        plans: plans.map((plan) => ({
-          ...plan,
-          amount: plan.amount,
-          plan_amount: plan.plan_amount || plan.amount,
-        })),
-      });
+      const plans = (await getVtuDataVariations(network))
+        .filter((plan) => plan.availability.toLowerCase() === 'available')
+        .map((plan) => ({
+          id: Number(plan.variation_id),
+          network_name: plan.service_name,
+          plantype: plan.service_name,
+          size: plan.data_plan,
+          plan_volume: plan.data_plan,
+          validity: '',
+          amount: Number(plan.price),
+          plan_amount: Number(plan.price),
+          plan_disabled: false,
+        }));
+      return Response.json({ plans });
     }
     if (service === 'cable') {
       const provider = text(searchParams.get('provider')).toLowerCase();
@@ -74,21 +301,22 @@ export async function GET(request: Request) {
           { status: 400 },
         );
       }
-      const plans = await getBigisubCablePlans(provider);
-      return Response.json({
-        plans,
-      });
+      const plans = (await getVtuTvVariations(provider))
+        .filter((plan) => plan.availability.toLowerCase() === 'available')
+        .map((plan) => ({
+          id: Number(plan.variation_id),
+          cable_name: plan.service_name,
+          product_name: plan.package_bouquet,
+          variation_code: String(plan.variation_id),
+          amount: Number(plan.price),
+        }));
+      return Response.json({ plans });
     }
     if (service === 'electricity') {
-      return Response.json({
-        providers: await getBigisubElectricityProviders(),
-      });
+      return Response.json({ providers: electricityProviders });
     }
     if (service === 'exam') {
-      const prices = await getBigisubExamPrices();
-      return Response.json({
-        prices,
-      });
+      return Response.json({ prices: await getBigisubExamPrices() });
     }
     return Response.json(
       { error: 'Choose a valid utility service.' },
@@ -105,6 +333,7 @@ export async function POST(request: Request) {
     if (!user) {
       return Response.json({ error: 'Sign in to continue.' }, { status: 401 });
     }
+
     const body = (await request.json()) as Record<string, unknown>;
     const action = text(body.action);
     const service = text(body.service);
@@ -113,30 +342,72 @@ export async function POST(request: Request) {
     const phone = text(body.phone);
     const meterType = text(body.meterType).toLowerCase();
 
-    if (action === 'verify' && service === 'cable') {
-      if (!cableProviders.has(provider) || account.length < 8) {
+    if (action === 'track') {
+      const requestId = text(body.requestId);
+      if (!requestId.startsWith('gcv_')) {
+        return Response.json(
+          { error: 'Enter a valid VTU order reference.' },
+          { status: 400 },
+        );
+      }
+      const admin = createAdminClient();
+      const { data: order } = await admin
+        .from('orders')
+        .select('id')
+        .eq('provider', 'VTU.ng')
+        .eq('provider_request_id', requestId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!order) {
+        return Response.json(
+          { error: 'VTU order not found.' },
+          { status: 404 },
+        );
+      }
+      const response = await requeryVtuOrder(requestId);
+      const reconciled = await reconcileVtuOrderData({
+        data: response.data,
+        requestId,
+      });
+      return Response.json({ ...response.data, status: reconciled.status });
+    }
+
+    if (
+      action === 'verify' &&
+      (service === 'cable' || service === 'electricity')
+    ) {
+      if (
+        service === 'cable' &&
+        (!cableProviders.has(provider) || account.length < 5)
+      ) {
         return Response.json(
           { error: 'Enter a valid TV provider and smartcard number.' },
           { status: 400 },
         );
       }
-      return Response.json(await verifyBigisubCable(provider, account));
-    }
-
-    if (action === 'verify' && service === 'electricity') {
       if (
-        !provider ||
-        !meterTypes.has(meterType) ||
-        !/^\d{10,15}$/.test(account)
+        service === 'electricity' &&
+        (!electricityProviders.some((item) => item.code === provider) ||
+          !meterTypes.has(meterType) ||
+          !/^\d{10,15}$/.test(account))
       ) {
         return Response.json(
           { error: 'Enter a valid provider, meter type and meter number.' },
           { status: 400 },
         );
       }
-      return Response.json(
-        await verifyBigisubElectricity(provider, account, meterType),
-      );
+      if (service === 'cable' && provider === 'showmax') {
+        return Response.json({
+          customer_name: 'Showmax account',
+          customer_id: account,
+        });
+      }
+      const verification = await verifyVtuCustomer({
+        customerId: account,
+        serviceId: provider,
+        variationId: service === 'electricity' ? meterType : undefined,
+      });
+      return Response.json(verification.data);
     }
 
     if (action !== 'purchase') {
@@ -146,167 +417,155 @@ export async function POST(request: Request) {
       );
     }
 
+    const idempotencyKey = text(body.idempotencyKey);
+    if (!idempotencyPattern.test(idempotencyKey)) {
+      return Response.json(
+        {
+          error:
+            'This checkout session expired. Please review the purchase again.',
+        },
+        { status: 409 },
+      );
+    }
+
     if (service === 'airtime') {
-      const network = Number(body.provider);
+      const network = networkIds.get(text(body.provider));
       const amount = positiveNumber(body.amount);
+      const minimum = network === 'mtn' ? 10 : 50;
       if (
-        ![1, 2, 3, 4].includes(network) ||
+        !network ||
         !phonePattern.test(account) ||
         !amount ||
-        amount < 25
+        amount < minimum ||
+        amount > 50_000
       ) {
         return Response.json(
           {
-            error:
-              'Enter a valid network, phone number and amount of at least ₦25.',
+            error: `Enter a valid network, phone number and amount from ₦${minimum} to ₦50,000.`,
           },
           { status: 400 },
         );
       }
       const quote = getVtuQuote(amount);
-      const result = await withWalletCharge({
+      return executePurchase({
         userId: user.id,
-        amount: quote.totalAmount,
-        description: `VTU airtime purchase for ${account}`,
-        purchase: () => purchaseBigisubAirtime(network, account, amount),
-      });
-      await recordOrder({
-        userId: user.id,
+        idempotencyKey,
         category: 'vtu-airtime',
         serviceName: 'Airtime recharge',
-        provider: 'Bigisub',
-        providerOrderId: providerReference(result),
-        amount: quote.totalAmount,
-        currency: 'NGN',
-        status: 'completed',
-        metadata: {
-          network,
-          phoneNumber: account,
-          rechargeValue: amount,
-          ...quote,
-          delivery: extractProviderPurchaseDetails(result),
-        },
+        quote,
+        metadata: { network, phoneNumber: account, rechargeValue: amount },
+        purchase: (requestId) =>
+          purchaseVtuAirtime({
+            requestId,
+            phone: account,
+            serviceId: network,
+            amount,
+          }),
       });
-      return Response.json({ ...result, ...quote }, { status: 201 });
     }
 
     if (service === 'data') {
-      const network = Number(body.provider);
-      const plan = Number(body.plan);
-      if (
-        ![1, 2, 3, 4].includes(network) ||
-        !Number.isInteger(plan) ||
-        !phonePattern.test(account)
-      ) {
+      const network = networkIds.get(text(body.provider));
+      const planId = text(body.plan);
+      if (!network || !/^\d+$/.test(planId) || !phonePattern.test(account)) {
         return Response.json(
-          {
-            error:
-              'Choose a valid data plan and enter an 11-digit phone number.',
-          },
+          { error: 'Choose a valid data plan and enter a valid phone number.' },
           { status: 400 },
         );
       }
-      const matchingPlan = (await getBigisubDataPlans(network)).find(
-        (item) => item.id === plan && !item.plan_disabled,
+      const plan = (await getVtuDataVariations(network)).find(
+        (item) =>
+          String(item.variation_id) === planId &&
+          item.availability.toLowerCase() === 'available',
       );
-      if (!matchingPlan)
+      if (!plan) {
         return Response.json(
           { error: 'That data plan is no longer available.' },
           { status: 409 },
         );
-      const baseAmount = matchingPlan.plan_amount || matchingPlan.amount;
-      const quote = getVtuQuote(baseAmount);
-      const result = await withWalletCharge({
+      }
+      const quote = getVtuQuote(Number(plan.price));
+      return executePurchase({
         userId: user.id,
-        amount: quote.totalAmount,
-        description: `VTU data purchase for ${account}`,
-        purchase: () => purchaseBigisubData(network, plan, account),
-      });
-      await recordOrder({
-        userId: user.id,
+        idempotencyKey,
         category: 'vtu-data',
-        serviceName: `${matchingPlan.network_name} ${matchingPlan.plan_volume || matchingPlan.size}`,
-        provider: 'Bigisub',
-        providerOrderId: providerReference(result),
-        amount: quote.totalAmount,
-        currency: 'NGN',
-        status: 'completed',
+        serviceName: `${plan.service_name} ${plan.data_plan}`,
+        quote,
         metadata: {
           network,
           phoneNumber: account,
-          plan,
-          planName: matchingPlan.plan_volume || matchingPlan.size,
-          ...quote,
-          delivery: extractProviderPurchaseDetails(result),
+          plan: planId,
+          planName: plan.data_plan,
         },
+        purchase: (requestId) =>
+          purchaseVtuData({
+            requestId,
+            phone: account,
+            serviceId: network,
+            variationId: planId,
+          }),
       });
-      return Response.json({ ...result, ...quote }, { status: 201 });
     }
 
     if (service === 'cable') {
-      const planId = Number(body.plan);
+      const planId = text(body.plan);
       if (
         !cableProviders.has(provider) ||
-        account.length < 8 ||
+        account.length < 5 ||
         !phonePattern.test(phone) ||
-        !Number.isInteger(planId)
+        !/^\d+$/.test(planId)
       ) {
         return Response.json(
           { error: 'Complete the TV subscription details.' },
           { status: 400 },
         );
       }
-      const [verified, plans] = await Promise.all([
-        verifyBigisubCable(provider, account),
-        getBigisubCablePlans(provider),
+      const [verification, plans] = await Promise.all([
+        provider === 'showmax'
+          ? Promise.resolve({ data: { customer_name: 'Showmax account' } })
+          : verifyVtuCustomer({ customerId: account, serviceId: provider }),
+        getVtuTvVariations(provider),
       ]);
-      const plan = plans.find((item) => item.id === planId);
-      if (!verified.valid || !plan) {
+      const plan = plans.find(
+        (item) =>
+          String(item.variation_id) === planId &&
+          item.availability.toLowerCase() === 'available',
+      );
+      if (!plan) {
         return Response.json(
-          { error: 'The smartcard or selected package could not be verified.' },
+          { error: 'That TV package is no longer available.' },
           { status: 409 },
         );
       }
-      const quote = getVtuQuote(plan.amount);
-      const result = await withWalletCharge({
+      const quote = getVtuQuote(Number(plan.price));
+      return executePurchase({
         userId: user.id,
-        amount: quote.totalAmount,
-        description: `VTU cable purchase for ${account}`,
-        purchase: () =>
-          purchaseBigisubCable({
-            cableType: provider,
-            cardNumber: account,
-            phone,
-            amount: plan.amount,
-            customerName: verified.customer_name,
-          }),
-      });
-      await recordOrder({
-        userId: user.id,
+        idempotencyKey,
         category: 'vtu-cable',
-        serviceName: plan.product_name,
-        provider: 'Bigisub',
-        providerOrderId: providerReference(result),
-        amount: quote.totalAmount,
-        currency: 'NGN',
-        status: 'completed',
+        serviceName: plan.package_bouquet,
+        quote,
         metadata: {
           cableProvider: provider,
           smartcardNumber: account,
           contactPhone: phone,
-          customerName: verified.customer_name,
-          packageName: plan.product_name,
-          ...quote,
-          delivery: extractProviderPurchaseDetails(result),
+          customerName: text(verification.data.customer_name),
+          packageName: plan.package_bouquet,
         },
+        purchase: (requestId) =>
+          purchaseVtuTv({
+            requestId,
+            customerId: account,
+            serviceId: provider,
+            variationId: planId,
+            subscriptionType: 'change',
+          }),
       });
-      return Response.json({ ...result, ...quote }, { status: 201 });
     }
 
     if (service === 'electricity') {
       const amount = positiveNumber(body.amount);
       if (
-        !provider ||
+        !electricityProviders.some((item) => item.code === provider) ||
         !meterTypes.has(meterType) ||
         !/^\d{10,15}$/.test(account) ||
         !phonePattern.test(phone) ||
@@ -317,58 +576,54 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const [verified, providers] = await Promise.all([
-        verifyBigisubElectricity(provider, account, meterType),
-        getBigisubElectricityProviders(),
-      ]);
-      const selectedProvider = providers.find((item) => item.code === provider);
-      if (!selectedProvider || amount < selectedProvider.min_amount) {
+      const verification = await verifyVtuCustomer({
+        customerId: account,
+        serviceId: provider,
+        variationId: meterType,
+      });
+      const minimum =
+        positiveNumber(verification.data.min_purchase_amount) ?? 1000;
+      const maximum =
+        positiveNumber(verification.data.max_purchase_amount) ?? 100_000;
+      if (amount < minimum || amount > maximum) {
         return Response.json(
           {
-            error: `The minimum payment for this provider is ₦${selectedProvider?.min_amount ?? 500}.`,
+            error: `Enter an amount from ₦${minimum.toLocaleString('en-NG')} to ₦${maximum.toLocaleString('en-NG')}.`,
           },
           { status: 400 },
         );
       }
+      const selectedProvider = electricityProviders.find(
+        (item) => item.code === provider,
+      )!;
       const quote = getVtuQuote(amount);
-      const result = await withWalletCharge({
+      return executePurchase({
         userId: user.id,
-        amount: quote.totalAmount,
-        description: `VTU electricity purchase for ${account}`,
-        purchase: () =>
-          purchaseBigisubElectricity({
-            company: provider,
-            meterNumber: account,
-            meterType,
-            phone,
-            amount,
-            customerName: verified.customer_name,
-            customerAddress: verified.customer_address,
-          }),
-      });
-      await recordOrder({
-        userId: user.id,
+        idempotencyKey,
         category: 'vtu-electricity',
         serviceName: `${selectedProvider.name} electricity`,
-        provider: 'Bigisub',
-        providerOrderId: providerReference(result),
-        amount: quote.totalAmount,
-        currency: 'NGN',
-        status: 'completed',
+        quote,
         metadata: {
           meterNumber: account,
           contactPhone: phone,
-          customerName: verified.customer_name,
-          customerAddress: verified.customer_address ?? null,
+          customerName: text(verification.data.customer_name),
+          customerAddress: text(verification.data.customer_address) || null,
           meterType,
           utilityValue: amount,
-          ...quote,
-          delivery: extractProviderPurchaseDetails(result),
         },
+        purchase: (requestId) =>
+          purchaseVtuElectricity({
+            requestId,
+            customerId: account,
+            serviceId: provider,
+            variationId: meterType,
+            amount,
+          }),
       });
-      return Response.json({ ...result, ...quote }, { status: 201 });
     }
 
+    // Exam PINs are not part of VTU.ng v2. Preserve the existing provider so
+    // this service keeps working while the requested utilities move to VTU.ng.
     if (service === 'exam') {
       const quantity = Number(body.quantity);
       if (!provider || ![1, 2, 5].includes(quantity)) {
@@ -382,11 +637,12 @@ export async function POST(request: Request) {
           item.code.toLowerCase() === provider ||
           item.exam_type.toLowerCase() === provider,
       );
-      if (!price)
+      if (!price) {
         return Response.json(
           { error: 'That exam PIN is no longer available.' },
           { status: 409 },
         );
+      }
       const quote = getVtuQuote(price.amount * quantity);
       const result = await withWalletCharge({
         userId: user.id,

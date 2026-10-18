@@ -14,6 +14,7 @@ import { getLogOrderDelivery } from '@/lib/provider-clients';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { syncTrackedNumberOrder } from '@/lib/number-orders';
 import { createClient } from '@/lib/supabase/server';
+import { syncTrackedVtuOrder } from '@/lib/vtu-orders';
 
 type OrderMetadataValue =
   | string
@@ -30,6 +31,7 @@ type OrderRow = {
   service_name: string;
   provider: string;
   provider_order_id: string | null;
+  provider_request_id: string | null;
   amount: number | string;
   currency: string;
   status: string;
@@ -195,9 +197,29 @@ async function refreshNumberOrders(orders: OrderRow[], userId: string) {
         providerOrderId: order.provider_order_id!,
       });
       order.status =
-        result.orderStatus === 'refunded'
-          ? 'cancelled'
-          : result.orderStatus;
+        result.orderStatus === 'refunded' ? 'cancelled' : result.orderStatus;
+    }),
+  );
+}
+
+async function refreshVtuOrders(orders: OrderRow[], userId: string) {
+  const activeOrders = orders
+    .filter(
+      (order) =>
+        order.provider === 'VTU.ng' &&
+        order.provider_request_id &&
+        ['pending', 'processing'].includes(order.status),
+    )
+    .slice(0, 10);
+
+  await Promise.allSettled(
+    activeOrders.map(async (order) => {
+      const result = await syncTrackedVtuOrder({
+        userId,
+        orderId: order.id,
+        providerRequestId: order.provider_request_id!,
+      });
+      order.status = result.status === 'refunded' ? 'cancelled' : result.status;
     }),
   );
 }
@@ -213,7 +235,7 @@ export default async function OrdersPage() {
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id,category,service_name,provider,provider_order_id,amount,currency,status,metadata,created_at',
+      'id,category,service_name,provider,provider_order_id,provider_request_id,amount,currency,status,metadata,created_at',
     )
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
@@ -221,6 +243,7 @@ export default async function OrdersPage() {
   await Promise.all([
     restoreMissingLogDeliveries(orders, user.id),
     refreshNumberOrders(orders, user.id),
+    refreshVtuOrders(orders, user.id),
     refreshTrackedBoostOrders(orders),
   ]);
 
@@ -312,7 +335,8 @@ export default async function OrdersPage() {
                       <strong>{formattedAmount}</strong>
                       <span className={`order-history-status status-${status}`}>
                         <StatusIcon status={status} />
-                        {statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1)}
+                        {statusLabel.charAt(0).toUpperCase() +
+                          statusLabel.slice(1)}
                       </span>
                       <small>
                         <CalendarDays />
