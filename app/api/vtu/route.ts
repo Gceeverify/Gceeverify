@@ -14,7 +14,6 @@ import { withWalletCharge } from '@/lib/wallet';
 import {
   getVtuDataVariations,
   getVtuTvVariations,
-  getVtuWallet,
   purchaseVtuAirtime,
   purchaseVtuData,
   purchaseVtuElectricity,
@@ -266,10 +265,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const service = searchParams.get('service');
 
-    if (service === 'wallet') {
-      const result = await getVtuWallet();
-      return Response.json(result.data);
-    }
     if (service === 'data') {
       const network = networkIds.get(searchParams.get('network') ?? '');
       if (!network) {
