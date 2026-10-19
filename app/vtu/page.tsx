@@ -259,6 +259,29 @@ export default function VtuPage() {
     purchaseLabel = `${money(Number(amount))} electricity value`;
   }
 
+  const resultStatus = result?.status?.toLowerCase() ?? '';
+  const purchaseSucceeded = Boolean(
+    result &&
+      (active === 'exam' ||
+        ['completed', 'completed-api', 'success', 'successful'].includes(
+          resultStatus,
+        )),
+  );
+  const purchaseProcessing = Boolean(
+    result && ['pending', 'processing', 'processing-api'].includes(resultStatus),
+  );
+  const receiptStatusLabel = purchaseSucceeded
+    ? 'Successful'
+    : purchaseProcessing
+      ? 'Processing'
+      : result?.status || 'Submitted';
+  const receiptTargetLabel =
+    active === 'cable'
+      ? 'Smartcard number'
+      : active === 'electricity'
+        ? 'Meter number'
+        : 'Phone number';
+
   const formReady = (() => {
     if (!provider) return false;
     if (active === 'exam')
@@ -680,13 +703,51 @@ export default function VtuPage() {
           </p>
 
           {result ? (
-            <output className="vtu-result">
-              <CheckCircle2 />
-              <h2>Request submitted</h2>
-              <p>
-                Your provider returned a {result.status || 'successful'} status.
+            <output
+              className={`vtu-result ${purchaseSucceeded ? 'vtu-result-success' : 'vtu-result-processing'}`}
+              aria-live="polite"
+            >
+              {purchaseSucceeded ? <CheckCircle2 /> : <RadioTower />}
+              <h2>
+                {purchaseSucceeded
+                  ? 'Purchase successful'
+                  : 'Purchase is processing'}
+              </h2>
+              <p className="vtu-result-message">
+                {purchaseSucceeded
+                  ? `Your ${selected.label.toLowerCase()} purchase was completed successfully${account ? ` for ${account}` : ''}.`
+                  : `Your ${selected.label.toLowerCase()} purchase has been received. You can track its final status from your orders.`}
               </p>
+              <div className="vtu-result-status" aria-label="Purchase status">
+                <span>{purchaseSucceeded ? <CheckCircle2 /> : <Loader2 />}</span>
+                <div>
+                  <small>Payment status</small>
+                  <strong>{receiptStatusLabel}</strong>
+                </div>
+              </div>
               <dl className="vtu-summary">
+                <div>
+                  <dt>Service</dt>
+                  <dd>{selected.label}</dd>
+                </div>
+                {providerLabel && (
+                  <div>
+                    <dt>Provider</dt>
+                    <dd>{providerLabel}</dd>
+                  </div>
+                )}
+                {account && active !== 'exam' && (
+                  <div>
+                    <dt>{receiptTargetLabel}</dt>
+                    <dd>{account}</dd>
+                  </div>
+                )}
+                {purchaseLabel && (
+                  <div>
+                    <dt>{active === 'data' || active === 'cable' ? 'Package' : 'Purchase'}</dt>
+                    <dd>{purchaseLabel}</dd>
+                  </div>
+                )}
                 {result.transaction_id && (
                   <div>
                     <dt>Transaction ID</dt>
