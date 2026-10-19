@@ -23,6 +23,22 @@ const categories = new Set([
   'other',
 ]);
 
+const fixedRetailPricesNgn = new Map<number, number>([
+  [22, 5_000], // Express for Phone — one month
+  [23, 5_000], // Express for Laptop & PC — one month
+  [29, 1_500], // PIA VPN — seven days
+  [59, 1_500], // PureVPN — seven days
+  [26, 8_000], // NordVPN — one month
+  [27, 8_000], // Avira Phantom — three months
+]);
+
+function resellerRetailPriceNgn(productId: number, providerPriceNgn: number) {
+  return (
+    fixedRetailPricesNgn.get(productId) ??
+    getResellerPriceNgn(providerPriceNgn)
+  );
+}
+
 function providerError(error: unknown, fallback: string, status = 400) {
   return Response.json(
     { error: error instanceof Error ? error.message : fallback },
@@ -42,7 +58,7 @@ export async function GET(request: Request) {
         id: product.id,
         name: product.name,
         description: product.description,
-        price: getResellerPriceNgn(product.priceMinor / 100),
+        price: resellerRetailPriceNgn(product.id, product.priceMinor / 100),
         availableStock: product.availableStock,
         category: getSujanCategory(product),
         sourceCategory: product.categoryName,
@@ -112,7 +128,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const unitPrice = getResellerPriceNgn(product.priceMinor / 100);
+    const unitPrice = resellerRetailPriceNgn(
+      product.id,
+      product.priceMinor / 100,
+    );
     const totalPrice = Math.round(unitPrice * quantity * 100) / 100;
     if (
       !Number.isFinite(body.quotedPrice) ||
@@ -146,6 +165,9 @@ export async function POST(request: Request) {
         providerUnitPriceNgn: product.priceMinor / 100,
         unitPriceNgn: unitPrice,
         markupPercent: getResellerMarkupPercent(),
+        pricingMode: fixedRetailPricesNgn.has(product.id)
+          ? 'fixed-retail-price'
+          : 'percentage-markup',
         deliveryCount: normalized.delivery.length,
         delivery: normalized.delivery,
       },
