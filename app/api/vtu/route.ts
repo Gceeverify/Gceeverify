@@ -43,6 +43,10 @@ const networkIds = new Map([
 const idempotencyPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const orderNotFoundGraceMs = 3 * 60 * 1000;
+const ambiguousProviderErrors = new Set([
+  'provider_timeout',
+  'provider_unavailable',
+]);
 
 const electricityProviders = [
   {
@@ -230,7 +234,15 @@ async function executePurchase(input: {
       { status: reconciliation.status === 'processing' ? 202 : 201 },
     );
   } catch (error) {
-    if (error instanceof VtuApiError && error.definitiveFailure) {
+    const providerRejectedOrder =
+      error instanceof VtuApiError &&
+      error.status >= 400 &&
+      error.status < 500 &&
+      !ambiguousProviderErrors.has(error.code);
+    if (
+      error instanceof VtuApiError &&
+      (error.definitiveFailure || providerRejectedOrder)
+    ) {
       await refundVtuOrder({
         providerRequestId: order.providerRequestId,
         reason: `Automatic refund: VTU.ng rejected ${input.serviceName}`,
@@ -249,6 +261,10 @@ async function executePurchase(input: {
       status: 'processing',
       metadata: {
         providerStatus: 'awaiting-requery',
+        providerErrorCode:
+          error instanceof VtuApiError ? error.code : 'unknown_error',
+        providerError:
+          error instanceof Error ? error.message : 'Unknown provider error',
         lastCheckedAt: new Date().toISOString(),
       },
     });
