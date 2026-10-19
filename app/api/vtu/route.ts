@@ -251,7 +251,12 @@ async function executePurchase(input: {
           providerError: error.message,
         },
       });
-      throw error;
+      return Response.json({
+        reference: order.providerRequestId,
+        status: 'refunded',
+        message: `${error.message} Your wallet has been refunded automatically.`,
+        ...input.quote,
+      });
     }
 
     await updateVtuOrder({
@@ -504,7 +509,7 @@ export async function POST(request: Request) {
         );
       }
       const quote = getVtuQuote(amount);
-      return executePurchase({
+      return await executePurchase({
         userId: user.id,
         idempotencyKey,
         category: 'vtu-airtime',
@@ -542,7 +547,7 @@ export async function POST(request: Request) {
         );
       }
       const quote = getVtuQuote(Number(plan.price));
-      return executePurchase({
+      return await executePurchase({
         userId: user.id,
         idempotencyKey,
         category: 'vtu-data',
@@ -595,7 +600,7 @@ export async function POST(request: Request) {
         );
       }
       const quote = getVtuQuote(Number(plan.price));
-      return executePurchase({
+      return await executePurchase({
         userId: user.id,
         idempotencyKey,
         category: 'vtu-cable',
@@ -654,7 +659,7 @@ export async function POST(request: Request) {
         (item) => item.code === provider,
       )!;
       const quote = getVtuQuote(amount);
-      return executePurchase({
+      return await executePurchase({
         userId: user.id,
         idempotencyKey,
         category: 'vtu-electricity',

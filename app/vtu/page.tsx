@@ -65,6 +65,7 @@ type PurchaseResult = {
   baseAmount?: number;
   serviceCharge?: number;
   totalAmount?: number;
+  message?: string;
 };
 
 const services = [
@@ -122,13 +123,28 @@ function money(value: number) {
 }
 
 async function json(response: Response) {
-  const result = (await response.json()) as Record<string, unknown>;
+  const body = await response.text();
+  let result: Record<string, unknown> = {};
+  if (body) {
+    try {
+      result = JSON.parse(body) as Record<string, unknown>;
+    } catch {
+      throw new Error(
+        response.ok
+          ? 'The server returned an invalid response. Please try again.'
+          : 'The request could not be completed. Please try again.',
+      );
+    }
+  }
   if (!response.ok) {
     throw new Error(
       typeof result.error === 'string'
         ? result.error
         : 'The request could not be completed.',
     );
+  }
+  if (!body) {
+    throw new Error('The server returned an empty response. Please try again.');
   }
   return result;
 }
@@ -793,7 +809,8 @@ export default function VtuPage() {
                 {purchaseSucceeded
                   ? `Your ${selected.label.toLowerCase()} purchase was completed successfully${account ? ` for ${account}` : ''}.`
                   : purchaseRefunded
-                    ? `VTU.ng could not complete your ${selected.label.toLowerCase()} purchase. The full amount has been returned to your wallet automatically.`
+                    ? result.message ||
+                      `VTU.ng could not complete your ${selected.label.toLowerCase()} purchase. The full amount has been returned to your wallet automatically.`
                     : purchaseFailed
                       ? `Your ${selected.label.toLowerCase()} purchase could not be completed. No additional charge will be made.`
                       : `Your ${selected.label.toLowerCase()} purchase has been received. We are checking the provider automatically, and this receipt will update when delivery is confirmed.`}
