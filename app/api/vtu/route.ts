@@ -195,13 +195,17 @@ async function executePurchase(input: {
     try {
       response = await input.purchase(order.providerRequestId);
     } catch (error) {
+      if (error instanceof VtuApiError && error.code === 'duplicate_order') {
+        throw new VtuApiError(
+          `VTU.ng blocked this duplicate ${input.serviceName} order because a similar purchase was made within the last three minutes. Your wallet has been refunded. Wait three minutes, then try again.`,
+          409,
+          error.code,
+          true,
+        );
+      }
       if (
         error instanceof VtuApiError &&
-        [
-          'duplicate_request',
-          'duplicate_request_id',
-          'duplicate_order',
-        ].includes(error.code)
+        ['duplicate_request', 'duplicate_request_id'].includes(error.code)
       ) {
         response = await requeryVtuOrder(order.providerRequestId);
       } else {

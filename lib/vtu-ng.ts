@@ -253,6 +253,7 @@ const definitiveCodes = new Set([
   'request_id_error',
   'failure',
   'insufficient_funds',
+  'duplicate_order',
   'rest_forbidden',
 ]);
 
