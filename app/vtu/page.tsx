@@ -208,6 +208,57 @@ export default function VtuPage() {
     return () => controller.abort();
   }, [active, provider]);
 
+  useEffect(() => {
+    const reference = result?.reference;
+    const status = result?.status?.toLowerCase() ?? '';
+    const processingStatuses = ['pending', 'processing', 'processing-api'];
+    if (!reference || !processingStatuses.includes(status)) return;
+
+    const controller = new AbortController();
+    let attempts = 0;
+    let timeout: ReturnType<typeof setTimeout>;
+
+    const checkStatus = async () => {
+      if (controller.signal.aborted) return;
+      try {
+        const response = await fetch('/api/vtu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'track', requestId: reference }),
+          signal: controller.signal,
+        });
+        const tracked = (await json(response)) as PurchaseResult;
+        setResult((current) =>
+          current
+            ? {
+                ...current,
+                ...tracked,
+                reference: tracked.reference ?? current.reference,
+                transaction_id:
+                  tracked.transaction_id ?? current.transaction_id,
+              }
+            : current,
+        );
+        const nextStatus = tracked.status?.toLowerCase() ?? '';
+        if (!processingStatuses.includes(nextStatus)) return;
+      } catch (caught) {
+        if (caught instanceof DOMException && caught.name === 'AbortError') {
+          return;
+        }
+        // Temporary provider errors are retried with the same order reference.
+      }
+
+      attempts += 1;
+      if (attempts < 24) timeout = setTimeout(checkStatus, 5_000);
+    };
+
+    timeout = setTimeout(checkStatus, 3_000);
+    return () => {
+      controller.abort();
+      clearTimeout(timeout);
+    };
+  }, [result?.reference, result?.status]);
+
   const selected = services.find((service) => service.key === active)!;
   const selectedDataPlan = dataPlans.find((item) => String(item.id) === plan);
   const selectedCablePlan = cablePlans.find((item) => String(item.id) === plan);
@@ -270,11 +321,26 @@ export default function VtuPage() {
   const purchaseProcessing = Boolean(
     result && ['pending', 'processing', 'processing-api'].includes(resultStatus),
   );
+  const purchaseRefunded = Boolean(
+    result && ['refunded', 'cancelled'].includes(resultStatus),
+  );
+  const purchaseFailed = Boolean(result && resultStatus === 'failed');
   const receiptStatusLabel = purchaseSucceeded
     ? 'Successful'
+    : purchaseRefunded
+      ? 'Refunded'
+      : purchaseFailed
+        ? 'Failed'
     : purchaseProcessing
       ? 'Processing'
       : result?.status || 'Submitted';
+  const receiptTone = purchaseSucceeded
+    ? 'success'
+    : purchaseRefunded
+      ? 'refunded'
+      : purchaseFailed
+        ? 'failed'
+        : 'processing';
   const receiptTargetLabel =
     active === 'cable'
       ? 'Smartcard number'
@@ -704,22 +770,44 @@ export default function VtuPage() {
 
           {result ? (
             <output
-              className={`vtu-result ${purchaseSucceeded ? 'vtu-result-success' : 'vtu-result-processing'}`}
+              className={`vtu-result vtu-result-${receiptTone}`}
               aria-live="polite"
             >
-              {purchaseSucceeded ? <CheckCircle2 /> : <RadioTower />}
+              {purchaseSucceeded ? (
+                <CheckCircle2 />
+              ) : purchaseRefunded || purchaseFailed ? (
+                <AlertCircle />
+              ) : (
+                <RadioTower />
+              )}
               <h2>
                 {purchaseSucceeded
                   ? 'Purchase successful'
-                  : 'Purchase is processing'}
+                  : purchaseRefunded
+                    ? 'Purchase refunded'
+                    : purchaseFailed
+                      ? 'Purchase failed'
+                      : 'Purchase is processing'}
               </h2>
               <p className="vtu-result-message">
                 {purchaseSucceeded
                   ? `Your ${selected.label.toLowerCase()} purchase was completed successfully${account ? ` for ${account}` : ''}.`
-                  : `Your ${selected.label.toLowerCase()} purchase has been received. You can track its final status from your orders.`}
+                  : purchaseRefunded
+                    ? `VTU.ng could not complete your ${selected.label.toLowerCase()} purchase. The full amount has been returned to your wallet automatically.`
+                    : purchaseFailed
+                      ? `Your ${selected.label.toLowerCase()} purchase could not be completed. No additional charge will be made.`
+                      : `Your ${selected.label.toLowerCase()} purchase has been received. We are checking the provider automatically, and this receipt will update when delivery is confirmed.`}
               </p>
               <div className="vtu-result-status" aria-label="Purchase status">
-                <span>{purchaseSucceeded ? <CheckCircle2 /> : <Loader2 />}</span>
+                <span>
+                  {purchaseSucceeded ? (
+                    <CheckCircle2 />
+                  ) : purchaseRefunded || purchaseFailed ? (
+                    <AlertCircle />
+                  ) : (
+                    <Loader2 />
+                  )}
+                </span>
                 <div>
                   <small>Payment status</small>
                   <strong>{receiptStatusLabel}</strong>

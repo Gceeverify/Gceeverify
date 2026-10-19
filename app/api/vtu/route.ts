@@ -42,6 +42,7 @@ const networkIds = new Map([
 ]);
 const idempotencyPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const orderNotFoundGraceMs = 3 * 60 * 1000;
 
 const electricityProviders = [
   {
@@ -348,7 +349,7 @@ export async function POST(request: Request) {
       const admin = createAdminClient();
       const { data: order } = await admin
         .from('orders')
-        .select('id')
+        .select('id,created_at')
         .eq('provider', 'VTU.ng')
         .eq('provider_request_id', requestId)
         .eq('user_id', user.id)
@@ -359,12 +360,53 @@ export async function POST(request: Request) {
           { status: 404 },
         );
       }
-      const response = await requeryVtuOrder(requestId);
-      const reconciled = await reconcileVtuOrderData({
-        data: response.data,
-        requestId,
-      });
-      return Response.json({ ...response.data, status: reconciled.status });
+      try {
+        const response = await requeryVtuOrder(requestId);
+        const reconciled = await reconcileVtuOrderData({
+          data: response.data,
+          requestId,
+        });
+        return Response.json({
+          ...response.data,
+          transaction_id:
+            response.data.order_id === undefined
+              ? undefined
+              : String(response.data.order_id),
+          reference: requestId,
+          status: reconciled.status,
+        });
+      } catch (error) {
+        if (error instanceof VtuApiError && error.code === 'order_not_found') {
+          const orderAge = Date.now() - new Date(order.created_at).getTime();
+          if (orderAge < orderNotFoundGraceMs) {
+            return Response.json(
+              {
+                reference: requestId,
+                status: 'processing',
+                message: 'VTU.ng is still confirming this order.',
+              },
+              { status: 202 },
+            );
+          }
+          await refundVtuOrder({
+            providerRequestId: requestId,
+            reason:
+              'Automatic refund: VTU.ng could not find the order after the confirmation window',
+            metadata: {
+              providerErrorCode: error.code,
+              providerError: error.message,
+              lastCheckedAt: new Date().toISOString(),
+            },
+          });
+          return Response.json({
+            reference: requestId,
+            status: 'refunded',
+            message:
+              'VTU.ng could not confirm this purchase. Your wallet has been refunded automatically.',
+          });
+        }
+        throw error;
+      }
     }
 
     if (

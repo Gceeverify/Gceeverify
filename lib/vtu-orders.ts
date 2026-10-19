@@ -39,7 +39,13 @@ function providerOrderId(data: VtuOrderData) {
 
 export function normalizedVtuStatus(status: unknown) {
   const value = typeof status === 'string' ? status.trim().toLowerCase() : '';
-  if (value === 'completed-api') return 'completed' as const;
+  if (
+    ['completed-api', 'completed', 'success', 'successful', 'delivered'].includes(
+      value,
+    )
+  ) {
+    return 'completed' as const;
+  }
   if (value === 'refunded') return 'refunded' as const;
   if (value === 'failed') return 'failed' as const;
   if (value === 'cancelled') return 'cancelled' as const;

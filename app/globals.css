@@ -7209,6 +7209,17 @@ html[data-theme='light'] .order-history-delivery-pending {
 .vtu-result-processing .vtu-result-status > span svg {
   animation: vtu-spin 1.2s linear infinite;
 }
+.vtu-result-refunded .vtu-result-status,
+.vtu-result-failed .vtu-result-status {
+  border-color: rgba(255, 193, 92, 0.24);
+  background: rgba(255, 193, 92, 0.07);
+}
+.vtu-result-refunded .vtu-result-status > span,
+.vtu-result-failed .vtu-result-status > span,
+.vtu-result-refunded .vtu-result-status strong,
+.vtu-result-failed .vtu-result-status strong {
+  color: #ffcf7a;
+}
 .vtu-secret-value {
   max-width: 210px;
   overflow-wrap: anywhere;
