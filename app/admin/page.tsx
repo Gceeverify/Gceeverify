@@ -15,6 +15,7 @@ import {
 import styles from './admin.module.css';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
 
 function isBanned(user: User) {
   return Boolean(
@@ -110,9 +111,7 @@ async function refreshNumberOrderStatuses(orders: OrderRecord[]) {
           providerOrderId: order.provider_order_id!,
         });
         order.status =
-          result.orderStatus === 'refunded'
-            ? 'cancelled'
-            : result.orderStatus;
+          result.orderStatus === 'refunded' ? 'cancelled' : result.orderStatus;
       }),
     );
   }

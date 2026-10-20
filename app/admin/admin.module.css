@@ -398,6 +398,190 @@
   margin-top: 18px;
 }
 
+.emailPanel {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(320px, 1.3fr);
+  gap: 28px;
+  margin-top: 18px;
+  padding: 24px;
+  border: 1px solid var(--admin-line);
+  border-radius: 20px;
+  background: var(--admin-panel);
+}
+
+.emailIntro {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.emailIntro h2 {
+  margin: 5px 0 8px;
+  font-size: 21px;
+  letter-spacing: -0.035em;
+}
+
+.emailIntro p {
+  max-width: 330px;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.emailIcon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--admin-green);
+  background: color-mix(in srgb, var(--admin-green) 11%, transparent);
+}
+
+.emailIcon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.emailForm,
+.emailForm > label:not(.emailConfirmation) {
+  display: grid;
+  gap: 8px;
+}
+
+.emailForm {
+  gap: 15px;
+}
+
+.emailForm label > span {
+  color: var(--admin-text);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.emailForm input[type='text'],
+.emailForm textarea {
+  width: 100%;
+  border: 1px solid var(--admin-line);
+  border-radius: 11px;
+  outline: 0;
+  color: var(--admin-text);
+  background: var(--admin-panel-soft);
+  font: inherit;
+  font-size: 12px;
+}
+
+.emailForm input[type='text'] {
+  min-height: 44px;
+  padding: 0 13px;
+}
+
+.emailForm textarea {
+  min-height: 150px;
+  padding: 13px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.emailForm input[type='text']:focus,
+.emailForm textarea:focus {
+  border-color: color-mix(in srgb, var(--admin-green) 55%, var(--admin-line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-green) 9%, transparent);
+}
+
+.emailConfirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--admin-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.emailConfirmation input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--admin-green);
+}
+
+.emailConfirmation span {
+  color: var(--admin-muted) !important;
+  font-weight: 600 !important;
+}
+
+.emailSuccess,
+.emailError {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px;
+  border: 1px solid
+    color-mix(in srgb, var(--admin-green) 28%, var(--admin-line));
+  border-radius: 10px;
+  color: var(--admin-green);
+  background: color-mix(in srgb, var(--admin-green) 7%, transparent);
+  font-size: 10px;
+}
+
+.emailError {
+  border-color: rgba(255, 99, 99, 0.26);
+  color: #ff9d9d;
+  background: rgba(255, 99, 99, 0.08);
+}
+
+.emailSuccess svg,
+.emailError svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.emailSubmitRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.emailSubmitRow small {
+  color: var(--admin-muted);
+  font-size: 9px;
+}
+
+.emailSubmitRow button {
+  display: inline-flex;
+  min-height: 42px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: 999px;
+  color: #102314;
+  background: #61ee65;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.emailSubmitRow button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.emailSubmitRow button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.spinnerIcon {
+  animation: spin 700ms linear infinite;
+}
+
 .orderTableWrap {
   overflow-x: auto;
   margin-top: 17px;
@@ -1093,7 +1277,7 @@
   .sidebar nav {
     display: grid;
     width: 100%;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(6, 1fr);
   }
   .sidebar nav a {
     justify-content: center;
@@ -1126,8 +1310,16 @@
     grid-template-columns: repeat(2, 1fr);
   }
   .businessPanel,
-  .ordersPanel {
+  .ordersPanel,
+  .emailPanel {
     padding: 18px 14px;
+  }
+  .emailPanel {
+    grid-template-columns: 1fr;
+  }
+  .emailSubmitRow {
+    align-items: stretch;
+    flex-direction: column;
   }
   .businessStats {
     grid-template-columns: 1fr 1fr;

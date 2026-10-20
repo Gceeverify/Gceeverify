@@ -12,6 +12,7 @@ import {
   ChevronDown,
   CircleDollarSign,
   Clock3,
+  Mail,
   House,
   LayoutDashboard,
   PackageSearch,
@@ -26,6 +27,7 @@ import {
 import { ThemeToggle } from '@/components/theme-toggle';
 import { signOut } from '@/app/auth/actions';
 import { AdminUserActions } from './admin-user-actions';
+import { BulkEmailComposer } from './bulk-email-composer';
 import styles from './admin.module.css';
 
 export type AdminUserRow = {
@@ -131,6 +133,9 @@ export function AdminDashboard({
           </Link>
           <Link href="#users">
             <UsersRound /> User management
+          </Link>
+          <Link href="#email-users">
+            <Mail /> Email users
           </Link>
           <Link href="/dashboard">
             <UserRound /> User dashboard
@@ -394,6 +399,12 @@ export function AdminDashboard({
             </div>
           )}
         </section>
+
+        <BulkEmailComposer
+          recipientCount={
+            users.filter((user) => user.email !== 'No email address').length
+          }
+        />
 
         <section className={styles.usersPanel} id="users">
           <div className={styles.sectionHeading}>

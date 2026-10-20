@@ -21,6 +21,7 @@ export default defineRailway(() => {
       BIGISUB_API_KEY: preserve(),
       BIGISUB_TRANSACTION_PIN: preserve(),
       BULKACC_API_KEY: preserve(),
+      EMAIL_FROM_NAME: preserve(),
       JAP_API_KEY: preserve(),
       NEXT_PUBLIC_SITE_URL: preserve(),
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: preserve(),
@@ -34,6 +35,8 @@ export default defineRailway(() => {
       RESELLER_API_BASE_URL: preserve(),
       RESELLER_API_KEY: preserve(),
       SMSBOWER_API_KEY: preserve(),
+      SMTP_APP_PASSWORD: preserve(),
+      SMTP_USER: preserve(),
       SUPABASE_SECRET_KEY: preserve(),
     },
   });
