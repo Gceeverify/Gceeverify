@@ -85,8 +85,8 @@ export async function sendEmailToAllUsers(
       throw new Error('No user email addresses were found.');
 
     const result = await sendBulkEmail({ recipients, subject, message });
-    const status = result.sent > 0 ? 'success' : 'error';
-    const summary = `${result.sent.toLocaleString()} email${result.sent === 1 ? '' : 's'} sent${result.failed ? `; ${result.failed.toLocaleString()} failed` : ''}.`;
+    const status = result.sent > 0 && result.failed === 0 ? 'success' : 'error';
+    const summary = `${result.sent.toLocaleString()} email${result.sent === 1 ? '' : 's'} sent${result.failed ? `; ${result.failed.toLocaleString()} failed` : ''}.${result.failureMessage ? ` ${result.failureMessage}` : ''}`;
 
     return { status, message: summary, ...result };
   } catch (error) {

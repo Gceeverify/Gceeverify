@@ -1,25 +1,18 @@
-import {
-  getBigisubExamPrices,
-  purchaseBigisubExam,
-} from '@/lib/provider-clients';
 import { getCurrentUser } from '@/lib/auth';
-import {
-  extractProviderPurchaseDetails,
-  providerReference,
-  recordOrder,
-} from '@/lib/orders';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getVtuQuote } from '@/lib/vtu-pricing';
-import { withWalletCharge } from '@/lib/wallet';
 import {
   getVtuDataVariations,
+  getVtuEducationVariations,
   getVtuTvVariations,
   purchaseVtuAirtime,
   purchaseVtuData,
+  purchaseVtuEducation,
   purchaseVtuElectricity,
   purchaseVtuTv,
   requeryVtuOrder,
-  verifyVtuCustomer,
+  verifyVtuCableCustomer,
+  verifyVtuElectricityCustomer,
   VtuApiError,
   type VtuOrderData,
 } from '@/lib/vtu-ng';
@@ -32,13 +25,13 @@ import {
 } from '@/lib/vtu-orders';
 
 const phonePattern = /^(?:0[789]\d{9}|\+234[789]\d{9})$/;
-const cableProviders = new Set(['dstv', 'gotv', 'startimes', 'showmax']);
+const cableProviders = new Set(['dstv', 'gotv', 'startimes']);
 const meterTypes = new Set(['prepaid', 'postpaid']);
 const networkIds = new Map([
   ['1', 'mtn'],
   ['2', 'airtel'],
   ['3', 'glo'],
-  ['4', '9mobile'],
+  ['4', 't2mobile'],
 ]);
 const idempotencyPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -51,73 +44,73 @@ const ambiguousProviderErrors = new Set([
 const electricityProviders = [
   {
     name: 'Ikeja Electric (IKEDC)',
-    code: 'ikeja-electric',
+    code: 'ikedc',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Eko Electric (EKEDC)',
-    code: 'eko-electric',
+    code: 'ekedc',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Kano Electric (KEDCO)',
-    code: 'kano-electric',
+    code: 'kedco',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Port Harcourt Electric (PHED)',
-    code: 'portharcourt-electric',
+    code: 'phed',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Jos Electric (JED)',
-    code: 'jos-electric',
+    code: 'jed',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Ibadan Electric (IBEDC)',
-    code: 'ibadan-electric',
+    code: 'ibedc',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Kaduna Electric (KAEDCO)',
-    code: 'kaduna-electric',
+    code: 'kaedco',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Abuja Electric (AEDC)',
-    code: 'abuja-electric',
+    code: 'aedc',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Enugu Electric (EEDC)',
-    code: 'enugu-electric',
+    code: 'eedc',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Benin Electric (BEDC)',
-    code: 'benin-electric',
+    code: 'bedc',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Aba Electric (ABEDC)',
-    code: 'aba-electric',
+    code: 'abedc',
     min_amount: 1000,
     service_charge: 0,
   },
   {
     name: 'Yola Electric (YEDC)',
-    code: 'yola-electric',
+    code: 'yedc',
     min_amount: 1000,
     service_charge: 0,
   },
@@ -302,7 +295,7 @@ export async function GET(request: Request) {
       const plans = (await getVtuDataVariations(network))
         .filter((plan) => plan.availability.toLowerCase() === 'available')
         .map((plan) => ({
-          id: Number(plan.variation_id),
+          id: plan.variation_id,
           network_name: plan.service_name,
           plantype: plan.service_name,
           size: plan.data_plan,
@@ -325,7 +318,7 @@ export async function GET(request: Request) {
       const plans = (await getVtuTvVariations(provider))
         .filter((plan) => plan.availability.toLowerCase() === 'available')
         .map((plan) => ({
-          id: Number(plan.variation_id),
+          id: plan.variation_id,
           cable_name: plan.service_name,
           product_name: plan.package_bouquet,
           variation_code: String(plan.variation_id),
@@ -337,7 +330,15 @@ export async function GET(request: Request) {
       return Response.json({ providers: electricityProviders });
     }
     if (service === 'exam') {
-      return Response.json({ prices: await getBigisubExamPrices() });
+      const prices = (await getVtuEducationVariations('waec'))
+        .filter((plan) => plan.availability.toLowerCase() === 'available')
+        .map((plan) => ({
+          exam_type: 'waec',
+          name: plan.exam_name,
+          amount: plan.price,
+          code: plan.variation_id,
+        }));
+      return Response.json({ prices });
     }
     return Response.json(
       { error: 'Choose a valid utility service.' },
@@ -401,7 +402,7 @@ export async function POST(request: Request) {
           status: reconciled.status,
         });
       } catch (error) {
-        if (error instanceof VtuApiError && error.code === 'order_not_found') {
+        if (error instanceof VtuApiError && error.code === 'not_found') {
           const orderAge = Date.now() - new Date(order.created_at).getTime();
           if (orderAge < orderNotFoundGraceMs) {
             return Response.json(
@@ -458,17 +459,17 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      if (service === 'cable' && provider === 'showmax') {
-        return Response.json({
-          customer_name: 'Showmax account',
-          customer_id: account,
-        });
-      }
-      const verification = await verifyVtuCustomer({
-        customerId: account,
-        serviceId: provider,
-        variationId: service === 'electricity' ? meterType : undefined,
-      });
+      const verification =
+        service === 'electricity'
+          ? await verifyVtuElectricityCustomer({
+              customerId: account,
+              serviceId: provider,
+              meterType,
+            })
+          : await verifyVtuCableCustomer({
+              customerId: account,
+              serviceId: provider,
+            });
       return Response.json(verification.data);
     }
 
@@ -529,7 +530,7 @@ export async function POST(request: Request) {
     if (service === 'data') {
       const network = networkIds.get(text(body.provider));
       const planId = text(body.plan);
-      if (!network || !/^\d+$/.test(planId) || !phonePattern.test(account)) {
+      if (!network || !planId || !phonePattern.test(account)) {
         return Response.json(
           { error: 'Choose a valid data plan and enter a valid phone number.' },
           { status: 400 },
@@ -575,7 +576,7 @@ export async function POST(request: Request) {
         !cableProviders.has(provider) ||
         account.length < 5 ||
         !phonePattern.test(phone) ||
-        !/^\d+$/.test(planId)
+        !planId
       ) {
         return Response.json(
           { error: 'Complete the TV subscription details.' },
@@ -583,9 +584,10 @@ export async function POST(request: Request) {
         );
       }
       const [verification, plans] = await Promise.all([
-        provider === 'showmax'
-          ? Promise.resolve({ data: { customer_name: 'Showmax account' } })
-          : verifyVtuCustomer({ customerId: account, serviceId: provider }),
+        verifyVtuCableCustomer({
+          customerId: account,
+          serviceId: provider,
+        }),
         getVtuTvVariations(provider),
       ]);
       const plan = plans.find(
@@ -638,13 +640,13 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const verification = await verifyVtuCustomer({
+      const verification = await verifyVtuElectricityCustomer({
         customerId: account,
         serviceId: provider,
-        variationId: meterType,
+        meterType,
       });
       const minimum =
-        positiveNumber(verification.data.min_purchase_amount) ?? 1000;
+        positiveNumber(verification.data.minimum_purchase_amount) ?? 1000;
       const maximum =
         positiveNumber(verification.data.max_purchase_amount) ?? 100_000;
       if (amount < minimum || amount > maximum) {
@@ -669,7 +671,7 @@ export async function POST(request: Request) {
           meterNumber: account,
           contactPhone: phone,
           customerName: text(verification.data.customer_name),
-          customerAddress: text(verification.data.customer_address) || null,
+          customerAddress: text(verification.data.address) || null,
           meterType,
           utilityValue: amount,
         },
@@ -684,8 +686,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // Exam PINs are not part of VTU.ng v2. Preserve the existing provider so
-    // this service keeps working while the requested utilities move to VTU.ng.
     if (service === 'exam') {
       const quantity = Number(body.quantity);
       if (!provider || ![1, 2, 5].includes(quantity)) {
@@ -694,10 +694,8 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const price = (await getBigisubExamPrices()).find(
-        (item) =>
-          item.code.toLowerCase() === provider ||
-          item.exam_type.toLowerCase() === provider,
+      const price = (await getVtuEducationVariations('waec')).find(
+        (item) => item.variation_id.toLowerCase() === provider,
       );
       if (!price) {
         return Response.json(
@@ -705,30 +703,26 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       }
-      const quote = getVtuQuote(price.amount * quantity);
-      const result = await withWalletCharge({
+      const quote = getVtuQuote(price.price * quantity);
+      return await executePurchase({
         userId: user.id,
-        amount: quote.totalAmount,
-        description: `VTU ${price.name || price.exam_type} PIN purchase`,
-        purchase: () => purchaseBigisubExam(price.code, quantity),
-      });
-      await recordOrder({
-        userId: user.id,
-        category: 'exam-pin',
-        serviceName: price.name || price.exam_type,
-        provider: 'Bigisub',
-        providerOrderId: providerReference(result),
-        amount: quote.totalAmount,
-        currency: 'NGN',
-        status: 'completed',
+        idempotencyKey,
+        category: 'vtu-exam',
+        serviceName: price.exam_name,
+        quote,
         metadata: {
           quantity,
-          examProvider: price.name || price.exam_type,
-          ...quote,
-          delivery: extractProviderPurchaseDetails(result),
+          examProvider: price.service_name,
+          variationCode: price.variation_id,
         },
+        purchase: (requestId) =>
+          purchaseVtuEducation({
+            requestId,
+            provider: price.service_id,
+            variationId: price.variation_id,
+            quantity,
+          }),
       });
-      return Response.json({ ...result, ...quote }, { status: 201 });
     }
 
     return Response.json(

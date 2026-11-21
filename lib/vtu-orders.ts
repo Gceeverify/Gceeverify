@@ -40,9 +40,13 @@ function providerOrderId(data: VtuOrderData) {
 export function normalizedVtuStatus(status: unknown) {
   const value = typeof status === 'string' ? status.trim().toLowerCase() : '';
   if (
-    ['completed-api', 'completed', 'success', 'successful', 'delivered'].includes(
-      value,
-    )
+    [
+      'completed-api',
+      'completed',
+      'success',
+      'successful',
+      'delivered',
+    ].includes(value)
   ) {
     return 'completed' as const;
   }
@@ -162,7 +166,7 @@ export async function reconcileVtuOrderData(input: {
     lastCheckedAt: new Date().toISOString(),
   };
 
-  if (status === 'refunded') {
+  if (status === 'failed' || status === 'refunded' || status === 'cancelled') {
     await refundVtuOrder({
       providerRequestId: requestId,
       providerOrderId: externalOrderId,

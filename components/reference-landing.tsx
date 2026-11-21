@@ -916,8 +916,7 @@ export function ReferenceLanding() {
           width={3456}
           height={1615}
           alt="Gceeverify hero from the supplied reference design"
-          priority
-          unoptimized
+          sizes="100vw"
         />
         <Image
           className="ref-mobile-hero-reference ref-mobile-hero-light"
@@ -926,18 +925,16 @@ export function ReferenceLanding() {
           width={1716}
           height={1375}
           alt="The original Gceeverify hero customer"
-          priority
-          unoptimized
+          sizes="100vw"
         />
         <Image
           className="ref-mobile-hero-reference ref-mobile-hero-dark"
           data-reveal="right"
-          src="/gceeverify-mobile-hero-person-dark.png?v=2"
+          src="/gceeverify-mobile-hero-person-dark.png"
           width={1716}
           height={1375}
           alt="The original Gceeverify hero customer on a dark background"
-          priority
-          unoptimized
+          sizes="100vw"
         />
         <span className="ref-hero-blend" aria-hidden="true" />
         <div className="ref-hero-orb ref-orb-yellow" />
@@ -958,7 +955,7 @@ export function ReferenceLanding() {
               width={1188}
               height={1323}
               alt="Smiling customer holding a phone and giving a thumbs-up"
-              priority
+              sizes="(max-width: 700px) 100vw, 590px"
             />
           </div>
         </div>
@@ -988,7 +985,7 @@ export function ReferenceLanding() {
           width={3456}
           height={1315}
           alt="Gceeverify services section from the supplied reference design"
-          unoptimized
+          sizes="100vw"
         />
         <div className="ref-mobile-customer-frame" data-reveal="right">
           <span className="ref-customer-frame-label">Instant access</span>
@@ -998,15 +995,15 @@ export function ReferenceLanding() {
             width={1050}
             height={1275}
             alt="The original Gceeverify customer using her phone"
-            unoptimized
+            sizes="(max-width: 420px) 285px, 315px"
           />
           <Image
             className="ref-mobile-customer-reference ref-mobile-customer-dark"
-            src="/gceeverify-mobile-customer-dark.png?v=1"
+            src="/gceeverify-mobile-customer-dark.png"
             width={1050}
             height={1275}
             alt="The original Gceeverify customer on a dark blended background"
-            unoptimized
+            sizes="(max-width: 420px) 285px, 315px"
           />
         </div>
         <div className="ref-simple-copy" data-reveal="left">

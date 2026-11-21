@@ -10388,6 +10388,12 @@ html[data-theme='dark'] .ref-simple {
     height: auto;
     transform: translateX(50%);
   }
+  html[data-theme='light'] .ref-mobile-hero-dark,
+  html[data-theme='light'] .ref-mobile-customer-dark,
+  html[data-theme='dark'] .ref-mobile-hero-light,
+  html[data-theme='dark'] .ref-mobile-customer-light {
+    display: none;
+  }
   .ref-simple > .ref-simple-visual {
     display: none;
   }

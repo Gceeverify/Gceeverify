@@ -1,16 +1,8 @@
 import 'server-only';
 
-import { createHash } from 'node:crypto';
-import { createAdminClient } from '@/lib/supabase/admin';
-
-const VTU_BASE_URL = 'https://vtu.ng/wp-json';
+const LIVE_BASE_URL = 'https://api.vtu.ng/v1';
+const SANDBOX_BASE_URL = 'https://sandbox.vtu.ng/v1';
 const REQUEST_TIMEOUT_MS = 15_000;
-const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
-const TOKEN_FALLBACK_LIFETIME_MS = 6 * 24 * 60 * 60 * 1000;
-
-type CachedToken = { value: string; expiresAt: number };
-let cachedToken: CachedToken | null = null;
-let tokenRequest: Promise<string> | null = null;
 
 export type VtuResponse<T extends Record<string, unknown>> = {
   code: string;
@@ -25,20 +17,29 @@ export type VtuOrderData = Record<string, unknown> & {
 };
 
 export type VtuDataVariation = {
-  variation_id: string | number;
+  variation_id: string;
   service_name: string;
   service_id: string;
   data_plan: string;
-  price: string | number;
+  price: number;
   availability: string;
 };
 
 export type VtuTvVariation = {
-  variation_id: string | number;
+  variation_id: string;
   service_name: string;
   service_id: string;
   package_bouquet: string;
-  price: string | number;
+  price: number;
+  availability: string;
+};
+
+export type VtuEducationVariation = {
+  variation_id: string;
+  service_name: string;
+  service_id: string;
+  exam_name: string;
+  price: number;
   availability: string;
 };
 
@@ -54,8 +55,8 @@ export class VtuApiError extends Error {
   }
 }
 
-function requiredCredential(name: 'VTU_USERNAME' | 'VTU_PASSWORD') {
-  const value = process.env[name]?.trim();
+function requiredSecretKey() {
+  const value = process.env.VTU_SECRET_KEY?.trim();
   if (!value) {
     throw new VtuApiError(
       'VTU.ng is not configured yet.',
@@ -67,27 +68,104 @@ function requiredCredential(name: 'VTU_USERNAME' | 'VTU_PASSWORD') {
   return value;
 }
 
-function tokenExpiry(token: string) {
-  try {
-    const payload = JSON.parse(
-      Buffer.from(token.split('.')[1], 'base64url').toString('utf8'),
-    ) as { exp?: number };
-    if (typeof payload.exp === 'number') return payload.exp * 1000;
-  } catch {
-    // VTU currently returns a JWT. The conservative fallback is for a future
-    // opaque-token response and expires before the documented seven days.
-  }
-  return Date.now() + TOKEN_FALLBACK_LIFETIME_MS;
-}
-
-function tokenIsFresh(token: CachedToken | null) {
-  return Boolean(
-    token && token.expiresAt > Date.now() + TOKEN_REFRESH_BUFFER_MS,
+function baseUrlFor(key: string) {
+  if (key.startsWith('vtu_sk_test_')) return SANDBOX_BASE_URL;
+  if (key.startsWith('vtu_sk_live_')) return LIVE_BASE_URL;
+  throw new VtuApiError(
+    'The configured VTU.ng secret key is invalid.',
+    503,
+    'configuration_error',
+    true,
   );
 }
 
-function tokenHash(token: string) {
-  return createHash('sha256').update(token).digest('hex');
+function record(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function stringValue(value: unknown, fallback = '') {
+  return typeof value === 'string' || typeof value === 'number'
+    ? String(value)
+    : fallback;
+}
+
+function providerError(result: Record<string, unknown>) {
+  return record(result.error);
+}
+
+function providerMessage(result: Record<string, unknown>, fallback: string) {
+  const error = providerError(result);
+  const message = error.message ?? result.message;
+  return typeof message === 'string' && message.trim()
+    ? message.replace(/<[^>]+>/g, '').trim()
+    : fallback;
+}
+
+function providerCode(result: Record<string, unknown>) {
+  const error = providerError(result);
+  return typeof error.code === 'string' && error.code
+    ? error.code
+    : 'provider_error';
+}
+
+function findScalar(value: unknown, keys: Set<string>): string | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findScalar(item, keys);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  if (!value || typeof value !== 'object') return undefined;
+  for (const [key, nested] of Object.entries(
+    value as Record<string, unknown>,
+  )) {
+    if (
+      keys.has(key.toLowerCase()) &&
+      (typeof nested === 'string' || typeof nested === 'number')
+    ) {
+      return String(nested);
+    }
+    const found = findScalar(nested, keys);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function findPins(value: unknown) {
+  const pins: string[] = [];
+  const visit = (nested: unknown, key = '') => {
+    if (Array.isArray(nested)) {
+      nested.forEach((item) => visit(item, key));
+      return;
+    }
+    if (nested && typeof nested === 'object') {
+      Object.entries(nested as Record<string, unknown>).forEach(
+        ([name, item]) => visit(item, name),
+      );
+      return;
+    }
+    if (
+      ['pin', 'pin_code', 'code'].includes(key.toLowerCase()) &&
+      (typeof nested === 'string' || typeof nested === 'number')
+    ) {
+      pins.push(String(nested));
+    }
+  };
+  visit(value);
+  return [...new Set(pins)];
+}
+
+function isDefinitiveFailure(status: number, code: string) {
+  if (status >= 500 || status === 408 || status === 429) return false;
+  return ![
+    'idempotency_request_in_progress',
+    'rate_limit_exceeded',
+    'polling_too_frequent',
+    'service_unavailable',
+  ].includes(code);
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit) {
@@ -119,250 +197,189 @@ async function fetchWithTimeout(url: string, init: RequestInit) {
   }
 }
 
-function providerMessage(value: unknown, fallback: string) {
-  if (!value || typeof value !== 'object') return fallback;
-  const result = value as Record<string, unknown>;
-  return typeof result.message === 'string' && result.message.trim()
-    ? result.message.replace(/<[^>]+>/g, '').trim()
-    : fallback;
-}
-
-async function generateToken() {
-  const response = await fetchWithTimeout(`${VTU_BASE_URL}/jwt-auth/v1/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      username: requiredCredential('VTU_USERNAME'),
-      password: requiredCredential('VTU_PASSWORD'),
-    }),
-  });
-  const result = (await response.json().catch(() => ({}))) as Record<
-    string,
-    unknown
-  >;
-  if (!response.ok || typeof result.token !== 'string') {
-    throw new VtuApiError(
-      providerMessage(result, 'VTU.ng authentication failed.'),
-      response.status || 502,
-      typeof result.code === 'string' ? result.code : 'authentication_failed',
-      true,
-    );
-  }
-  return result.token;
-}
-
-async function claimSharedToken(failedToken?: string): Promise<string> {
-  const admin = createAdminClient();
-  const failedHash = failedToken ? tokenHash(failedToken) : null;
-
-  for (let attempt = 0; attempt < 24; attempt += 1) {
-    const { data, error } = await admin.rpc('claim_vtu_token_refresh', {
-      p_failed_token_hash: failedHash,
-    });
-    if (error) {
-      throw new VtuApiError(
-        'VTU.ng authentication storage is unavailable.',
-        503,
-        'token_storage_error',
-        true,
-      );
-    }
-
-    const row = Array.isArray(data) ? data[0] : data;
-    if (row?.token && row?.expires_at) {
-      cachedToken = {
-        value: String(row.token),
-        expiresAt: new Date(String(row.expires_at)).getTime(),
-      };
-      return cachedToken.value;
-    }
-
-    if (row?.should_refresh) {
-      try {
-        const token = await generateToken();
-        const expiresAt = tokenExpiry(token);
-        const { error: storeError } = await admin.rpc('store_vtu_token', {
-          p_token: token,
-          p_expires_at: new Date(expiresAt).toISOString(),
-        });
-        if (storeError) throw storeError;
-        cachedToken = { value: token, expiresAt };
-        return token;
-      } catch (error) {
-        try {
-          await admin.rpc('release_vtu_token_refresh');
-        } catch {
-          // The 30-second database lease also recovers abandoned refreshes.
-        }
-        if (error instanceof VtuApiError) throw error;
-        throw new VtuApiError(
-          'VTU.ng authentication could not be saved.',
-          503,
-          'token_storage_error',
-          true,
-        );
-      }
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-
-  throw new VtuApiError(
-    'VTU.ng authentication is busy. Please try again shortly.',
-    503,
-    'token_refresh_busy',
-    true,
-  );
-}
-
-async function getAccessToken(failedToken?: string) {
-  if (
-    tokenIsFresh(cachedToken) &&
-    (!failedToken || cachedToken?.value !== failedToken)
-  ) {
-    return cachedToken!.value;
-  }
-
-  if (tokenRequest) {
-    const token = await tokenRequest;
-    if (!failedToken || token !== failedToken) return token;
-  }
-
-  tokenRequest = claimSharedToken(failedToken);
-  try {
-    return await tokenRequest;
-  } finally {
-    tokenRequest = null;
-  }
-}
-
-const definitiveCodes = new Set([
-  'missing_fields',
-  'missing_request_id',
-  'invalid_field',
-  'invalid_service',
-  'invalid_service_id',
-  'invalid_variation_id',
-  'invalid_request_id',
-  'below_minimum_amount',
-  'above_maximum_amount',
-  'below_customer_arrears',
-  'invalid_product',
-  'product_unavailable',
-  'order_failed',
-  'request_id_error',
-  'failure',
-  'insufficient_funds',
-  'duplicate_order',
-  'rest_forbidden',
-]);
-
-async function authenticatedRequest<T extends Record<string, unknown>>(
+async function partnerRequest(
   path: string,
-  body?: Record<string, unknown>,
-  retryAuthentication = true,
-): Promise<VtuResponse<T>> {
-  let token: string;
-  try {
-    token = await getAccessToken();
-  } catch (error) {
-    if (error instanceof VtuApiError) {
-      throw new VtuApiError(error.message, error.status, error.code, true);
-    }
-    throw error;
-  }
-  const response = await fetchWithTimeout(`${VTU_BASE_URL}${path}`, {
-    method: body ? 'POST' : 'GET',
+  init: {
+    method?: 'GET' | 'POST';
+    body?: Record<string, unknown>;
+    idempotencyKey?: string;
+  } = {},
+) {
+  const secretKey = requiredSecretKey();
+  const response = await fetchWithTimeout(`${baseUrlFor(secretKey)}${path}`, {
+    method: init.method ?? 'GET',
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      Authorization: `Bearer ${secretKey}`,
+      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init.idempotencyKey
+        ? { 'Idempotency-Key': init.idempotencyKey }
+        : {}),
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: init.body ? JSON.stringify(init.body) : undefined,
   });
-  const result = (await response.json().catch(() => ({}))) as Record<
-    string,
-    unknown
-  >;
-  const code = typeof result.code === 'string' ? result.code : 'provider_error';
-
-  if (
-    retryAuthentication &&
-    (response.status === 401 ||
-      code.includes('jwt_auth_invalid_token') ||
-      code.includes('jwt_auth_failed'))
-  ) {
-    cachedToken = null;
-    await getAccessToken(token);
-    return authenticatedRequest<T>(path, body, false);
-  }
-
-  if (!response.ok || code !== 'success' || !result.data) {
+  const result = record(await response.json().catch(() => ({})));
+  if (!response.ok) {
+    const code = providerCode(result);
     throw new VtuApiError(
       providerMessage(result, 'VTU.ng could not complete this request.'),
       response.status || 502,
       code,
-      definitiveCodes.has(code),
+      isDefinitiveFailure(response.status, code),
     );
   }
-  return result as VtuResponse<T>;
+  return result;
 }
 
-async function publicVariations<T>(path: string) {
-  const response = await fetchWithTimeout(`${VTU_BASE_URL}${path}`, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
+function normalizeTransaction(value: unknown, requestId: string) {
+  const transaction = record(value);
+  const externalId = transaction.reference ?? transaction.id;
+  const status =
+    typeof transaction.status === 'string'
+      ? transaction.status
+      : stringValue(record(transaction.status).value, 'processing');
+  const token = findScalar(
+    transaction,
+    new Set(['token', 'meter_token', 'electricity_token']),
+  );
+  const units = findScalar(transaction, new Set(['units', 'unit']));
+  const pins = findPins(transaction.education_exam_pins);
+  return {
+    ...transaction,
+    ...(token ? { token } : {}),
+    ...(units ? { units } : {}),
+    ...(pins.length ? { pins } : {}),
+    order_id:
+      typeof externalId === 'string' || typeof externalId === 'number'
+        ? externalId
+        : undefined,
+    request_id:
+      typeof transaction.idempotency_key === 'string'
+        ? transaction.idempotency_key
+        : requestId,
+    status,
+  } satisfies VtuOrderData;
+}
+
+async function purchase(
+  path: string,
+  requestId: string,
+  body: Record<string, unknown>,
+): Promise<VtuResponse<VtuOrderData>> {
+  const result = await partnerRequest(path, {
+    method: 'POST',
+    body,
+    idempotencyKey: requestId,
   });
-  const result = (await response.json().catch(() => ({}))) as Record<
-    string,
-    unknown
-  >;
-  if (
-    !response.ok ||
-    result.code !== 'success' ||
-    !Array.isArray(result.data)
-  ) {
-    throw new VtuApiError(
-      providerMessage(result, 'VTU.ng plans could not be loaded.'),
-      response.status || 502,
-      typeof result.code === 'string' ? result.code : 'provider_error',
-      true,
-    );
-  }
-  return result.data as T[];
+  return {
+    code: 'success',
+    message:
+      typeof result.message === 'string' ? result.message : 'Request received.',
+    data: normalizeTransaction(result.transaction, requestId),
+  };
 }
 
-export function getVtuDataVariations(serviceId: string) {
-  return publicVariations<VtuDataVariation>(
-    `/api/v2/variations/data?service_id=${encodeURIComponent(serviceId)}`,
+export async function getVtuDataVariations(network: string) {
+  const result = await partnerRequest(
+    `/bills/data-plans?network=${encodeURIComponent(network)}`,
   );
+  return (Array.isArray(result.data) ? result.data : []).map((value) => {
+    const plan = record(value);
+    return {
+      variation_id: stringValue(plan.variation_code),
+      service_name: network.toUpperCase(),
+      service_id: network,
+      data_plan: stringValue(plan.name),
+      price: Number(plan.amount),
+      availability: 'available',
+    } satisfies VtuDataVariation;
+  });
 }
 
-export function getVtuTvVariations(serviceId: string) {
-  return publicVariations<VtuTvVariation>(
-    `/api/v2/variations/tv?service_id=${encodeURIComponent(serviceId)}`,
+export async function getVtuTvVariations(provider: string) {
+  const result = await partnerRequest(
+    `/bills/cable-packages?provider=${encodeURIComponent(provider)}`,
   );
+  return (Array.isArray(result.data) ? result.data : []).map((value) => {
+    const plan = record(value);
+    return {
+      variation_id: stringValue(plan.variation_code),
+      service_name: provider.toUpperCase(),
+      service_id: provider,
+      package_bouquet: stringValue(plan.name),
+      price: Number(plan.amount),
+      availability: 'available',
+    } satisfies VtuTvVariation;
+  });
 }
 
-export function verifyVtuCustomer(input: {
+export async function getVtuEducationVariations(provider = 'waec') {
+  const result = await partnerRequest(
+    `/bills/education-plans?provider=${encodeURIComponent(provider)}`,
+  );
+  return (Array.isArray(result.data) ? result.data : []).map((value) => {
+    const plan = record(value);
+    return {
+      variation_id: stringValue(plan.variation_code),
+      service_name: provider.toUpperCase(),
+      service_id: provider,
+      exam_name: stringValue(plan.name),
+      price: Number(plan.amount),
+      availability: 'available',
+    } satisfies VtuEducationVariation;
+  });
+}
+
+export async function verifyVtuElectricityCustomer(input: {
   customerId: string;
   serviceId: string;
-  variationId?: string;
+  meterType: string;
 }) {
-  return authenticatedRequest<Record<string, unknown>>(
-    '/api/v2/verify-customer',
-    {
-      customer_id: input.customerId,
-      service_id: input.serviceId,
-      ...(input.variationId ? { variation_id: input.variationId } : {}),
+  const result = await partnerRequest('/bills/electricity/verify-meter', {
+    method: 'POST',
+    body: {
+      disco_slug: input.serviceId,
+      meter_number: input.customerId,
+      meter_type: input.meterType,
     },
-  );
+  });
+  return {
+    code: 'success',
+    message: stringValue(result.message, 'Meter verified successfully.'),
+    data: record(result.verification),
+  };
 }
 
-export function getVtuWallet() {
-  return authenticatedRequest<{ balance: number; currency: string }>(
-    '/api/v2/balance',
-  );
+export async function verifyVtuCableCustomer(input: {
+  customerId: string;
+  serviceId: string;
+}) {
+  const result = await partnerRequest('/bills/cable-tv/verify-smartcard', {
+    method: 'POST',
+    body: {
+      provider: input.serviceId,
+      smartcard_number: input.customerId,
+    },
+  });
+  return {
+    code: 'success',
+    message: stringValue(result.message, 'Smartcard verified successfully.'),
+    data: record(result.verification),
+  };
+}
+
+export async function getVtuWallet() {
+  const result = await partnerRequest('/wallet');
+  const wallets = Array.isArray(result.data) ? result.data : [];
+  const wallet = record(wallets[0]);
+  return {
+    code: 'success',
+    message: 'Wallet loaded.',
+    data: {
+      balance: Number(wallet.balance),
+      currency: stringValue(wallet.currency, 'NGN'),
+    },
+  };
 }
 
 export function purchaseVtuAirtime(input: {
@@ -371,10 +388,9 @@ export function purchaseVtuAirtime(input: {
   serviceId: string;
   amount: number;
 }) {
-  return authenticatedRequest<VtuOrderData>('/api/v2/airtime', {
-    request_id: input.requestId,
+  return purchase('/bills/airtime', input.requestId, {
     phone: input.phone,
-    service_id: input.serviceId,
+    network: input.serviceId,
     amount: input.amount,
   });
 }
@@ -385,11 +401,10 @@ export function purchaseVtuData(input: {
   serviceId: string;
   variationId: string;
 }) {
-  return authenticatedRequest<VtuOrderData>('/api/v2/data', {
-    request_id: input.requestId,
+  return purchase('/bills/data', input.requestId, {
     phone: input.phone,
-    service_id: input.serviceId,
-    variation_id: input.variationId,
+    network: input.serviceId,
+    variation_code: input.variationId,
   });
 }
 
@@ -400,11 +415,10 @@ export function purchaseVtuElectricity(input: {
   variationId: string;
   amount: number;
 }) {
-  return authenticatedRequest<VtuOrderData>('/api/v2/electricity', {
-    request_id: input.requestId,
-    customer_id: input.customerId,
-    service_id: input.serviceId,
-    variation_id: input.variationId,
+  return purchase('/bills/electricity', input.requestId, {
+    disco_slug: input.serviceId,
+    meter_number: input.customerId,
+    meter_type: input.variationId,
     amount: input.amount,
   });
 }
@@ -417,20 +431,35 @@ export function purchaseVtuTv(input: {
   subscriptionType?: 'change' | 'renew';
   amount?: number;
 }) {
-  return authenticatedRequest<VtuOrderData>('/api/v2/tv', {
-    request_id: input.requestId,
-    customer_id: input.customerId,
-    service_id: input.serviceId,
-    variation_id: input.variationId,
-    ...(input.subscriptionType
-      ? { subscription_type: input.subscriptionType }
-      : {}),
+  return purchase('/bills/cable-tv', input.requestId, {
+    provider: input.serviceId,
+    smartcard_number: input.customerId,
+    subscription_type: input.subscriptionType ?? 'change',
+    variation_code: input.variationId,
     ...(input.amount ? { amount: input.amount } : {}),
   });
 }
 
-export function requeryVtuOrder(requestId: string) {
-  return authenticatedRequest<VtuOrderData>('/api/v2/requery', {
-    request_id: requestId,
+export function purchaseVtuEducation(input: {
+  requestId: string;
+  provider: string;
+  variationId: string;
+  quantity: number;
+}) {
+  return purchase('/bills/education', input.requestId, {
+    provider: input.provider,
+    variation_code: input.variationId,
+    quantity: input.quantity,
   });
+}
+
+export async function requeryVtuOrder(requestId: string) {
+  const result = await partnerRequest(
+    `/transactions/${encodeURIComponent(requestId)}?type=bill_payment`,
+  );
+  return {
+    code: 'success',
+    message: 'Transaction loaded.',
+    data: normalizeTransaction(result.data, requestId),
+  };
 }

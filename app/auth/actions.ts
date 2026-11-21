@@ -57,7 +57,15 @@ export async function signIn(
       showResend: true,
     };
   }
-  if (error) return { error: 'The email or password is incorrect.' };
+  if (error) {
+    if (error.status === 0 || error.message === 'fetch failed') {
+      return {
+        error:
+          'The authentication service could not be reached. Check the server connection and try again.',
+      };
+    }
+    return { error: 'The email or password is incorrect.' };
+  }
   redirect(next);
 }
 

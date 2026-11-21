@@ -28,14 +28,14 @@ import {
 
 type ServiceKey = 'airtime' | 'data' | 'cable' | 'electricity' | 'exam';
 type DataPlan = {
-  id: number;
+  id: string;
   plantype: string;
   size: string;
   validity: string;
   amount: number;
   plan_amount: number;
 };
-type CablePlan = { id: number; product_name: string; amount: number };
+type CablePlan = { id: string; product_name: string; amount: number };
 type ElectricityProvider = {
   name: string;
   code: string;
@@ -99,13 +99,12 @@ const mobileNetworks = [
   { value: '1', label: 'MTN' },
   { value: '2', label: 'Airtel' },
   { value: '3', label: 'Glo' },
-  { value: '4', label: '9mobile' },
+  { value: '4', label: 'T2 (9mobile)' },
 ];
 const cableProviders = [
   { value: 'dstv', label: 'DStv' },
   { value: 'gotv', label: 'GOtv' },
   { value: 'startimes', label: 'StarTimes' },
-  { value: 'showmax', label: 'Showmax' },
 ];
 const defaults: Record<ServiceKey, string> = {
   airtime: '1',
@@ -268,7 +267,7 @@ export default function VtuPage() {
       if (attempts < 24) timeout = setTimeout(checkStatus, 5_000);
     };
 
-    timeout = setTimeout(checkStatus, 3_000);
+    timeout = setTimeout(checkStatus, 10_000);
     return () => {
       controller.abort();
       clearTimeout(timeout);
@@ -329,13 +328,13 @@ export default function VtuPage() {
   const resultStatus = result?.status?.toLowerCase() ?? '';
   const purchaseSucceeded = Boolean(
     result &&
-      (active === 'exam' ||
-        ['completed', 'completed-api', 'success', 'successful'].includes(
-          resultStatus,
-        )),
+    ['completed', 'completed-api', 'success', 'successful'].includes(
+      resultStatus,
+    ),
   );
   const purchaseProcessing = Boolean(
-    result && ['pending', 'processing', 'processing-api'].includes(resultStatus),
+    result &&
+    ['pending', 'processing', 'processing-api'].includes(resultStatus),
   );
   const purchaseRefunded = Boolean(
     result && ['refunded', 'cancelled'].includes(resultStatus),
@@ -347,9 +346,9 @@ export default function VtuPage() {
       ? 'Refunded'
       : purchaseFailed
         ? 'Failed'
-    : purchaseProcessing
-      ? 'Processing'
-      : result?.status || 'Submitted';
+        : purchaseProcessing
+          ? 'Processing'
+          : result?.status || 'Submitted';
   const receiptTone = purchaseSucceeded
     ? 'success'
     : purchaseRefunded
@@ -473,7 +472,7 @@ export default function VtuPage() {
       });
       const purchase = (await json(response)) as PurchaseResult;
       setResult(purchase);
-      if (active === 'exam' || purchase.status === 'completed') {
+      if (purchase.status === 'completed') {
         trackTikTokEvent(
           'Purchase',
           commercePayload(
@@ -849,7 +848,11 @@ export default function VtuPage() {
                 )}
                 {purchaseLabel && (
                   <div>
-                    <dt>{active === 'data' || active === 'cable' ? 'Package' : 'Purchase'}</dt>
+                    <dt>
+                      {active === 'data' || active === 'cable'
+                        ? 'Package'
+                        : 'Purchase'}
+                    </dt>
                     <dd>{purchaseLabel}</dd>
                   </div>
                 )}

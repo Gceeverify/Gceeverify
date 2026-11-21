@@ -5,13 +5,13 @@ import type { VtuOrderData } from '@/lib/vtu-ng';
 export const runtime = 'nodejs';
 
 function validSignature(rawBody: string, receivedSignature: string) {
-  const pin = process.env.VTU_USER_PIN;
-  if (!pin || !receivedSignature) return false;
+  const secret = process.env.VTU_WEBHOOK_SECRET;
+  if (!secret || !receivedSignature) return false;
 
   const normalized = receivedSignature.trim().replace(/^sha256=/i, '');
   if (!/^[a-f0-9]{64}$/i.test(normalized)) return false;
 
-  const expected = createHmac('sha256', pin).update(rawBody).digest();
+  const expected = createHmac('sha256', secret).update(rawBody).digest();
   const received = Buffer.from(normalized, 'hex');
   return (
     received.length === expected.length && timingSafeEqual(received, expected)
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       { status: 413 },
     );
   }
-  const signature = request.headers.get('x-signature') ?? '';
+  const signature = request.headers.get('x-vtu-signature-256') ?? '';
 
   if (!validSignature(rawBody, signature)) {
     return Response.json(
@@ -42,9 +42,9 @@ export async function POST(request: Request) {
     );
   }
 
-  let payload: VtuOrderData;
+  let payload: Record<string, unknown>;
   try {
-    payload = JSON.parse(rawBody) as VtuOrderData;
+    payload = JSON.parse(rawBody) as Record<string, unknown>;
   } catch {
     return Response.json(
       { status: 'error', message: 'Invalid JSON payload' },
@@ -52,9 +52,28 @@ export async function POST(request: Request) {
     );
   }
 
+  const event = typeof payload.event === 'string' ? payload.event : '';
+  const transaction =
+    payload.data &&
+    typeof payload.data === 'object' &&
+    !Array.isArray(payload.data)
+      ? (payload.data as Record<string, unknown>)
+      : {};
+  const requestId =
+    typeof transaction.idempotency_key === 'string'
+      ? transaction.idempotency_key
+      : '';
   const status =
-    typeof payload.status === 'string' ? payload.status.toLowerCase() : '';
-  if (!payload.request_id || !['completed-api', 'refunded'].includes(status)) {
+    typeof transaction.status === 'string'
+      ? transaction.status.toLowerCase()
+      : '';
+  const supportedEvents = new Set([
+    'transaction.completed',
+    'transaction.failed',
+    'transaction.refunded',
+    'transaction.cancelled',
+  ]);
+  if (!requestId || !status || !supportedEvents.has(event)) {
     return Response.json(
       { status: 'error', message: 'Unsupported webhook payload' },
       { status: 400 },
@@ -63,8 +82,18 @@ export async function POST(request: Request) {
 
   try {
     const result = await reconcileVtuOrderData({
-      data: payload,
-      requestId: payload.request_id,
+      data: {
+        ...transaction,
+        request_id: requestId,
+        order_id:
+          typeof transaction.reference === 'string'
+            ? transaction.reference
+            : typeof transaction.id === 'string'
+              ? transaction.id
+              : undefined,
+        status,
+      } satisfies VtuOrderData,
+      requestId,
     });
     return Response.json({ status: 'success', order_status: result.status });
   } catch (error) {

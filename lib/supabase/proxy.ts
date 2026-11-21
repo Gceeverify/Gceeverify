@@ -1,7 +1,16 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const protectedPages = ['/dashboard', '/boost', '/numbers', '/emails', '/logs', '/vtu', '/admin'];
+const protectedPages = [
+  '/dashboard',
+  '/boost',
+  '/numbers',
+  '/emails',
+  '/logs',
+  '/vtu',
+  '/orders',
+  '/admin',
+];
 
 function isProtectedPage(pathname: string) {
   return protectedPages.some(

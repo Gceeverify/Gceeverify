@@ -59,6 +59,15 @@ railway.cmd variable set KEY --stdin --service gceeverify --environment producti
 Set every applicable key listed in `.env.example`. Do not set `PORT`; Railway
 injects it. Do not set `BLOB_READ_WRITE_TOKEN` after the tutorial import.
 
+Railway disables outbound SMTP on Free, Trial, and Hobby plans. To send from a
+normal Gmail address without a custom domain, enable the Gmail API and configure
+`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`,
+`EMAIL_FROM_ADDRESS`, and `EMAIL_FROM_NAME`. Grant only the
+`https://www.googleapis.com/auth/gmail.send` scope and request offline access
+when generating the refresh token. The app sends through Google's HTTPS API;
+`SMTP_USER` and `SMTP_APP_PASSWORD` remain a fallback for local development or
+Railway Pro and above.
+
 For non-secret settings, normal assignments are safe:
 
 ```powershell
