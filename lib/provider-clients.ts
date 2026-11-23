@@ -13,7 +13,9 @@ async function timedFetch(input: string, init?: RequestInit) {
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('The provider took too long to respond. Please try again.');
+      throw new Error(
+        'The provider took too long to respond. Please try again.',
+      );
     }
     throw error;
   } finally {
@@ -26,6 +28,7 @@ function requiredKey(
     | 'JAP_API_KEY'
     | 'BULKACC_API_KEY'
     | 'SMSBOWER_API_KEY'
+    | 'GRIZZLYSMS_API_KEY'
     | 'BIGISUB_API_KEY'
     | 'BIGISUB_TRANSACTION_PIN',
 ) {
@@ -397,9 +400,7 @@ type LogCatalogResult = {
   data: LogProductCatalog;
   complete: boolean;
 };
-let logCatalogCache:
-  | (LogCatalogResult & { expiresAt: number })
-  | null = null;
+let logCatalogCache: (LogCatalogResult & { expiresAt: number }) | null = null;
 let logCatalogRequest: Promise<LogCatalogResult> | null = null;
 let logFirstPageRequest: Promise<LogProductCatalog> | null = null;
 
@@ -615,10 +616,7 @@ export async function warmLogCatalog() {
     await logCatalogRequest;
     return;
   }
-  if (
-    logCatalogCache?.complete &&
-    logCatalogCache.expiresAt > Date.now()
-  )
+  if (logCatalogCache?.complete && logCatalogCache.expiresAt > Date.now())
     return;
   await startLogCatalogRefresh();
 }
@@ -681,27 +679,69 @@ export async function getLogOrderDelivery(orderCode: string) {
   throw new Error(lastMessage);
 }
 
-const smsBowerBase = 'https://smsbower.page/stubs/handler_api.php';
+export type NumberProviderName = 'SMSBower' | 'GrizzlySMS';
+
+const numberProviders = {
+  SMSBower: {
+    baseUrl: 'https://smsbower.page/stubs/handler_api.php',
+    keyName: 'SMSBOWER_API_KEY' as const,
+  },
+  GrizzlySMS: {
+    baseUrl: 'https://api.grizzlysms.com/stubs/handler_api.php',
+    keyName: 'GRIZZLYSMS_API_KEY' as const,
+  },
+} satisfies Record<
+  NumberProviderName,
+  { baseUrl: string; keyName: 'SMSBOWER_API_KEY' | 'GRIZZLYSMS_API_KEY' }
+>;
+
 const mailBase = 'https://smsbower.page/api/mail';
 
-export class SmsBowerApiError extends Error {
-  constructor(public readonly code: string) {
+export class NumberProviderApiError extends Error {
+  constructor(
+    public readonly provider: NumberProviderName,
+    public readonly code: string,
+  ) {
     super(code.replaceAll('_', ' ').toLowerCase());
-    this.name = 'SmsBowerApiError';
+    this.name = 'NumberProviderApiError';
   }
 }
 
-async function smsBowerRequest(params: Record<string, string>) {
-  const url = new URL(smsBowerBase);
-  url.searchParams.set('api_key', requiredKey('SMSBOWER_API_KEY'));
+async function numberProviderRequest(
+  provider: NumberProviderName,
+  params: Record<string, string>,
+) {
+  const config = numberProviders[provider];
+  const url = new URL(config.baseUrl);
+  url.searchParams.set('api_key', requiredKey(config.keyName));
   Object.entries(params).forEach(([key, value]) =>
     url.searchParams.set(key, value),
   );
   const response = await timedFetch(url.toString());
   const text = await response.text();
   if (!response.ok || text.startsWith('BAD_') || text.startsWith('NO_'))
-    throw new SmsBowerApiError(text);
+    throw new NumberProviderApiError(provider, text);
   return text;
+}
+
+function smsBowerRequest(params: Record<string, string>) {
+  return numberProviderRequest('SMSBower', params);
+}
+
+async function withNumberProviderFallback<T>(
+  request: (provider: NumberProviderName) => Promise<T>,
+  shouldFallback: (error: unknown) => boolean = () => true,
+) {
+  try {
+    return await request('SMSBower');
+  } catch (primaryError) {
+    if (!shouldFallback(primaryError)) throw primaryError;
+    try {
+      return await request('GrizzlySMS');
+    } catch (fallbackError) {
+      throw fallbackError instanceof Error ? fallbackError : primaryError;
+    }
+  }
 }
 
 type NumberProviderOffer = {
@@ -711,10 +751,10 @@ type NumberProviderOffer = {
   rate: number | null;
 };
 
-export async function getNumberCatalog() {
+async function getProviderNumberCatalog(provider: NumberProviderName) {
   const [servicesText, countriesText] = await Promise.all([
-    smsBowerRequest({ action: 'getServicesList' }),
-    smsBowerRequest({ action: 'getCountries' }),
+    numberProviderRequest(provider, { action: 'getServicesList' }),
+    numberProviderRequest(provider, { action: 'getCountries' }),
   ]);
   const servicesResult = JSON.parse(servicesText) as {
     services: Array<{ code: string; name: string }>;
@@ -740,18 +780,42 @@ export async function getNumberCatalog() {
   };
 }
 
-export async function getNumberQuote(service: string, country: string) {
+export function getNumberCatalog() {
+  return withNumberProviderFallback(getProviderNumberCatalog);
+}
+
+async function getProviderNumberQuote(
+  provider: NumberProviderName,
+  service: string,
+  country: string,
+) {
   const [pricesText, topCountriesText, countriesText] = await Promise.all([
-    smsBowerRequest({ action: 'getPricesV3', service, country }),
-    smsBowerRequest({ action: 'getTopCountriesByService', service }),
-    smsBowerRequest({ action: 'getCountries' }),
+    numberProviderRequest(provider, {
+      action: 'getPricesV3',
+      service,
+      country,
+    }),
+    numberProviderRequest(provider, {
+      action: 'getTopCountriesByService',
+      service,
+    }).catch(() => '{}'),
+    numberProviderRequest(provider, { action: 'getCountries' }),
   ]);
+  type RawNumberOffer = {
+    count: number;
+    price: number | number[];
+    provider_id: number;
+  };
+  type RawNumberService =
+    | Record<string, RawNumberOffer>
+    | {
+        price: number;
+        count: number;
+        providers: Record<string, RawNumberOffer>;
+      };
   const prices = JSON.parse(pricesText) as Record<
     string,
-    Record<
-      string,
-      Record<string, { count: number; price: number; provider_id: number }>
-    >
+    Record<string, RawNumberService>
   >;
   const countries = JSON.parse(countriesText) as Record<
     string,
@@ -765,14 +829,25 @@ export async function getNumberQuote(service: string, country: string) {
     .replace(/[()]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
-  const providerMap = prices[country]?.[service] ?? {};
+  const rawService = prices[country]?.[service];
+  const providerMap =
+    rawService && 'providers' in rawService
+      ? rawService.providers
+      : (rawService ?? {});
   const available: NumberProviderOffer[] = Object.values(providerMap)
-    .map((provider) => ({
-      providerId: String(provider.provider_id),
-      price: Number(provider.price),
-      count: Number(provider.count),
-      rate: null,
-    }))
+    .map((provider) => {
+      const prices = (
+        Array.isArray(provider.price) ? provider.price : [provider.price]
+      )
+        .map(Number)
+        .filter(Number.isFinite);
+      return {
+        providerId: String(provider.provider_id),
+        price: prices.length ? Math.min(...prices) : Number.NaN,
+        count: Number(provider.count),
+        rate: null,
+      };
+    })
     .filter(
       (provider) => Number.isFinite(provider.price) && provider.count > 0,
     );
@@ -852,19 +927,17 @@ export async function getNumberQuote(service: string, country: string) {
   };
 }
 
-export async function purchaseNumber(
-  service: string,
-  country: string,
+export function getNumberQuote(service: string, country: string) {
+  return withNumberProviderFallback((provider) =>
+    getProviderNumberQuote(provider, service, country),
+  );
+}
+
+function parseNumberPurchase(
+  text: string,
   expectedProviderPrice: number,
-  providerId: string,
+  country: string,
 ) {
-  const text = await smsBowerRequest({
-    action: 'getNumberV2',
-    service,
-    country,
-    maxPrice: String(expectedProviderPrice),
-    providerIds: providerId,
-  });
   if (text.startsWith('{')) {
     const result = JSON.parse(text) as {
       activationId: string | number;
@@ -893,17 +966,61 @@ export async function purchaseNumber(
   };
 }
 
-export async function getNumberStatus(id: string) {
-  const text = await smsBowerRequest({ action: 'getStatus', id });
+export async function purchaseNumber(
+  service: string,
+  country: string,
+  expectedProviderPrice: number,
+  providerId: string,
+) {
+  const result = await withNumberProviderFallback(
+    async (provider) => {
+      const params: Record<string, string> = {
+        action: 'getNumberV2',
+        service,
+        country,
+        maxPrice: String(expectedProviderPrice),
+      };
+      // Provider IDs are provider-specific. Keep the selected SMSBower route on
+      // the primary attempt and let Grizzly choose its best matching route.
+      if (provider === 'SMSBower') params.providerIds = providerId;
+      const text = await numberProviderRequest(provider, params);
+      return {
+        ...parseNumberPurchase(text, expectedProviderPrice, country),
+        provider,
+      };
+    },
+    (error) =>
+      error instanceof NumberProviderApiError &&
+      ['NO_NUMBERS', 'NO_BALANCE', 'BAD_KEY'].includes(error.code),
+  );
+  return result;
+}
+
+export async function getNumberStatus(
+  id: string,
+  provider: NumberProviderName = 'SMSBower',
+) {
+  const text = await numberProviderRequest(provider, {
+    action: 'getStatus',
+    id,
+  });
   if (text.startsWith('STATUS_OK:'))
     return { status: 'received', code: text.slice('STATUS_OK:'.length).trim() };
   if (text.startsWith('STATUS_WAIT')) return { status: 'waiting', code: null };
   if (text === 'STATUS_CANCEL') return { status: 'cancelled', code: null };
-  throw new SmsBowerApiError(text);
+  throw new NumberProviderApiError(provider, text);
 }
 
-export async function setNumberStatus(id: string, status: '6' | '8') {
-  const text = await smsBowerRequest({ action: 'setStatus', id, status });
+export async function setNumberStatus(
+  id: string,
+  status: '6' | '8',
+  provider: NumberProviderName = 'SMSBower',
+) {
+  const text = await numberProviderRequest(provider, {
+    action: 'setStatus',
+    id,
+    status,
+  });
   if (status === '6' && text === 'ACCESS_ACTIVATION') {
     return { status: 'completed' as const };
   }
@@ -911,9 +1028,11 @@ export async function setNumberStatus(id: string, status: '6' | '8') {
     return { status: 'cancelled' as const };
   }
   if (text === 'EARLY_CANCEL_DENIED') {
-    throw new Error('SMSBower allows cancellation two minutes after purchase.');
+    throw new Error(
+      `${provider} allows cancellation two minutes after purchase.`,
+    );
   }
-  throw new SmsBowerApiError(text);
+  throw new NumberProviderApiError(provider, text);
 }
 
 function virtualEmailProviderError(message?: string) {

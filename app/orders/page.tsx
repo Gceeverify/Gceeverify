@@ -185,7 +185,7 @@ async function refreshNumberOrders(orders: OrderRow[], userId: string) {
     .filter(
       (order) =>
         order.category === 'virtual-number' &&
-        order.provider === 'SMSBower' &&
+        ['SMSBower', 'GrizzlySMS'].includes(order.provider) &&
         order.provider_order_id &&
         ['pending', 'processing'].includes(order.status),
     )

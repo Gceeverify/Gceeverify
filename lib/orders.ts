@@ -101,9 +101,9 @@ export async function getTrackedNumberOrder(input: {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from('orders')
-    .select('id,status,created_at,amount')
+    .select('id,status,created_at,amount,provider')
     .eq('user_id', input.userId)
-    .eq('provider', 'SMSBower')
+    .in('provider', ['SMSBower', 'GrizzlySMS'])
     .eq('provider_order_id', input.providerOrderId)
     .eq('category', 'virtual-number')
     .order('created_at', { ascending: false })
@@ -117,6 +117,7 @@ export async function getTrackedNumberOrder(input: {
     status: OrderStatus;
     created_at: string;
     amount: number | string;
+    provider: 'SMSBower' | 'GrizzlySMS';
   };
 }
 

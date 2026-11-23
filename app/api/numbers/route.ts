@@ -15,6 +15,7 @@ import {
 } from '@/lib/exchange-rates';
 import {
   getNumberActivationTimeoutMs,
+  changeTrackedNumberStatus,
   numberActivationExpiresAt,
   syncTrackedNumberOrder,
 } from '@/lib/number-orders';
@@ -23,7 +24,6 @@ import {
   getNumberCatalog,
   getNumberQuote,
   purchaseNumber,
-  setNumberStatus,
 } from '@/lib/provider-clients';
 import { withWalletCharge } from '@/lib/wallet';
 
@@ -207,7 +207,7 @@ export async function POST(request: Request) {
         userId: user.id,
         category: 'virtual-number',
         serviceName: body.service,
-        provider: 'SMSBower',
+        provider: result.provider,
         providerOrderId: result.activationId,
         amount: customerPriceNgn,
         currency: 'NGN',
@@ -259,10 +259,11 @@ export async function POST(request: Request) {
     }
 
     if ((body.action === 'complete' || body.action === 'cancel') && body.id) {
-      const result = await setNumberStatus(
-        body.id,
-        body.action === 'complete' ? '6' : '8',
-      );
+      const result = await changeTrackedNumberStatus({
+        userId: user.id,
+        providerOrderId: body.id,
+        status: body.action === 'complete' ? '6' : '8',
+      });
       const orderStatus = await reconcileTrackedNumberOrder({
         userId: user.id,
         providerOrderId: body.id,

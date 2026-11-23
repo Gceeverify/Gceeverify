@@ -7,7 +7,7 @@ import {
 import {
   getNumberStatus,
   setNumberStatus,
-  SmsBowerApiError,
+  NumberProviderApiError,
 } from '@/lib/provider-clients';
 
 const DEFAULT_ACTIVATION_TIMEOUT_MINUTES = 3;
@@ -16,7 +16,8 @@ const MINIMUM_ACTIVATION_TIMEOUT_MINUTES = 2;
 export function getNumberActivationTimeoutMs() {
   const configured = Number(process.env.NUMBER_ACTIVATION_TIMEOUT_MINUTES);
   const minutes =
-    Number.isFinite(configured) && configured >= MINIMUM_ACTIVATION_TIMEOUT_MINUTES
+    Number.isFinite(configured) &&
+    configured >= MINIMUM_ACTIVATION_TIMEOUT_MINUTES
       ? configured
       : DEFAULT_ACTIVATION_TIMEOUT_MINUTES;
   return minutes * 60_000;
@@ -62,9 +63,18 @@ export async function syncTrackedNumberOrder(input: {
   const expired = (input.now ?? Date.now()) >= new Date(expiresAt).getTime();
   let providerResult;
   try {
-    providerResult = await getNumberStatus(input.providerOrderId);
+    providerResult = await getNumberStatus(
+      input.providerOrderId,
+      order.provider,
+    );
   } catch (error) {
-    if (!(expired && error instanceof SmsBowerApiError && error.code === 'NO_ACTIVATION')) {
+    if (
+      !(
+        expired &&
+        error instanceof NumberProviderApiError &&
+        error.code === 'NO_ACTIVATION'
+      )
+    ) {
       throw error;
     }
     await reconcileTrackedNumberOrder({
@@ -85,11 +95,15 @@ export async function syncTrackedNumberOrder(input: {
       providerStatus: 'received',
     });
     try {
-      await setNumberStatus(input.providerOrderId, '6');
+      await setNumberStatus(input.providerOrderId, '6', order.provider);
     } catch (error) {
-      if (!(error instanceof SmsBowerApiError && error.code === 'BAD_STATUS')) {
+      if (
+        !(
+          error instanceof NumberProviderApiError && error.code === 'BAD_STATUS'
+        )
+      ) {
         console.error(
-          '[number-orders] delivered activation could not be closed at SMSBower',
+          `[number-orders] delivered activation could not be closed at ${order.provider}`,
           error,
         );
       }
@@ -115,9 +129,14 @@ export async function syncTrackedNumberOrder(input: {
 
   if (expired) {
     try {
-      await setNumberStatus(input.providerOrderId, '8');
+      await setNumberStatus(input.providerOrderId, '8', order.provider);
     } catch (error) {
-      if (!(error instanceof SmsBowerApiError && error.code === 'NO_ACTIVATION')) {
+      if (
+        !(
+          error instanceof NumberProviderApiError &&
+          error.code === 'NO_ACTIVATION'
+        )
+      ) {
         throw error;
       }
     }
@@ -139,4 +158,13 @@ export async function syncTrackedNumberOrder(input: {
     orderStatus: 'processing' as const,
     expiresAt,
   };
+}
+
+export async function changeTrackedNumberStatus(input: {
+  userId: string;
+  providerOrderId: string;
+  status: '6' | '8';
+}) {
+  const order = await getTrackedNumberOrder(input);
+  return setNumberStatus(input.providerOrderId, input.status, order.provider);
 }
