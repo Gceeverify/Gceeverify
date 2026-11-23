@@ -46,6 +46,7 @@ const categoryLabels: Record<string, string> = {
   'digital-accounts': 'Logs & accounts',
   'reseller-vpn': 'VPN',
   'reseller-proxy': 'Proxy',
+  'reseller-communication': 'Foreign number account',
   'vtu-airtime': 'Airtime',
   'vtu-data': 'Mobile data',
   'vtu-cable': 'Cable TV',

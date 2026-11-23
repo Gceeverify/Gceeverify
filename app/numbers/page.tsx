@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Notice, ServicePageShell } from '@/components/service-page-shell';
+import { ForeignNumberAccounts } from '@/components/foreign-number-accounts';
 import { Button } from '@/components/ui/button';
 import { ServiceInformationDialog } from '@/components/onboarding-dialogs';
 import {
@@ -723,6 +724,7 @@ export default function NumbersPage() {
           )}
         </aside>
       </section>
+      <ForeignNumberAccounts />
     </ServicePageShell>
   );
 }

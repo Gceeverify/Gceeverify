@@ -8,7 +8,6 @@ import {
   Globe2,
   LoaderCircle,
   Mail,
-  MessageCircle,
   Search,
   ShieldCheck,
   ShoppingBag,
@@ -63,7 +62,6 @@ const categories: Array<{
   { value: 'vpn', label: 'VPN', icon: ShieldCheck },
   { value: 'proxy', label: 'Proxies', icon: Wifi },
   { value: 'social', label: 'Social accounts', icon: Globe2 },
-  { value: 'communication', label: 'Communication', icon: MessageCircle },
   { value: 'email', label: 'Email accounts', icon: Mail },
   { value: 'other', label: 'Other', icon: ShoppingBag },
 ];
@@ -121,6 +119,7 @@ export default function ResellerMarketplacePage() {
     const normalizedQuery = query.trim().toLowerCase();
     const items = (catalog?.products ?? []).filter(
       (product) =>
+        product.category !== 'communication' &&
         (category === 'all' || product.category === category) &&
         (!normalizedQuery ||
           `${product.name} ${product.description} ${product.sourceCategory}`

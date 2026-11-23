@@ -73,15 +73,30 @@ function normalizeProduct(product: SujanProductResponse): SujanProduct {
 }
 
 export function getSujanCategory(product: SujanProduct) {
-  const value =
-    `${product.categoryName} ${product.platformName} ${product.name}`.toLowerCase();
-  if (/\bproxy\b|\bproxies\b|\bip\b/.test(value)) return 'proxy' as const;
-  if (/\bvpn\b/.test(value)) return 'vpn' as const;
-  if (/gmail|email/.test(value)) return 'email' as const;
-  if (/texting|textplus|nextplus|google voice/.test(value))
+  const name = product.name.toLowerCase();
+  const providerGrouping =
+    `${product.categoryName} ${product.platformName}`.toLowerCase();
+  const value = `${name} ${providerGrouping}`;
+
+  // Product names are more specific than provider groupings. In particular,
+  // TextPlus/NextPlus listings may mention or be grouped under VPN because a
+  // VPN is required during login, but the product itself is a communication
+  // account.
+  if (/text\s*plus|next\s*plus|google\s+voice/.test(name))
     return 'communication' as const;
+  if (/gmail|e-?mail/.test(name)) return 'email' as const;
+  if (/instagram|tiktok|twitter|facebook|\bx\b|follower/.test(name))
+    return 'social' as const;
+  if (/\bproxy\b|\bproxies\b|\bip\b/.test(name)) return 'proxy' as const;
+  if (/\bvpn\b/.test(name)) return 'vpn' as const;
+
+  if (/texting|text\s*plus|next\s*plus|google\s+voice/.test(providerGrouping))
+    return 'communication' as const;
+  if (/gmail|e-?mail/.test(providerGrouping)) return 'email' as const;
   if (/instagram|tiktok|twitter|facebook|\bx\b|follower/.test(value))
     return 'social' as const;
+  if (/\bproxy\b|\bproxies\b|\bip\b/.test(value)) return 'proxy' as const;
+  if (/\bvpn\b/.test(value)) return 'vpn' as const;
   return 'other' as const;
 }
 

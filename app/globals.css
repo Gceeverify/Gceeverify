@@ -10760,6 +10760,40 @@ html[data-theme='light'] .active-email-copy {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
+.foreign-account-surface {
+  margin-top: 24px;
+}
+.foreign-account-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.foreign-account-heading > span {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(190, 255, 92, 0.14);
+  color: #caff7d;
+}
+.foreign-account-heading > span svg {
+  width: 21px;
+  height: 21px;
+}
+.foreign-account-heading h2 {
+  margin-top: 2px;
+  color: #f5fff8;
+  font-size: clamp(1.12rem, 2vw, 1.4rem);
+}
+.foreign-account-heading div > p:last-child {
+  margin-top: 5px;
+  color: #91a199;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
 .reseller-card {
   display: flex;
   min-height: 220px;
@@ -10867,6 +10901,12 @@ html[data-theme='light'] .reseller-toolbar select {
 }
 html[data-theme='light'] .reseller-card h2 {
   color: #172b22;
+}
+html[data-theme='light'] .foreign-account-heading h2 {
+  color: #172b22;
+}
+html[data-theme='light'] .foreign-account-heading div > p:last-child {
+  color: #50695a;
 }
 html[data-theme='light'] .reseller-card > p,
 html[data-theme='light'] .reseller-card-topline {
