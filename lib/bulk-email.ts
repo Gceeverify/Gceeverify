@@ -70,26 +70,74 @@ function escapeHtml(value: string) {
     .replaceAll("'", '&#039;');
 }
 
-function messageHtml(message: string) {
-  const paragraphs = escapeHtml(message)
+function personalizedMessage(recipient: BulkEmailRecipient, message: string) {
+  const name = recipient.name.replace(/\s+/g, ' ').trim();
+  const greeting =
+    name && name !== 'Gceeverify user' ? `Hi ${name},` : 'Hi there,';
+  return `${greeting}\n\n${message}`;
+}
+
+function publicSiteUrl() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!configured) return null;
+
+  try {
+    const url = new URL(configured);
+    return ['http:', 'https:'].includes(url.protocol)
+      ? url.toString().replace(/\/$/, '')
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function messageHtml(
+  recipient: BulkEmailRecipient,
+  subject: string,
+  message: string,
+) {
+  const paragraphs = escapeHtml(personalizedMessage(recipient, message))
     .split(/\n{2,}/)
     .map(
       (paragraph) =>
         `<p style="margin:0 0 16px;line-height:1.7">${paragraph.replaceAll('\n', '<br>')}</p>`,
     )
     .join('');
+  const siteUrl = publicSiteUrl();
+  const logoUrl = siteUrl ? `${siteUrl}/logo-transparent.png` : null;
+  const brand = logoUrl
+    ? `<img src="${escapeHtml(logoUrl)}" width="48" height="48" alt="Gceeverify" style="display:block;width:48px;height:48px;border:0;object-fit:contain">`
+    : `<span style="display:block;width:48px;height:48px;line-height:48px;border-radius:14px;background:#61ee65;color:#102314;text-align:center;font-size:20px;font-weight:800">G</span>`;
+  const dashboardButton = siteUrl
+    ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px"><tr><td style="border-radius:999px;background:#61ee65"><a href="${escapeHtml(siteUrl)}" style="display:inline-block;padding:13px 22px;color:#102314;font-size:13px;font-weight:800;text-decoration:none">Open Gceeverify</a></td></tr></table>`
+    : '';
 
   return `<!doctype html>
 <html lang="en">
-  <body style="margin:0;padding:0;background:#f4f8f3;color:#132718;font-family:Arial,sans-serif">
-    <div style="display:none;max-height:0;overflow:hidden">A message from Gceeverify Support</div>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f8f3;padding:24px 12px">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(subject)}</title></head>
+  <body style="margin:0;padding:0;background:#eef4ed;color:#132718;font-family:Arial,Helvetica,sans-serif">
+    <div style="display:none;max-height:0;overflow:hidden;color:transparent">${escapeHtml(subject)} — a message from Gceeverify Support</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:#eef4ed;padding:32px 12px">
       <tr><td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border:1px solid #dce8da;border-radius:18px;overflow:hidden">
-          <tr><td style="padding:22px 28px;background:#0f2115;color:#f5fff3;font-size:20px;font-weight:700">Gceeverify</td></tr>
-          <tr><td style="padding:30px 28px;font-size:15px">${paragraphs}</td></tr>
-          <tr><td style="padding:18px 28px;border-top:1px solid #e4ece2;color:#687a6c;font-size:12px;line-height:1.6">This message was sent by Gceeverify Support because you have a Gceeverify account.</td></tr>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:620px;background:#ffffff;border:1px solid #d8e6d6;border-radius:22px;overflow:hidden;box-shadow:0 16px 50px rgba(21,53,28,.10)">
+          <tr><td style="padding:26px 30px;background:#0b2112">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
+              <td width="62" valign="middle">${brand}</td>
+              <td valign="middle"><strong style="display:block;color:#f6fff4;font-size:21px;letter-spacing:-.4px">Gceeverify</strong><span style="display:block;margin-top:4px;color:#9ec6a3;font-size:11px;letter-spacing:.08em;text-transform:uppercase">Digital services, simplified</span></td>
+              <td align="right" valign="middle"><span style="display:inline-block;padding:7px 10px;border:1px solid rgba(97,238,101,.28);border-radius:999px;color:#8ef592;font-size:10px;font-weight:700">ACCOUNT UPDATE</span></td>
+            </tr></table>
+          </td></tr>
+          <tr><td style="padding:34px 30px 30px">
+            <p style="margin:0 0 9px;color:#4b6751;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">A message from our team</p>
+            <h1 style="margin:0 0 24px;color:#102b18;font-size:25px;line-height:1.25;letter-spacing:-.5px">${escapeHtml(subject)}</h1>
+            <div style="color:#294630;font-size:15px;line-height:1.7">${paragraphs}</div>
+            ${dashboardButton}
+          </td></tr>
+          <tr><td style="padding:20px 30px;border-top:1px solid #e3ece1;background:#f8fbf7;color:#6a7f6e;font-size:11px;line-height:1.7">
+            This email was sent by Gceeverify Support because this address is registered to a Gceeverify account. For your security, we will never ask for your password or verification code by email.
+          </td></tr>
         </table>
+        <p style="margin:18px 0 0;color:#819086;font-size:10px">© ${new Date().getFullYear()} Gceeverify. All rights reserved.</p>
       </td></tr>
     </table>
   </body>
@@ -174,8 +222,8 @@ async function gmailRawMessage({
     replyTo: config.fromAddress,
     to: { name: recipient.name, address: recipient.email },
     subject: content.subject,
-    text: content.message,
-    html: messageHtml(content.message),
+    text: personalizedMessage(recipient, content.message),
+    html: messageHtml(recipient, content.subject, content.message),
   });
 
   if (!Buffer.isBuffer(result.message)) {
@@ -195,6 +243,7 @@ async function sendWithGmailApi(
   let sent = 0;
   let failed = 0;
   let failureMessage = '';
+  const deliveredEmails: string[] = [];
 
   for (
     let index = 0;
@@ -232,9 +281,11 @@ async function sendWithGmailApi(
       }),
     );
 
-    for (const result of results) {
+    for (const [resultIndex, result] of results.entries()) {
       if (result.status === 'fulfilled') sent += 1;
-      else {
+      if (result.status === 'fulfilled') {
+        deliveredEmails.push(batch[resultIndex].email);
+      } else {
         failed += 1;
         failureMessage ||= `Gmail API could not send an email: ${errorMessage(result.reason)}`;
       }
@@ -242,7 +293,7 @@ async function sendWithGmailApi(
   }
 
   if (!sent && failureMessage) throw new Error(failureMessage);
-  return { sent, failed, failureMessage };
+  return { sent, failed, failureMessage, deliveredEmails };
 }
 
 function smtpError(error: unknown) {
@@ -282,9 +333,9 @@ async function sendWithSmtp(
     socketTimeout: 30_000,
     auth: { user: config.user, pass: config.password },
   });
-  const html = messageHtml(content.message);
   let sent = 0;
   let failed = 0;
+  const deliveredEmails: string[] = [];
 
   try {
     await transporter.verify();
@@ -298,15 +349,17 @@ async function sendWithSmtp(
             replyTo: config.user,
             to: { name: recipient.name, address: recipient.email },
             subject: content.subject,
-            text: content.message,
-            html,
+            text: personalizedMessage(recipient, content.message),
+            html: messageHtml(recipient, content.subject, content.message),
           }),
         ),
       );
 
-      for (const result of results) {
+      for (const [resultIndex, result] of results.entries()) {
         if (result.status === 'fulfilled') sent += 1;
-        else failed += 1;
+        if (result.status === 'fulfilled') {
+          deliveredEmails.push(batch[resultIndex].email);
+        } else failed += 1;
       }
     }
   } catch (error) {
@@ -315,7 +368,7 @@ async function sendWithSmtp(
     transporter.close();
   }
 
-  return { sent, failed, failureMessage: '' };
+  return { sent, failed, failureMessage: '', deliveredEmails };
 }
 
 export async function sendBulkEmail(content: EmailContent) {

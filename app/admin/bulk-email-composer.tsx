@@ -5,10 +5,15 @@ import {
   CheckCircle2,
   LoaderCircle,
   Mail,
+  MailCheck,
   Send,
   TriangleAlert,
 } from 'lucide-react';
-import { sendEmailToAllUsers, type BulkEmailState } from './bulk-email-actions';
+import {
+  sendEmailToAllUsers,
+  sendTestEmailToAdmin,
+  type BulkEmailState,
+} from './bulk-email-actions';
 import styles from './admin.module.css';
 
 const initialState: BulkEmailState = {
@@ -27,7 +32,12 @@ export function BulkEmailComposer({
     sendEmailToAllUsers,
     initialState,
   );
+  const [testState, testFormAction, testPending] = useActionState(
+    sendTestEmailToAdmin,
+    initialState,
+  );
   const formRef = useRef<HTMLFormElement>(null);
+  const submitting = pending || testPending;
 
   useEffect(() => {
     if (state.status === 'success' && state.failed === 0)
@@ -48,9 +58,10 @@ export function BulkEmailComposer({
           <span className={styles.eyebrow}>Customer communication</span>
           <h2 id="bulk-email-title">Email all users</h2>
           <p>
-            Send one private copy to each of the{' '}
+            Send private, tracked daily batches to the{' '}
             {recipientCount.toLocaleString()} registered email address
-            {recipientCount === 1 ? '' : 'es'}.
+            {recipientCount === 1 ? '' : 'es'}. Each user receives the exact
+            campaign only once.
           </p>
         </div>
       </div>
@@ -65,7 +76,7 @@ export function BulkEmailComposer({
             minLength={1}
             maxLength={150}
             placeholder="Important update from Gceeverify"
-            disabled={pending}
+            disabled={submitting}
           />
         </label>
         <label>
@@ -76,15 +87,21 @@ export function BulkEmailComposer({
             minLength={1}
             maxLength={10_000}
             rows={8}
-            placeholder="Write the message every user should receive..."
-            disabled={pending}
+            placeholder="Write the message every user should receive. The greeting is added automatically..."
+            disabled={submitting}
           />
         </label>
         <label className={styles.emailConfirmation}>
-          <input name="confirmed" type="checkbox" required disabled={pending} />
+          <input
+            name="confirmed"
+            type="checkbox"
+            required
+            disabled={submitting}
+          />
           <span>
-            I have reviewed this message and want to send it to all{' '}
-            {recipientCount.toLocaleString()} users.
+            I have reviewed this message and want to send the next batch of up
+            to 450 users. I will keep the subject and message unchanged until
+            the campaign is complete.
           </span>
         </label>
 
@@ -103,16 +120,53 @@ export function BulkEmailComposer({
           </div>
         )}
 
-        <div className={styles.emailSubmitRow}>
-          <small>Recipients cannot see anyone else&apos;s email address.</small>
-          <button type="submit" disabled={pending || recipientCount === 0}>
-            {pending ? (
-              <LoaderCircle className={styles.spinnerIcon} />
+        {testState.message && (
+          <div
+            className={
+              testState.status === 'success'
+                ? styles.emailSuccess
+                : styles.emailError
+            }
+            role={testState.status === 'error' ? 'alert' : 'status'}
+            aria-live="polite"
+          >
+            {testState.status === 'success' ? (
+              <CheckCircle2 />
             ) : (
-              <Send />
+              <TriangleAlert />
             )}
-            {pending ? 'Sending emails...' : 'Send to all users'}
-          </button>
+            <span>{testState.message}</span>
+          </div>
+        )}
+
+        <div className={styles.emailSubmitRow}>
+          <small>
+            Test first. Broadcast batches are private and tracked per user.
+          </small>
+          <div className={styles.emailButtons}>
+            <button
+              type="submit"
+              formAction={testFormAction}
+              formNoValidate
+              className={styles.testEmailButton}
+              disabled={submitting}
+            >
+              {testPending ? (
+                <LoaderCircle className={styles.spinnerIcon} />
+              ) : (
+                <MailCheck />
+              )}
+              {testPending ? 'Sending test...' : 'Send test to me'}
+            </button>
+            <button type="submit" disabled={submitting || recipientCount === 0}>
+              {pending ? (
+                <LoaderCircle className={styles.spinnerIcon} />
+              ) : (
+                <Send />
+              )}
+              {pending ? 'Sending batch...' : 'Send next batch (up to 450)'}
+            </button>
+          </div>
         </div>
       </form>
     </section>

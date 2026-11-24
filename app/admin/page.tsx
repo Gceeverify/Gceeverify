@@ -1,9 +1,8 @@
 import Link from 'next/link';
+import { unstable_cache } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { isAdminUser } from '@/lib/admin';
-import { refreshTrackedBoostOrders } from '@/lib/boost-orders';
-import { syncTrackedNumberOrder } from '@/lib/number-orders';
 import { createAdminClient, hasAdminConfiguration } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -23,11 +22,30 @@ function isBanned(user: User) {
   );
 }
 
+function stableUserText(value: string) {
+  return new TextDecoder()
+    .decode(new TextEncoder().encode(value))
+    .normalize('NFC')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function displayName(user: User) {
   const metadata = user.user_metadata as { full_name?: unknown } | null;
-  return typeof metadata?.full_name === 'string' && metadata.full_name.trim()
-    ? metadata.full_name.trim()
-    : user.email?.split('@')[0] || 'Unnamed user';
+  const metadataName =
+    typeof metadata?.full_name === 'string'
+      ? stableUserText(metadata.full_name)
+      : '';
+
+  if (
+    metadataName &&
+    !metadataName.includes('\uFFFD') &&
+    !metadataName.includes('ï¿½')
+  ) {
+    return metadataName;
+  }
+
+  return stableUserText(user.email?.split('@')[0] || '') || 'Unnamed user';
 }
 
 function initials(name: string) {
@@ -35,25 +53,35 @@ function initials(name: string) {
     name
       .split(/\s+/)
       .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
+      .map((part) => Array.from(part)[0]?.toUpperCase())
       .join('') || 'GU'
   );
 }
 
 async function getAllUsers() {
   const admin = createAdminClient();
-  const users: User[] = [];
+  const perPage = 1000;
+  const { data: firstPage, error } = await admin.auth.admin.listUsers({
+    page: 1,
+    perPage,
+  });
+  if (error) throw error;
 
-  for (let page = 1; ; page += 1) {
-    const { data, error } = await admin.auth.admin.listUsers({
-      page,
-      perPage: 1000,
-    });
-    if (error) throw error;
-    users.push(...data.users);
-    if (data.users.length < 1000) break;
+  const pageCount = Math.ceil(
+    (firstPage.total ?? firstPage.users.length) / perPage,
+  );
+  if (pageCount <= 1) return firstPage.users;
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: pageCount - 1 }, (_, index) =>
+      admin.auth.admin.listUsers({ page: index + 2, perPage }),
+    ),
+  );
+  const users: User[] = [...firstPage.users];
+  for (const page of remainingPages) {
+    if (page.error) throw page.error;
+    users.push(...page.data.users);
   }
-
   return users;
 }
 
@@ -72,50 +100,50 @@ type OrderRecord = {
 
 async function getAllOrders() {
   const admin = createAdminClient();
-  const orders: OrderRecord[] = [];
+  const perPage = 1000;
+  const columns =
+    'id,user_id,category,service_name,provider,provider_order_id,amount,currency,status,created_at';
+  const {
+    data: firstPage,
+    count,
+    error,
+  } = await admin
+    .from('orders')
+    .select(columns, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(0, perPage - 1);
+  if (error) throw error;
 
-  for (let page = 0; ; page += 1) {
-    const from = page * 1000;
-    const { data, error } = await admin
-      .from('orders')
-      .select(
-        'id,user_id,category,service_name,provider,provider_order_id,amount,currency,status,created_at',
-      )
-      .order('created_at', { ascending: false })
-      .range(from, from + 999);
-    if (error) throw error;
-    orders.push(...(data as OrderRecord[]));
-    if (data.length < 1000) break;
+  const orders = [...(firstPage as OrderRecord[])];
+  const pageCount = Math.ceil((count ?? orders.length) / perPage);
+  if (pageCount <= 1) return orders;
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: pageCount - 1 }, (_, index) => {
+      const from = (index + 1) * perPage;
+      return admin
+        .from('orders')
+        .select(columns)
+        .order('created_at', { ascending: false })
+        .range(from, from + perPage - 1);
+    }),
+  );
+  for (const page of remainingPages) {
+    if (page.error) throw page.error;
+    orders.push(...(page.data as OrderRecord[]));
   }
-
   return orders;
 }
 
-async function refreshNumberOrderStatuses(orders: OrderRecord[]) {
-  const candidates = orders
-    .filter(
-      (order) =>
-        order.category === 'virtual-number' &&
-        ['SMSBower', 'GrizzlySMS'].includes(order.provider) &&
-        order.provider_order_id &&
-        ['pending', 'processing'].includes(order.status),
-    )
-    .slice(0, 50);
+const getCachedUsers = unstable_cache(getAllUsers, ['admin-users-v2'], {
+  tags: ['admin-users'],
+  revalidate: 15,
+});
 
-  for (let index = 0; index < candidates.length; index += 5) {
-    const batch = candidates.slice(index, index + 5);
-    await Promise.allSettled(
-      batch.map(async (order) => {
-        const result = await syncTrackedNumberOrder({
-          userId: order.user_id,
-          providerOrderId: order.provider_order_id!,
-        });
-        order.status =
-          result.orderStatus === 'refunded' ? 'cancelled' : result.orderStatus;
-      }),
-    );
-  }
-}
+const getCachedOrders = unstable_cache(getAllOrders, ['admin-orders-v2'], {
+  tags: ['admin-orders'],
+  revalidate: 15,
+});
 
 export default async function AdminPage({
   searchParams,
@@ -152,13 +180,9 @@ export default async function AdminPage({
   }
 
   const [users, orderRecords, params] = await Promise.all([
-    getAllUsers(),
-    getAllOrders(),
+    getCachedUsers(),
+    getCachedOrders(),
     searchParams,
-  ]);
-  await Promise.all([
-    refreshNumberOrderStatuses(orderRecords),
-    refreshTrackedBoostOrders(orderRecords, 50),
   ]);
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();

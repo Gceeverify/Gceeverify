@@ -1,12 +1,13 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/admin';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const validActions = new Set(['promote', 'demote', 'ban', 'unban', 'delete']);
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function field(formData: FormData, key: string) {
   const entry = formData.get(key);
@@ -18,7 +19,10 @@ function adminUrl(type: 'notice' | 'error', message: string) {
 }
 
 export async function manageUser(formData: FormData) {
-  let destination = adminUrl('error', 'The requested action could not be completed.');
+  let destination = adminUrl(
+    'error',
+    'The requested action could not be completed.',
+  );
 
   try {
     const actor = await requireAdmin();
@@ -34,8 +38,10 @@ export async function manageUser(formData: FormData) {
     }
 
     const admin = createAdminClient();
-    const { data, error: targetError } = await admin.auth.admin.getUserById(targetId);
-    if (targetError || !data.user) throw new Error('That user could not be found.');
+    const { data, error: targetError } =
+      await admin.auth.admin.getUserById(targetId);
+    if (targetError || !data.user)
+      throw new Error('That user could not be found.');
 
     const target = data.user;
     const currentMetadata = target.app_metadata ?? {};
@@ -48,7 +54,10 @@ export async function manageUser(formData: FormData) {
         app_metadata: { ...currentMetadata, role },
       });
       error = result.error;
-      success = intent === 'promote' ? 'User appointed as an admin.' : 'Admin access removed.';
+      success =
+        intent === 'promote'
+          ? 'User appointed as an admin.'
+          : 'Admin access removed.';
     } else if (intent === 'ban' || intent === 'unban') {
       const banned = intent === 'ban';
       const result = await admin.auth.admin.updateUserById(targetId, {
@@ -64,12 +73,15 @@ export async function manageUser(formData: FormData) {
     }
 
     if (error) throw new Error(error.message);
+    updateTag('admin-users');
     revalidatePath('/admin');
     destination = adminUrl('notice', success);
   } catch (error) {
     destination = adminUrl(
       'error',
-      error instanceof Error ? error.message : 'The requested action could not be completed.',
+      error instanceof Error
+        ? error.message
+        : 'The requested action could not be completed.',
     );
   }
 

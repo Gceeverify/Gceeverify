@@ -522,6 +522,7 @@ export function GceeverifyHome({
             {isAdmin ? (
               <Link
                 href="/admin"
+                prefetch={true}
                 className="nav-item"
                 onClick={() => setMobileOpen(false)}
               >

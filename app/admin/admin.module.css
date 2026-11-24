@@ -551,6 +551,13 @@
   font-size: 9px;
 }
 
+.emailButtons {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .emailSubmitRow button {
   display: inline-flex;
   min-height: 42px;
@@ -576,6 +583,13 @@
 .emailSubmitRow button svg {
   width: 15px;
   height: 15px;
+}
+
+.emailSubmitRow .testEmailButton {
+  border: 1px solid
+    color-mix(in srgb, var(--admin-green) 35%, var(--admin-line));
+  color: var(--admin-green);
+  background: color-mix(in srgb, var(--admin-green) 7%, transparent);
 }
 
 .spinnerIcon {
@@ -1246,6 +1260,125 @@
   }
 }
 
+.loadingShell {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 220px minmax(0, 1fr);
+  color: #f4fff2;
+  background: #07130b;
+}
+
+.loadingSidebar {
+  padding: 24px 18px;
+  border-right: 1px solid rgba(232, 255, 230, 0.08);
+  background: #0b1b10;
+}
+
+.loadingBrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.loadingBrand img {
+  width: 38px;
+  height: 38px;
+}
+
+.loadingNavLines {
+  display: grid;
+  gap: 12px;
+  margin-top: 48px;
+}
+
+.loadingNavLines i,
+.loadingCards i,
+.loadingPanel {
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.045) 25%,
+    rgba(97, 238, 101, 0.12) 50%,
+    rgba(255, 255, 255, 0.045) 75%
+  );
+  background-size: 200% 100%;
+  animation: adminShimmer 1.4s ease-in-out infinite;
+}
+
+.loadingNavLines i {
+  width: 88%;
+  height: 42px;
+  border-radius: 10px;
+}
+
+.loadingContent {
+  width: min(1180px, 100%);
+  padding: clamp(30px, 5vw, 64px);
+}
+
+.loadingMessage > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #61ee65;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.loadingMessage > span svg {
+  width: 15px;
+}
+
+.loadingMessage h1 {
+  margin: 10px 0 5px;
+  font-size: clamp(30px, 5vw, 48px);
+  letter-spacing: -0.05em;
+}
+
+.loadingMessage p {
+  margin: 0;
+  color: #8fa293;
+  font-size: 12px;
+}
+
+.loadingSpinner {
+  width: 22px;
+  height: 22px;
+  margin-top: 20px;
+  color: #61ee65;
+  animation: spin 700ms linear infinite;
+}
+
+.loadingCards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 44px;
+}
+
+.loadingCards i {
+  height: 112px;
+  border: 1px solid rgba(232, 255, 230, 0.06);
+  border-radius: 15px;
+}
+
+.loadingPanel {
+  height: 290px;
+  margin-top: 18px;
+  border: 1px solid rgba(232, 255, 230, 0.06);
+  border-radius: 18px;
+}
+
+@keyframes adminShimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
 @media (max-width: 1100px) {
   .stats {
     grid-template-columns: repeat(3, 1fr);
@@ -1256,6 +1389,21 @@
 }
 
 @media (max-width: 760px) {
+  .loadingShell {
+    display: block;
+  }
+  .loadingSidebar {
+    display: none;
+  }
+  .loadingContent {
+    padding: 34px 18px;
+  }
+  .loadingCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .loadingCards i:last-child {
+    display: none;
+  }
   .shell {
     padding-bottom: 78px;
   }
@@ -1318,6 +1466,10 @@
     grid-template-columns: 1fr;
   }
   .emailSubmitRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .emailButtons {
     align-items: stretch;
     flex-direction: column;
   }
