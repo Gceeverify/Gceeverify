@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import nodemailer from 'nodemailer';
 
 export type BulkEmailRecipient = {
@@ -14,6 +16,24 @@ type EmailContent = {
 };
 
 const GMAIL_SEND_BATCH_SIZE = 5;
+const EMAIL_LOGO_CID = 'gceeverify-logo';
+let emailLogoContentPromise: Promise<Buffer> | undefined;
+
+function emailLogoContent() {
+  emailLogoContentPromise ??= readFile(
+    join(process.cwd(), 'public', 'logo-transparent.png'),
+  );
+  return emailLogoContentPromise;
+}
+
+function emailLogoAttachment(content: Buffer) {
+  return {
+    filename: 'gceeverify-logo.png',
+    content,
+    cid: EMAIL_LOGO_CID,
+    contentDisposition: 'inline' as const,
+  };
+}
 
 function emailConfiguration() {
   const gmailClientId = process.env.GMAIL_CLIENT_ID?.trim();
@@ -104,10 +124,7 @@ function messageHtml(
     )
     .join('');
   const siteUrl = publicSiteUrl();
-  const logoUrl = siteUrl ? `${siteUrl}/logo-transparent.png` : null;
-  const brand = logoUrl
-    ? `<img src="${escapeHtml(logoUrl)}" width="48" height="48" alt="Gceeverify" style="display:block;width:48px;height:48px;border:0;object-fit:contain">`
-    : `<span style="display:block;width:48px;height:48px;line-height:48px;border-radius:14px;background:#61ee65;color:#102314;text-align:center;font-size:20px;font-weight:800">G</span>`;
+  const brand = `<img src="cid:${EMAIL_LOGO_CID}" width="48" height="48" alt="Gceeverify" style="display:block;width:48px;height:48px;border:0;object-fit:contain">`;
   const dashboardButton = siteUrl
     ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:24px"><tr><td style="border-radius:999px;background:#61ee65"><a href="${escapeHtml(siteUrl)}" style="display:inline-block;padding:13px 22px;color:#102314;font-size:13px;font-weight:800;text-decoration:none">Open Gceeverify</a></td></tr></table>`
     : '';
@@ -224,6 +241,7 @@ async function gmailRawMessage({
     subject: content.subject,
     text: personalizedMessage(recipient, content.message),
     html: messageHtml(recipient, content.subject, content.message),
+    attachments: [emailLogoAttachment(await emailLogoContent())],
   });
 
   if (!Buffer.isBuffer(result.message)) {
@@ -339,6 +357,7 @@ async function sendWithSmtp(
 
   try {
     await transporter.verify();
+    const logoContent = await emailLogoContent();
 
     for (let index = 0; index < content.recipients.length; index += 5) {
       const batch = content.recipients.slice(index, index + 5);
@@ -351,6 +370,7 @@ async function sendWithSmtp(
             subject: content.subject,
             text: personalizedMessage(recipient, content.message),
             html: messageHtml(recipient, content.subject, content.message),
+            attachments: [emailLogoAttachment(logoContent)],
           }),
         ),
       );
